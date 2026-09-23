@@ -21,7 +21,11 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Organizy",
+      "shortName": "Organizy",
+      "themeColor": "#F3EFE6",
+      "backgroundColor": "#F3EFE6"
     },
     "plugins": [
       "expo-router",
@@ -37,8 +41,16 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "baseUrl": "/organizy"
     },
-    "backgroundColor": "#F3EFE6"
+    "backgroundColor": "#F3EFE6",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bf4c1bdd-dea3-4040-b236-458205d44d0e"
+      }
+    },
+    "owner": "mangel_creator"
   }
 }

@@ -1,0 +1,30 @@
+import { ScrollViewStyleReset } from 'expo-router/html';
+import type { PropsWithChildren } from 'react';
+
+// Plantilla HTML de la versión web (solo se usa en web).
+// Las etiquetas "apple-*" permiten guardarla en la pantalla de inicio del iPhone
+// y que se abra a pantalla completa, como una app.
+export default function Root({ children }: PropsWithChildren) {
+  return (
+    <html lang="es">
+      <head>
+        <meta charSet="utf-8" />
+        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+        />
+        <title>Organizy</title>
+        <meta name="theme-color" content="#F3EFE6" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Organizy" />
+        <link rel="apple-touch-icon" href="/organizy/icono-app.png" />
+        <ScrollViewStyleReset />
+        <style dangerouslySetInnerHTML={{ __html: 'body{background-color:#F3EFE6;}' }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
