@@ -5,19 +5,23 @@ import { alturaTactil, colores, espacio, fuentes, radio, tamanos } from '@/theme
 type Props = TextInputProps & {
   etiqueta?: string;
   ayuda?: string;
+  error?: string | null;
 };
 
 // Campo para escribir texto, con etiqueta encima y ayuda opcional debajo.
-export function CampoTexto({ etiqueta, ayuda, style, ...resto }: Props) {
+// Si hay "error", el borde se pone naranja y el mensaje sale debajo.
+export function CampoTexto({ etiqueta, ayuda, error, style, ...resto }: Props) {
   return (
     <View style={estilos.contenedor}>
       {etiqueta ? <Text style={estilos.etiqueta}>{etiqueta}</Text> : null}
       <TextInput
         accessibilityLabel={etiqueta}
+        accessibilityHint={error ?? undefined}
         placeholderTextColor={colores.textoSecundario}
-        style={[estilos.campo, style]}
+        style={[estilos.campo, error ? estilos.campoError : null, style]}
         {...resto}
       />
+      {error ? <Text style={estilos.error}>{error}</Text> : null}
       {ayuda ? <Text style={estilos.ayuda}>{ayuda}</Text> : null}
     </View>
   );
@@ -40,6 +44,12 @@ const estilos = StyleSheet.create({
     fontFamily: fuentes.texto,
     fontSize: tamanos.normal,
     color: colores.texto,
+  },
+  campoError: { borderColor: colores.principal, borderWidth: 2 },
+  error: {
+    fontFamily: fuentes.textoMedio,
+    fontSize: tamanos.pequeno,
+    color: colores.principal,
   },
   ayuda: {
     fontFamily: fuentes.texto,
