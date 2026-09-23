@@ -8,9 +8,10 @@ import { colores, fuentes } from '@/theme';
 type NombreIcono = ComponentProps<typeof Ionicons>['name'];
 
 function icono(nombre: NombreIcono, nombreActivo: NombreIcono) {
-  return ({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? nombreActivo : nombre} size={size} color={color} />
-  );
+  function IconoPestana({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) {
+    return <Ionicons name={focused ? nombreActivo : nombre} size={size} color={color} />;
+  }
+  return IconoPestana;
 }
 
 // Barra inferior con las 5 pestañas de Organizy.
