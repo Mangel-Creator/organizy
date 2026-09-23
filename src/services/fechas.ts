@@ -56,3 +56,29 @@ export function inicioDeSemana(fecha: Date): Date {
 }
 
 export const DIAS_SEMANA_CORTOS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'] as const;
+
+// Letras de los días para selectores, empezando en lunes (X = miércoles).
+export const DIAS_SEMANA_LETRA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
+
+// "Buenos días" de 6:00 a 13:59, "Buenas tardes" de 14:00 a 20:59 y
+// "Buenas noches" el resto, como se dice en España.
+export function saludoSegunHora(fecha: Date): string {
+  const hora = fecha.getHours();
+  if (hora >= 6 && hora < 14) return 'Buenos días';
+  if (hora >= 14 && hora < 21) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+// "07:30" -> 450 (minutos desde medianoche).
+export function minutosDesdeHora(hora: string): number {
+  const [h, m] = hora.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// 450 -> "07:30". Da la vuelta al pasar de medianoche.
+export function horaDesdeMinutos(minutos: number): string {
+  const total = ((minutos % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}

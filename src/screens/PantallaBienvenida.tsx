@@ -1,0 +1,135 @@
+import { useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+
+import { BarraProgreso, Boton, Pantalla, Texto, Titulo } from '@/components';
+import { completarBienvenida, usePerfil } from '@/data/perfil';
+import { pedirPermiso } from '@/services/permisos';
+import { espacio } from '@/theme';
+
+import {
+  borradorDesdePerfil,
+  comprobarPaso1,
+  comprobarPaso2,
+  hayErrores,
+  perfilDesdeBorrador,
+  type Borrador,
+  type Errores,
+} from './formulario-perfil/borrador';
+import { CamposRitmo } from './formulario-perfil/CamposRitmo';
+import { CamposSobreTi } from './formulario-perfil/CamposSobreTi';
+import { TarjetaPermiso } from './formulario-perfil/permisos';
+
+type Paso = 1 | 2 | 'permisos';
+
+// Formulario de bienvenida. Sale solo la primera vez (o tras "Repetir bienvenida").
+// Al terminar, el diseño de rutas (_layout.tsx) lleva a las pestañas automáticamente.
+export function PantallaBienvenida() {
+  const { perfil } = usePerfil();
+  const [borrador, setBorrador] = useState<Borrador>(() => borradorDesdePerfil(perfil));
+  const [errores, setErrores] = useState<Errores>({});
+  const [paso, setPaso] = useState<Paso>(1);
+  const [ocupado, setOcupado] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+
+  const cambiar = (cambios: Partial<Borrador>) => {
+    setBorrador((actual) => ({ ...actual, ...cambios }));
+    // Quita el error de los campos que se acaban de tocar.
+    setErrores((actuales) => {
+      const quedan = { ...actuales };
+      for (const clave of Object.keys(cambios)) delete quedan[clave as keyof Borrador];
+      return quedan;
+    });
+  };
+
+  const irA = (nuevo: Paso) => {
+    setPaso(nuevo);
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  };
+
+  const siguiente = async () => {
+    setOcupado(true);
+    const resultado = await comprobarPaso1(borrador);
+    setOcupado(false);
+    setBorrador(resultado.borrador);
+    setErrores(resultado.errores);
+    if (hayErrores(resultado.errores)) {
+      scroll.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    irA(2);
+  };
+
+  const empezar = () => {
+    const nuevos = comprobarPaso2(borrador);
+    setErrores(nuevos);
+    if (!hayErrores(nuevos)) irA('permisos');
+  };
+
+  const terminar = async (pedirPermisos: boolean) => {
+    setOcupado(true);
+    if (pedirPermisos) {
+      // Se piden uno detrás de otro. Diga lo que diga el usuario, se sigue adelante.
+      await pedirPermiso('ubicacion');
+      await pedirPermiso('notificaciones');
+    }
+    await completarBienvenida(perfilDesdeBorrador(borrador));
+  };
+
+  return (
+    <Pantalla ref={scroll}>
+      <BarraProgreso paso={paso === 1 ? 1 : 2} total={2} />
+
+      {paso === 1 ? (
+        <>
+          <Titulo>Cuéntame un poco de ti</Titulo>
+          <CamposSobreTi borrador={borrador} cambiar={cambiar} errores={errores} />
+          <Boton
+            titulo={ocupado ? 'Comprobando…' : 'Siguiente'}
+            disabled={ocupado}
+            onPress={siguiente}
+          />
+        </>
+      ) : null}
+
+      {paso === 2 ? (
+        <>
+          <Titulo>Tu ritmo</Titulo>
+          <CamposRitmo borrador={borrador} cambiar={cambiar} errores={errores} />
+          <View style={estilos.botones}>
+            <Boton titulo="Empezar" onPress={empezar} />
+            <Boton variante="secundario" titulo="Atrás" onPress={() => irA(1)} />
+          </View>
+        </>
+      ) : null}
+
+      {paso === 'permisos' ? (
+        <>
+          <Titulo>Dos permisos</Titulo>
+          <Texto secundario>
+            Te los pido ahora para que Organizy funcione del todo. Si dices que no, la app sigue
+            funcionando y puedes activarlos más tarde desde Perfil.
+          </Texto>
+          <TarjetaPermiso permiso="ubicacion" />
+          <TarjetaPermiso permiso="notificaciones" />
+          <View style={estilos.botones}>
+            <Boton
+              titulo={ocupado ? 'Un momento…' : 'Continuar'}
+              disabled={ocupado}
+              onPress={() => terminar(true)}
+            />
+            <Boton
+              variante="secundario"
+              titulo="Ahora no"
+              disabled={ocupado}
+              onPress={() => terminar(false)}
+            />
+          </View>
+        </>
+      ) : null}
+    </Pantalla>
+  );
+}
+
+const estilos = StyleSheet.create({
+  botones: { gap: espacio.s, marginTop: espacio.s },
+});
