@@ -12,7 +12,7 @@ import { abrirEvento } from './textos';
 
 type Props = {
   evento: Evento;
-  pasado?: boolean; // ya ha terminado: sale más apagado
+  pasado?: boolean; // ya ha terminado: sin fondo blanco y con el texto en gris
   focoEnNegro?: boolean; // en Semana, los bloques de foco van en negro con "Protegido"
 };
 
@@ -23,6 +23,7 @@ export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
   const { medidas } = useDensidad();
   const textoFila = { fontSize: medidas.texto, lineHeight: medidas.interlineado };
   const negro = focoEnNegro && evento.foco;
+  const apagado = pasado && !negro;
   const lugar = resolverLugar(evento.lugar, perfil);
   const detalle = [lugar?.nombre ?? lugar?.direccion, evento.foco && !negro ? 'Bloque de foco' : null]
     .filter(Boolean)
@@ -37,20 +38,29 @@ export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
         estilos.fila,
         { minHeight: medidas.altoFila, paddingVertical: medidas.rellenoFila },
         negro && estilos.filaNegra,
-        pasado && estilos.pasado,
+        apagado && estilos.pasado,
         pressed && estilos.pulsado,
       ]}>
       <View style={estilos.horas}>
-        <Texto fuerte style={[textoFila, negro && estilos.textoClaro]}>
+        <Texto fuerte style={[textoFila, apagado && estilos.textoApagado, negro && estilos.textoClaro]}>
           {evento.horaInicio}
         </Texto>
         <Texto pequeno secundario style={negro && estilos.textoClaro}>
           {evento.horaFin}
         </Texto>
       </View>
-      <View style={[estilos.punto, { backgroundColor: negro ? colores.fondo : colorTipo[evento.tipo] }]} />
+      <View
+        style={[
+          estilos.punto,
+          { backgroundColor: negro ? colores.fondo : colorTipo[evento.tipo] },
+          apagado && estilos.puntoApagado,
+        ]}
+      />
       <View style={estilos.textos}>
-        <Texto fuerte style={[textoFila, negro && estilos.textoClaro]} numberOfLines={2}>
+        <Texto
+          fuerte
+          style={[textoFila, apagado && estilos.textoApagado, negro && estilos.textoClaro]}
+          numberOfLines={2}>
           {evento.titulo}
         </Texto>
         {negro ? (
@@ -86,7 +96,10 @@ const estilos = StyleSheet.create({
     borderRadius: radio.normal,
   },
   filaNegra: { backgroundColor: colores.texto, borderColor: colores.texto },
-  pasado: { opacity: 0.5 },
+  // Sin opacidad: así el texto sigue pasando el contraste mínimo.
+  pasado: { backgroundColor: 'transparent' },
+  textoApagado: { color: colores.textoSecundario },
+  puntoApagado: { opacity: 0.45 },
   pulsado: { opacity: 0.75, transform: [{ scale: 0.99 }] },
   horas: { width: 48 },
   punto: { width: 10, height: 10, borderRadius: 5 },

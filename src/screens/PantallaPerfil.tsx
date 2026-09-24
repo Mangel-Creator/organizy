@@ -3,7 +3,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Boton, Pantalla, Texto, Titulo } from '@/components';
+import { Boton, Pantalla, Selector, Texto, Titulo } from '@/components';
+import { guardarDensidad, OPCIONES_DENSIDAD, useDensidad } from '@/data/densidad';
 import { borrarEventosEjemplo, crearEventosEjemplo } from '@/data/eventos';
 import { guardarPerfil, repetirBienvenida, usePerfil } from '@/data/perfil';
 import {
@@ -34,7 +35,14 @@ import { SeccionAvisos } from './perfil/SeccionAvisos';
 type EstadosPermisos = Record<Permiso, EstadoPermiso | undefined>;
 
 // Perfil: editar los datos de la bienvenida, activar permisos y repetir la bienvenida.
+const EXPLICACION_DENSIDAD = {
+  aire: 'Letra algo mayor y más espacio: unos 3 o 4 eventos por pantalla.',
+  equilibrado: 'Unos 5 o 6 eventos por pantalla.',
+  compacto: 'Más apretado para días llenos: 8 o más eventos por pantalla.',
+} as const;
+
 export function PantallaPerfil() {
+  const { nivel: densidad } = useDensidad();
   const { perfil } = usePerfil();
   const [borrador, setBorrador] = useState<Borrador>(() => borradorDesdePerfil(perfil));
   const [errores, setErrores] = useState<Errores>({});
@@ -138,6 +146,19 @@ export function PantallaPerfil() {
           <MensajeError texto={aviso} />
         )}
       </View>
+
+      <Titulo nivel={2} style={estilos.seccion}>
+        Cómo se ve
+      </Titulo>
+      <Selector
+        etiqueta="Cuánto cabe en Hoy y en Semana"
+        opciones={OPCIONES_DENSIDAD}
+        valor={densidad}
+        alCambiar={guardarDensidad}
+      />
+      <Texto pequeno secundario>
+        {EXPLICACION_DENSIDAD[densidad]} Se aplica al momento.
+      </Texto>
 
       <Titulo nivel={2} style={estilos.seccion}>
         Permisos

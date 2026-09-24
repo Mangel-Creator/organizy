@@ -286,7 +286,11 @@ function FilaTarea({ tarea, detalle, apagada }: FilaTareaLista) {
         style={({ pressed }) => [estilos.tareaTextos, pressed && estilos.pulsado]}>
         <Texto
           fuerte
-          style={[{ fontSize: medidas.texto, lineHeight: medidas.interlineado }, tarea.hecha && estilos.tachada]}>
+          style={[
+            { fontSize: medidas.texto, lineHeight: medidas.interlineado },
+            apagada && estilos.textoApagado,
+            tarea.hecha && estilos.tachada,
+          ]}>
           {tarea.titulo}
         </Texto>
         <Texto pequeno secundario>
@@ -322,6 +326,8 @@ const estilos = StyleSheet.create({
     borderRadius: radio.normal,
   },
   tareaTextos: { flex: 1, minHeight: 44, justifyContent: 'center' },
-  apagada: { opacity: 0.55 },
+  // Sin opacidad, para que el texto siga pasando el contraste mínimo.
+  apagada: { backgroundColor: 'transparent' },
+  textoApagado: { color: colores.textoSecundario },
   tachada: { textDecorationLine: 'line-through' },
 });
