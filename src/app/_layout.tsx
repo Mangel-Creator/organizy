@@ -42,8 +42,8 @@ export default function LayoutRaiz() {
   const listo = (letrasListas || !!errorLetras) && perfilCargado;
 
   useEffect(() => {
-    // Lee el perfil guardado y, en el móvil, calcula coordenadas que falten
-    // (por ejemplo, si la bienvenida se rellenó desde el navegador).
+    // Lee el perfil guardado y calcula las coordenadas que falten
+    // (por ejemplo, si se rellenó sin conexión).
     cargarPerfil().then(() => completarCoordenadasPendientes());
   }, []);
 

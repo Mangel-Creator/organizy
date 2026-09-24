@@ -9,6 +9,7 @@ import {
   abrirAjustesDelTelefono,
   consultarPermiso,
   pedirPermiso,
+  PERMISOS_DISPONIBLES,
   type EstadoPermiso,
   type Permiso,
 } from '@/services/permisos';
@@ -138,16 +139,14 @@ export function PantallaPerfil() {
       <Titulo nivel={2} style={estilos.seccion}>
         Permisos
       </Titulo>
-      <TarjetaPermiso
-        permiso="ubicacion"
-        estado={permisos.ubicacion}
-        alActivar={() => activar('ubicacion')}
-      />
-      <TarjetaPermiso
-        permiso="notificaciones"
-        estado={permisos.notificaciones}
-        alActivar={() => activar('notificaciones')}
-      />
+      {PERMISOS_DISPONIBLES.map((permiso) => (
+        <TarjetaPermiso
+          key={permiso}
+          permiso={permiso}
+          estado={permisos[permiso]}
+          alActivar={() => activar(permiso)}
+        />
+      ))}
 
       <Titulo nivel={2} style={estilos.seccion}>
         Pruebas

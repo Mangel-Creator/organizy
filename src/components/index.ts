@@ -1,3 +1,4 @@
+export { AvisoPantallaInicio } from './AvisoPantallaInicio';
 export { BarraProgreso } from './BarraProgreso';
 export { Boton } from './Boton';
 export { BotonInicial } from './BotonInicial';

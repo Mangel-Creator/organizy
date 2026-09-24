@@ -130,7 +130,7 @@ export async function comprobarPaso1(b: Borrador): Promise<{ borrador: Borrador;
     } else if (resultado.estado === 'no-encontrado') {
       errores.vivienda = MENSAJE_NO_ENCONTRADO;
     }
-    // "no-disponible" (navegador): se guarda sin coordenadas y se calculan en el móvil.
+    // "no-disponible" (sin conexión): se guarda sin coordenadas y se calculan más tarde.
   }
   return { borrador, errores };
 }

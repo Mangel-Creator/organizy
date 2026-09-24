@@ -3,22 +3,29 @@ import { Platform } from 'react-native';
 
 import { guardarPerfil, leerPerfil, type Coordenadas, type Lugar } from '@/data/perfil';
 
-// Convierte texto ("Chamberí, Madrid") en coordenadas con expo-location.
-// Solo funciona en el móvil (Android e iOS). En el navegador del ordenador
-// devuelve "no-disponible": se guarda el texto y las coordenadas se calculan
-// la próxima vez que se abra la app en el móvil (ver completarCoordenadasPendientes).
+// Convierte texto ("Chamberí, Madrid") en coordenadas.
+// - En el móvil (Android e iOS): con expo-location, que usa el buscador del teléfono.
+// - En la web: con el buscador gratuito de OpenStreetMap (Nominatim). Solo se envía
+//   el texto de la dirección; ningún otro dato del usuario.
+// Si no hay conexión devuelve "no-disponible": se guarda el texto y las coordenadas
+// se calculan la próxima vez que se abra la app (ver completarCoordenadasPendientes).
 
 export type ResultadoBusqueda =
   | { estado: 'encontrado'; coordenadas: Coordenadas }
   | { estado: 'no-encontrado' }
   | { estado: 'no-disponible' };
 
-export const puedeBuscarCoordenadas = Platform.OS === 'ios' || Platform.OS === 'android';
+export const usaOpenStreetMap = Platform.OS === 'web';
+
+// Texto de atribución que exigen las normas de OpenStreetMap.
+export const ATRIBUCION_OPENSTREETMAP =
+  'Las direcciones se buscan con OpenStreetMap (© colaboradores de OpenStreetMap).';
 
 export async function buscarCoordenadas(texto: string): Promise<ResultadoBusqueda> {
-  if (!puedeBuscarCoordenadas) {
-    return { estado: 'no-disponible' };
-  }
+  return usaOpenStreetMap ? buscarEnOpenStreetMap(texto) : buscarEnElTelefono(texto);
+}
+
+async function buscarEnElTelefono(texto: string): Promise<ResultadoBusqueda> {
   try {
     const resultados = await Location.geocodeAsync(texto);
     const primero = resultados[0];
@@ -30,8 +37,48 @@ export async function buscarCoordenadas(texto: string): Promise<ResultadoBusqued
       coordenadas: { latitud: primero.latitude, longitud: primero.longitude },
     };
   } catch {
-    // iOS da error cuando no encuentra nada; también si no hay conexión.
+    // iOS da error cuando no encuentra nada.
     return { estado: 'no-encontrado' };
+  }
+}
+
+// Las normas de Nominatim piden como mucho una búsqueda por segundo.
+const ESPERA_ENTRE_BUSQUEDAS_MS = 1100;
+let ultimaBusqueda = 0;
+
+async function esperarTurno() {
+  const falta = ultimaBusqueda + ESPERA_ENTRE_BUSQUEDAS_MS - Date.now();
+  ultimaBusqueda = Date.now() + Math.max(falta, 0);
+  if (falta > 0) {
+    await new Promise((resolver) => setTimeout(resolver, falta));
+  }
+}
+
+async function buscarEnOpenStreetMap(texto: string): Promise<ResultadoBusqueda> {
+  await esperarTurno();
+  const parametros = new URLSearchParams({
+    q: texto,
+    format: 'jsonv2',
+    limit: '1',
+    'accept-language': 'es',
+  });
+  try {
+    const respuesta = await fetch(`https://nominatim.openstreetmap.org/search?${parametros}`);
+    if (!respuesta.ok) {
+      return { estado: 'no-disponible' };
+    }
+    const resultados = (await respuesta.json()) as { lat: string; lon: string }[];
+    const primero = resultados[0];
+    if (!primero) {
+      return { estado: 'no-encontrado' };
+    }
+    return {
+      estado: 'encontrado',
+      coordenadas: { latitud: Number(primero.lat), longitud: Number(primero.lon) },
+    };
+  } catch {
+    // Sin conexión o el servicio no responde.
+    return { estado: 'no-disponible' };
   }
 }
 
@@ -44,11 +91,8 @@ async function completarLugar<T extends Lugar>(lugar: T): Promise<T> {
 }
 
 // Si hay sitios guardados sin coordenadas, intenta calcularlas ahora.
-// Se llama al arrancar la app; en el navegador no hace nada.
+// Se llama al arrancar la app. Va de uno en uno para no saturar el buscador.
 export async function completarCoordenadasPendientes(): Promise<void> {
-  if (!puedeBuscarCoordenadas) {
-    return;
-  }
   const perfil = await leerPerfil();
   if (!perfil) {
     return;
@@ -58,6 +102,9 @@ export async function completarCoordenadasPendientes(): Promise<void> {
     return;
   }
   const vivienda = await completarLugar(perfil.vivienda);
-  const sitios = await Promise.all(perfil.sitios.map(completarLugar));
+  const sitios = [];
+  for (const sitio of perfil.sitios) {
+    sitios.push(await completarLugar(sitio));
+  }
   await guardarPerfil({ ...perfil, vivienda, sitios });
 }

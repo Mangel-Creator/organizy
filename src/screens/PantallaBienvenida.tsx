@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { BarraProgreso, Boton, Pantalla, Texto, Titulo } from '@/components';
 import { completarBienvenida, usePerfil } from '@/data/perfil';
-import { pedirPermiso } from '@/services/permisos';
+import { PERMISOS_DISPONIBLES, pedirPermiso } from '@/services/permisos';
 import { espacio } from '@/theme';
 
 import {
@@ -69,8 +69,9 @@ export function PantallaBienvenida() {
     setOcupado(true);
     if (pedirPermisos) {
       // Se piden uno detrás de otro. Diga lo que diga el usuario, se sigue adelante.
-      await pedirPermiso('ubicacion');
-      await pedirPermiso('notificaciones');
+      for (const permiso of PERMISOS_DISPONIBLES) {
+        await pedirPermiso(permiso);
+      }
     }
     await completarBienvenida(perfilDesdeBorrador(borrador));
   };
@@ -104,13 +105,15 @@ export function PantallaBienvenida() {
 
       {paso === 'permisos' ? (
         <>
-          <Titulo>Dos permisos</Titulo>
+          <Titulo>{PERMISOS_DISPONIBLES.length === 1 ? 'Un permiso' : 'Dos permisos'}</Titulo>
           <Texto secundario>
-            Te los pido ahora para que Organizy funcione del todo. Si dices que no, la app sigue
-            funcionando y puedes activarlos más tarde desde Perfil.
+            {PERMISOS_DISPONIBLES.length === 1
+              ? 'Te lo pido ahora para que Organizy funcione del todo. Si dices que no, la app sigue funcionando y puedes activarlo más tarde desde Perfil.'
+              : 'Te los pido ahora para que Organizy funcione del todo. Si dices que no, la app sigue funcionando y puedes activarlos más tarde desde Perfil.'}
           </Texto>
-          <TarjetaPermiso permiso="ubicacion" />
-          <TarjetaPermiso permiso="notificaciones" />
+          {PERMISOS_DISPONIBLES.map((permiso) => (
+            <TarjetaPermiso key={permiso} permiso={permiso} />
+          ))}
           <View style={estilos.botones}>
             <Boton
               titulo={ocupado ? 'Un momento…' : 'Continuar'}

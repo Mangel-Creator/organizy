@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { BotonInicial, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
+import { AvisoPantallaInicio, BotonInicial, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
 import { usePerfil } from '@/data/perfil';
 import { capitalizar, formatearFechaLarga, saludoSegunHora } from '@/services/fechas';
 import { espacio } from '@/theme';
@@ -21,6 +21,7 @@ export function PantallaHoy() {
         </View>
         <BotonInicial nombre={nombre} onPress={() => router.push('/perfil')} />
       </View>
+      <AvisoPantallaInicio />
       <Tarjeta>
         <Texto>Aquí verás tu día. Próximamente.</Texto>
       </Tarjeta>

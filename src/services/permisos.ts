@@ -23,7 +23,15 @@ function traducir(respuesta: Respuesta): EstadoPermiso {
   return respuesta.canAskAgain ? 'denegado' : 'bloqueado';
 }
 
-const notificacionesDisponibles = Platform.OS !== 'web';
+export const esWeb = Platform.OS === 'web';
+
+// En la web las notificaciones llegarán en la fase 4 (necesitan un servidor).
+const notificacionesDisponibles = !esWeb;
+
+// Permisos que tiene sentido pedir o mostrar en este dispositivo.
+export const PERMISOS_DISPONIBLES: Permiso[] = notificacionesDisponibles
+  ? ['ubicacion', 'notificaciones']
+  : ['ubicacion'];
 
 export async function consultarPermiso(permiso: Permiso): Promise<EstadoPermiso> {
   try {

@@ -4,7 +4,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Boton, CampoTexto, Selector, Tarjeta, Texto, Titulo } from '@/components';
 import type { SitioHabitual } from '@/data/perfil';
-import { buscarCoordenadas, puedeBuscarCoordenadas } from '@/services/lugares';
+import {
+  ATRIBUCION_OPENSTREETMAP,
+  buscarCoordenadas,
+  usaOpenStreetMap,
+} from '@/services/lugares';
 import { alturaTactil, colores, espacio } from '@/theme';
 
 import {
@@ -170,10 +174,9 @@ function SitiosHabituales({ sitios, alCambiar }: PropsSitios) {
           disabled={buscando}
           onPress={anadir}
         />
-        {!puedeBuscarCoordenadas ? (
+        {usaOpenStreetMap ? (
           <Texto pequeno secundario>
-            Desde el navegador no puedo situar las direcciones en el mapa. Las guardo y lo haré
-            cuando abras la app en el móvil.
+            {ATRIBUCION_OPENSTREETMAP}
           </Texto>
         ) : null}
       </Tarjeta>

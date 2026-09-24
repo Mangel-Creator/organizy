@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Boton, Tarjeta, Texto } from '@/components';
-import type { EstadoPermiso, Permiso } from '@/services/permisos';
+import { esWeb, type EstadoPermiso, type Permiso } from '@/services/permisos';
 import { colores, espacio } from '@/theme';
 
 type NombreIcono = ComponentProps<typeof Ionicons>['name'];
@@ -41,6 +41,9 @@ type Props = {
 export function TarjetaPermiso({ permiso, estado, alActivar }: Props) {
   const info = EXPLICACION_PERMISOS[permiso];
   const sePuedeActivar = estado && estado !== 'concedido' && estado !== 'no-disponible';
+  // En la web, si se dijo que no, el navegador ya no vuelve a preguntar: hay que
+  // activarlo desde sus ajustes.
+  const soloDesdeNavegador = esWeb && (estado === 'denegado' || estado === 'bloqueado');
   return (
     <Tarjeta>
       <View style={estilos.cabecera}>
@@ -55,7 +58,12 @@ export function TarjetaPermiso({ permiso, estado, alActivar }: Props) {
         ) : null}
       </View>
       <Texto secundario>{info.frase}</Texto>
-      {sePuedeActivar && alActivar ? (
+      {soloDesdeNavegador ? (
+        <Texto pequeno secundario>
+          Para activarlo, toca el icono junto a la dirección de la web (o los ajustes del
+          navegador) y permite la ubicación.
+        </Texto>
+      ) : sePuedeActivar && alActivar ? (
         <Boton
           variante="secundario"
           titulo={estado === 'bloqueado' ? 'Abrir Ajustes del teléfono' : 'Activar'}
