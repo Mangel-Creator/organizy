@@ -345,8 +345,11 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 - Al tocar un aviso: evento -> su ficha; resumen y cierre -> Hoy. Se escucha en
   `_layout.tsx` con `escucharRespuestas` (también el aviso que abrió la app cerrada).
 - Perfil > Avisos (`screens/perfil/SeccionAvisos.tsx`): interruptores por tipo, aviso
-  con botón si no hay permiso, número de avisos programados y "Enviar un aviso de
-  prueba" (llega en 5 s).
+  con botón si no hay permiso, número de avisos programados y botones de prueba que
+  llegan en 5 s: "Enviar un aviso de prueba", "Probar el resumen de la mañana" y
+  "Probar el cierre del día" (`probarAvisoDeHoy`: el aviso de hoy tal cual, con sus
+  botones). Hacen falta porque las horas van de 15 en 15 min y no se puede poner la
+  hora de levantarse "dentro de 2 minutos".
 - Android: canal "avisos" de importancia alta.
 
 ## Hoja de ruta
