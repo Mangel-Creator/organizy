@@ -26,5 +26,5 @@ export function ConfirmacionMovidas() {
 }
 
 const estilos = StyleSheet.create({
-  texto: { color: colores.amigos },
+  texto: { color: colores.texto }, // el verde es solo de Amigos
 });
