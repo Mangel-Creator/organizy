@@ -45,6 +45,10 @@ const MIGRACIONES: Migracion[] = [
       UPDATE eventos SET lugar_tipo = 'otro' WHERE lugar_direccion IS NOT NULL;
     `);
   },
+  // 3. Fase 4: antelación del aviso de cada evento (NULL = la del perfil, 0 = sin aviso).
+  async (bd) => {
+    await bd.execAsync('ALTER TABLE eventos ADD COLUMN aviso_min INTEGER;');
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;

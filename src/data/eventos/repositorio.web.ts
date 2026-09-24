@@ -14,7 +14,8 @@ const CLAVE = 'eventos';
 async function leer(): Promise<Evento[]> {
   const eventos = await leerAjuste<Evento[]>(CLAVE, []);
   // Convierte los lugares guardados con el formato antiguo (ver normalizarLugar).
-  return eventos.map((e) => ({ ...e, lugar: normalizarLugar(e.lugar) }));
+  // Los eventos guardados antes de la fase 4 no tienen "avisoMin": usan el del perfil.
+  return eventos.map((e) => ({ ...e, lugar: normalizarLugar(e.lugar), avisoMin: e.avisoMin ?? null }));
 }
 
 export const repositorio: RepositorioEventos = {

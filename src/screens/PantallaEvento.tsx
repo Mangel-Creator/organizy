@@ -34,6 +34,7 @@ import {
   resolverLugar,
   sitioTrabajo,
 } from '@/services/agenda';
+import { avisosDisponibles } from '@/services/avisos';
 import {
   claveDia,
   horaDesdeMinutos,
@@ -44,7 +45,13 @@ import {
 import { ATRIBUCION_OPENSTREETMAP, buscarCoordenadas, usaOpenStreetMap } from '@/services/lugares';
 import { alturaTactil, colores, espacio } from '@/theme';
 
-import { OPCIONES_DURACION, OPCIONES_REPETICION, OPCIONES_TIPO, rangoHoras } from './calendario/textos';
+import {
+  OPCIONES_AVISO,
+  OPCIONES_DURACION,
+  OPCIONES_REPETICION,
+  OPCIONES_TIPO,
+  rangoHoras,
+} from './calendario/textos';
 import { MENSAJE_NO_ENCONTRADO } from './formulario-perfil/borrador';
 import { MensajeError } from './formulario-perfil/MensajeError';
 
@@ -89,6 +96,18 @@ export function PantallaEvento() {
 }
 
 type Duracion = (typeof OPCIONES_DURACION)[number]['valor'];
+type Aviso = (typeof OPCIONES_AVISO)[number]['valor'];
+
+// Antelación de los avisos elegida en el perfil (30 min si no hay perfil).
+function antelacionDelPerfil(perfil: Perfil | null): number {
+  return perfil?.antelacionAvisoMin ?? 30;
+}
+
+// Aviso elegido: el del evento o, si no tiene, el del perfil.
+function avisoInicial(avisoMin: number | null, perfil: Perfil | null): Aviso {
+  const valor = String(avisoMin ?? antelacionDelPerfil(perfil));
+  return (OPCIONES_AVISO.find((o) => o.valor === valor)?.valor ?? '30') as Aviso;
+}
 
 type Borrador = {
   titulo: string;
@@ -101,6 +120,7 @@ type Borrador = {
   hecha: boolean;
   foco: boolean;
   repeticion: Repeticion;
+  aviso: Aviso;
   // "ninguno", "casa", "sitio:<id>", "nuevo-trabajo" (si el perfil aún no tiene
   // Trabajo) u "otro" (dirección exacta).
   lugar: string;
@@ -139,6 +159,7 @@ function borradorInicial(evento: Evento | null, fecha: ClaveDia, perfil: Perfil 
       hecha: false,
       foco: false,
       repeticion: 'nunca',
+      aviso: avisoInicial(null, perfil),
       lugar: 'ninguno',
       direccion: '',
       direccionTrabajo: '',
@@ -157,6 +178,7 @@ function borradorInicial(evento: Evento | null, fecha: ClaveDia, perfil: Perfil 
     hecha: evento.hecha,
     foco: evento.foco,
     repeticion: evento.repeticion,
+    aviso: avisoInicial(evento.avisoMin, perfil),
     lugar: lugarInicial(evento.lugar, perfil),
     direccion: evento.lugar?.tipo === 'otro' ? evento.lugar.direccion : '',
     direccionTrabajo: '',
@@ -173,6 +195,7 @@ type Props = {
 
 function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
   const [b, setBorrador] = useState<Borrador>(() => borradorInicial(evento, fechaInicial, perfil));
+  const antelacionPerfil = antelacionDelPerfil(perfil);
   const [errores, setErrores] = useState<Errores>({});
   const [ocupado, setOcupado] = useState(false);
   const [focoPisado, setFocoPisado] = useState<{ bloque: Evento; nuevo: Evento } | null>(null);
@@ -292,6 +315,8 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
       duracionMin: b.flexible ? Number(b.duracion) : null,
       hecha: b.flexible && b.hecha,
       foco: !b.flexible && b.foco,
+      // Si coincide con el del perfil se guarda null: así sigue al perfil si lo cambias.
+      avisoMin: b.flexible || Number(b.aviso) === antelacionPerfil ? null : Number(b.aviso),
       ejemplo: evento?.ejemplo ?? false,
     };
 
@@ -384,6 +409,22 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
             valor={b.repeticion}
             alCambiar={(repeticion) => cambiar({ repeticion })}
           />
+
+          {/* En la web no hay avisos: solo en la app del móvil. */}
+          {avisosDisponibles ? (
+            <View style={estilos.grupo}>
+              <Selector
+                etiqueta="Aviso antes"
+                opciones={OPCIONES_AVISO}
+                valor={b.aviso}
+                alCambiar={(aviso) => cambiar({ aviso })}
+              />
+              <Texto pequeno secundario>
+                Por defecto, {OPCIONES_AVISO.find((o) => o.valor === String(antelacionPerfil))?.etiqueta ?? '30 min'}{' '}
+                como en tu perfil. Los tipos de aviso se activan o se quitan en Perfil.
+              </Texto>
+            </View>
+          ) : null}
         </>
       )}
 

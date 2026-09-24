@@ -86,7 +86,8 @@ export function cargarPerfil(): Promise<EstadoPerfil> {
       return estado;
     })();
   }
-  return cargando;
+  // Siempre el estado actual (no el del momento de la primera lectura).
+  return cargando.then(() => estado);
 }
 
 export async function leerPerfil(): Promise<Perfil | null> {
@@ -118,6 +119,9 @@ function suscribirse(avisar: () => void) {
     oyentes.delete(avisar);
   };
 }
+
+// Para la lógica sin pantallas (por ejemplo, reprogramar los avisos al cambiar el perfil).
+export { suscribirse as suscribirsePerfil };
 
 function leerEstado() {
   return estado;

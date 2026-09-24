@@ -44,6 +44,7 @@ import {
 } from '@/services/fechas';
 import { colorTipo, colores, espacio, radio } from '@/theme';
 
+import { ConfirmacionMovidas } from './calendario/ConfirmacionMovidas';
 import { FilaEvento } from './calendario/FilaEvento';
 import { TarjetaHueco } from './calendario/TarjetaHueco';
 import { OPCIONES_ENERGIA, abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
@@ -142,6 +143,7 @@ export function PantallaHoy() {
             <Texto style={estilos.resumen} accessibilityLiveRegion="polite">
               {frase}
             </Texto>
+            <ConfirmacionMovidas />
 
             {siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
 

@@ -29,6 +29,7 @@ import { CamposRitmo } from './formulario-perfil/CamposRitmo';
 import { CamposSobreTi } from './formulario-perfil/CamposSobreTi';
 import { MensajeError } from './formulario-perfil/MensajeError';
 import { TarjetaPermiso } from './formulario-perfil/permisos';
+import { SeccionAvisos } from './perfil/SeccionAvisos';
 
 type EstadosPermisos = Record<Permiso, EstadoPermiso | undefined>;
 
@@ -149,6 +150,14 @@ export function PantallaPerfil() {
           alActivar={() => activar(permiso)}
         />
       ))}
+
+      <Titulo nivel={2} style={estilos.seccion}>
+        Avisos
+      </Titulo>
+      <SeccionAvisos
+        permiso={permisos.notificaciones}
+        alActivarPermiso={() => activar('notificaciones')}
+      />
 
       <Titulo nivel={2} style={estilos.seccion}>
         Pruebas

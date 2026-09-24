@@ -24,6 +24,7 @@ type Fila = {
   hecha: number;
   foco: number;
   ejemplo: number;
+  aviso_min: number | null; // migración 3
 };
 
 function lugarDesdeFila(f: Fila): LugarEvento | null {
@@ -57,6 +58,7 @@ function eventoDesdeFila(f: Fila): Evento {
     duracionMin: f.duracion_min,
     hecha: f.hecha === 1,
     foco: f.foco === 1,
+    avisoMin: f.aviso_min,
     ejemplo: f.ejemplo === 1,
   };
 }
@@ -75,8 +77,8 @@ export const repositorio: RepositorioEventos = {
       `INSERT OR REPLACE INTO eventos (
         id, titulo, fecha, hora_inicio, hora_fin, tipo,
         lugar_tipo, lugar_sitio_id, lugar_direccion, lugar_latitud, lugar_longitud,
-        notas, repeticion, flexible, duracion_min, hecha, foco, ejemplo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        notas, repeticion, flexible, duracion_min, hecha, foco, ejemplo, aviso_min
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       e.id,
       e.titulo,
       e.fecha,
@@ -95,6 +97,7 @@ export const repositorio: RepositorioEventos = {
       e.hecha ? 1 : 0,
       e.foco ? 1 : 0,
       e.ejemplo ? 1 : 0,
+      e.avisoMin,
     );
   },
 

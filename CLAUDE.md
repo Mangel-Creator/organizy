@@ -21,8 +21,9 @@ alarmas. En español de España.
 - **Lo que no puede hacer la web** (quedará solo para la app): alarma que suena como
   despertador con el móvil bloqueado, widget y voz sin abrir la app (en web, como
   mucho, un Atajo del iPhone). En web lo que no funcione se oculta o se avisa.
-- Avisos en web (fase 4): solo con la web añadida a la pantalla de inicio y con un
-  servidor pequeño de notificaciones push.
+- Avisos en web: solo con la web añadida a la pantalla de inicio y con un servidor
+  pequeño de notificaciones push. La fase 4 se hizo sin servidor, así que en la web
+  no hay avisos (Perfil lo explica); los push web quedan pendientes para más adelante.
 - Funciones que necesiten claves secretas (IA, WhatsApp Business) irán detrás de un
   servidor pequeño propio, nunca dentro de la app.
 - Instalar en el iPhone una versión propia (alarmas, widget, voz) exige la cuenta
@@ -113,15 +114,17 @@ src/
     formulario-perfil/ Piezas compartidas por Bienvenida y Perfil (campos, borrador,
                        comprobaciones y tarjetas de permisos).
     calendario/        Piezas de Hoy, Semana y la ficha de evento (FilaEvento,
-                       TarjetaHueco, textos y opciones, useAhora).
+                       TarjetaHueco, textos y opciones, useAhora, ConfirmacionMovidas).
+    perfil/            Secciones propias de Perfil (SeccionAvisos).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
                        perfil.ts (perfil del usuario), energia.ts (energía del día),
-                       eventos/ (eventos del calendario).
+                       avisos.ts (qué avisos están activados), eventos/ (eventos).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
-                       agenda/ (huecos, carga, resumen, reparto; con pruebas).
+                       agenda/ (huecos, carga, resumen, reparto; con pruebas),
+                       avisos/ (notificaciones locales; con pruebas).
 ```
 
 El alias `@/` apunta a `src/`.
@@ -184,7 +187,7 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 - `src/data/db.ts`: `obtenerBD()` abre `organizy.db` y aplica migraciones. Para crear
   tablas, añade una función al final de `MIGRACIONES` (la versión se guarda en
   `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
-  `lugar_tipo` y `lugar_sitio_id`. Solo se usa en Android e iOS.
+  `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`. Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -210,6 +213,14 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   `siguienteEvento`, `bloqueDeFocoQuePisa`, `colocarEnCarriles`, `ventanaDelDia`,
   `resolverLugar`, `sitioTrabajo`.
   Tiempos en minutos desde medianoche (`Intervalo`).
+- `src/data/avisos.ts`: `AjustesAvisos` (eventos, resumenManana, cierreDia,
+  cierreSinPendientes) en `organizy:avisos`. En pantallas `useAjustesAvisos()`; para
+  cambiar `cambiarAjustesAvisos({...})`.
+- Evento tiene `avisoMin` (migración 3 de SQLite, columna `aviso_min`): null = la
+  antelación del perfil, 0 = sin aviso. En la web, los eventos antiguos sin el campo
+  se leen con null.
+- Para lógica sin pantallas: `leerEventos()` / `suscribirseEventos` y
+  `cargarPerfil()` / `suscribirsePerfil`.
 
 ## Fase 2: bienvenida y perfil (decisiones)
 
@@ -292,12 +303,53 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   borrarlos también en la web publicada (allí no hay modo desarrollo).
 - La hora actual se refresca cada minuto (`useAhora`).
 
+## Fase 4: avisos (decisiones)
+
+- Notificaciones locales con expo-notifications, sin servidor. Solo en el móvil: en
+  la web no se programan (el navegador no puede con la web cerrada) y Perfil > Avisos
+  lo explica; la ficha de evento oculta el selector de aviso.
+- `src/services/avisos/`:
+  - `planificar.ts` (puro, con pruebas): `planificarAvisos(ctx)` recorre los días
+    (desde ayer hasta 7 días) y llama a los `GENERADORES` activos. Quita lo pasado,
+    ordena por hora y se queda con 60 (`MAX_AVISOS`; iOS admite 64).
+  - `programar.ts` (móvil) y `programar.web.ts` (no hace nada): hablan con
+    expo-notifications. Cada vez se borran todos los programados (menos el de
+    prueba) y se vuelven a programar.
+  - `index.ts`: `iniciarAvisos()` (en `_layout`) reprograma al arrancar, al volver a
+    abrir la app y al cambiar eventos, perfil o ajustes (espera 0,5 s para juntar
+    cambios). Solo si hay permiso y la bienvenida está hecha.
+  - **Para añadir un tipo de aviso** (fase 4b: inicio de bloque, fin del descanso,
+    hora de dormir...): añade el tipo en `tipos.ts`, su interruptor en
+    `data/avisos.ts` y un generador `(ctx, dia) => AvisoPlanificado[]` en `GENERADORES`.
+    Si lleva botones, crea su categoría en `prepararAvisos()`.
+- Aviso de evento: "En 30 min: Reunión con Laura en Oficina" y la hora debajo. Uno
+  por cada repetición. Antelación: la del evento o la del perfil (10, 30 o 60 min).
+  En la ficha, si eliges la misma que el perfil se guarda null (sigue al perfil).
+- Resumen de la mañana a la hora de levantarse: `fraseDeLaManana` usa `fraseResumen`
+  de Hoy (huecos de todo el día) y añade "Hoy va justo, mejor no metas nada más." si
+  la carga pasa del 80 % (la misma cuenta que Semana).
+- Cierre del día una hora antes de acostarse (si se acuesta después de medianoche,
+  cae de madrugada). Con tareas pendientes: "Te quedaron 2 cosas: ... ¿Las paso a
+  mañana?" con botones "Sí, a mañana" y "Abrir". Sin pendientes: buenas noches o
+  nada (ajuste `cierreSinPendientes`).
+- **"Sí, a mañana" abre la app**: iOS (y Expo Go) no deja ejecutar código de la app
+  desde un botón de la notificación si está cerrada. Al abrirse pasa al momento las
+  tareas que sigan pendientes ese día y enseña Hoy con "Hecho: he pasado N tareas a
+  mañana" (`/?movidas=N`, `ConfirmacionMovidas`). Con una versión propia se podría
+  hacer sin abrir la app (tarea en segundo plano).
+- Al tocar un aviso: evento -> su ficha; resumen y cierre -> Hoy. Se escucha en
+  `_layout.tsx` con `escucharRespuestas` (también el aviso que abrió la app cerrada).
+- Perfil > Avisos (`screens/perfil/SeccionAvisos.tsx`): interruptores por tipo, aviso
+  con botón si no hay permiso, número de avisos programados y "Enviar un aviso de
+  prueba" (llega en 5 s).
+- Android: canal "avisos" de importancia alta.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
 - [x] 2. Formulario de bienvenida y perfil.
 - [x] 3. Calendario: pantallas Hoy y Semana.
-- [ ] 4. Avisos (notificaciones).
+- [x] 4. Avisos (notificaciones).
 - [ ] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
 - [ ] 5. Captura rápida con IA.
 - [ ] 6. Mapa, tráfico, radares y rutas.

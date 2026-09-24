@@ -25,7 +25,8 @@ function traducir(respuesta: Respuesta): EstadoPermiso {
 
 export const esWeb = Platform.OS === 'web';
 
-// En la web las notificaciones llegarán en la fase 4 (necesitan un servidor).
+// En la web no hay notificaciones: los avisos programados de la fase 4 son solo
+// para el móvil (en la web harían falta push con un servidor).
 const notificacionesDisponibles = !esWeb;
 
 // Permisos que tiene sentido pedir o mostrar en este dispositivo.

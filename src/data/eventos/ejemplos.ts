@@ -21,6 +21,7 @@ export function crearEjemplos(hoy: ClaveDia): Evento[] {
     duracionMin: null,
     hecha: false,
     foco: false,
+    avisoMin: null,
     ejemplo: true,
     ...datos,
   });

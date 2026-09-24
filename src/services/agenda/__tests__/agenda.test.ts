@@ -41,6 +41,7 @@ function evento(parcial: Partial<Evento>): Evento {
     duracionMin: null,
     hecha: false,
     foco: false,
+    avisoMin: null,
     ejemplo: false,
     ...parcial,
   };

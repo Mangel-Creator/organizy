@@ -99,6 +99,14 @@ function suscribirse(avisar: () => void) {
   };
 }
 
+// Para la lógica sin pantallas (por ejemplo, programar los avisos).
+export async function leerEventos(): Promise<Evento[]> {
+  await cargarEventos();
+  return estado.eventos;
+}
+
+export { suscribirse as suscribirseEventos };
+
 function leerEstado() {
   return estado;
 }

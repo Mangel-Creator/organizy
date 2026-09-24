@@ -4,13 +4,14 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import { Fraunces_600SemiBold, Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
-import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { cargarEventos } from '@/data/eventos';
 import { cargarPerfil, usePerfil } from '@/data/perfil';
+import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { colores } from '@/theme';
 
@@ -47,6 +48,8 @@ export default function LayoutRaiz() {
     // (por ejemplo, si se rellenó sin conexión).
     cargarPerfil().then(() => completarCoordenadasPendientes());
     cargarEventos();
+    // Programa los avisos de los próximos días y los mantiene al día (solo en el móvil).
+    return iniciarAvisos();
   }, []);
 
   useEffect(() => {
@@ -54,6 +57,23 @@ export default function LayoutRaiz() {
       SplashScreen.hideAsync();
     }
   }, [listo]);
+
+  // Al tocar un aviso (o uno de sus botones), abre la pantalla que corresponda.
+  // Espera a que se vean las pestañas: antes no se puede navegar.
+  useEffect(() => {
+    if (!listo || !bienvenidaCompletada) return;
+    return escucharRespuestas(async (respuesta) => {
+      const destino = await atenderRespuesta(respuesta);
+      if (destino.pantalla === 'evento') {
+        router.push({ pathname: '/evento', params: { id: destino.id } });
+      } else {
+        router.navigate({
+          pathname: '/',
+          params: destino.movidas !== undefined ? { movidas: String(destino.movidas) } : {},
+        });
+      }
+    });
+  }, [listo, bienvenidaCompletada]);
 
   if (!listo) {
     return null;

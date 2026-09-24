@@ -52,6 +52,9 @@ export type Evento = {
   duracionMin: number | null; // solo en tareas flexibles
   hecha: boolean; // solo en tareas flexibles
   foco: boolean; // bloque de foco: tiempo protegido
+  // Minutos de antelación del aviso (fase 4). null = la del perfil; 0 = sin aviso.
+  // Las tareas flexibles no tienen aviso (no tienen hora).
+  avisoMin: number | null;
   ejemplo: boolean; // creado como ejemplo (se puede borrar desde Perfil)
 };
 
