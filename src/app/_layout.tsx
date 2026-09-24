@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { cargarEventos } from '@/data/eventos';
 import { cargarPerfil, usePerfil } from '@/data/perfil';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { colores } from '@/theme';
@@ -45,6 +46,7 @@ export default function LayoutRaiz() {
     // Lee el perfil guardado y calcula las coordenadas que falten
     // (por ejemplo, si se rellenó sin conexión).
     cargarPerfil().then(() => completarCoordenadasPendientes());
+    cargarEventos();
   }, []);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function LayoutRaiz() {
         <Stack.Protected guard={bienvenidaCompletada}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="perfil" />
+          <Stack.Screen name="evento" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />

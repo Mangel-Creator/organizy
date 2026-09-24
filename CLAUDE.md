@@ -71,9 +71,13 @@ sesión que fuera**:
 - Expo Router (rutas en `src/app/`), pestañas con `Tabs` de `expo-router`.
 - Iconos: `@expo/vector-icons` (Ionicons).
 - Letras: `@expo-google-fonts/fraunces` y `@expo-google-fonts/dm-sans`.
-- Guardado local: AsyncStorage (ajustes) y expo-sqlite (datos como eventos).
+- Guardado local: AsyncStorage (ajustes) y expo-sqlite (datos como eventos; en la
+  web, AsyncStorage: ver "Fase 3").
 - Se prueba con Expo Go mientras no haga falta código nativo propio.
 - Instala librerías siempre con `npx expo install <paquete>`.
+- Pruebas automáticas con Jest (`jest-expo`): `npm test`. Están junto al código en
+  carpetas `__tests__`. Importa `describe`, `it` y `expect` de `@jest/globals`
+  (TypeScript 6 no carga los tipos globales solo).
 
 ## Estructura de carpetas
 
@@ -83,6 +87,7 @@ src/
     _layout.tsx        Raíz: carga letras y perfil, tema, Stack con rutas protegidas.
     bienvenida.tsx     Formulario de bienvenida (solo si no se ha completado).
     perfil.tsx         Perfil (se abre desde el botón con la inicial en Hoy).
+    evento.tsx         Ficha de evento: /evento?fecha=AAAA-MM-DD (nuevo) o ?id= (editar).
     (tabs)/_layout.tsx Barra inferior con las 5 pestañas.
     (tabs)/index.tsx   Hoy
     (tabs)/semana.tsx  Semana
@@ -92,12 +97,16 @@ src/
   screens/             Una pantalla por archivo (PantallaHoy, PantallaSemana...).
     formulario-perfil/ Piezas compartidas por Bienvenida y Perfil (campos, borrador,
                        comprobaciones y tarjetas de permisos).
+    calendario/        Piezas de Hoy, Semana y la ficha de evento (FilaEvento,
+                       TarjetaHueco, textos y opciones, useAhora).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
-                       perfil.ts (perfil del usuario).
+                       perfil.ts (perfil del usuario), energia.ts (energía del día),
+                       eventos/ (eventos del calendario).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
-                       lugares.ts (texto -> coordenadas), permisos.ts.
+                       lugares.ts (texto -> coordenadas), permisos.ts,
+                       agenda/ (huecos, carga, resumen, reparto; con pruebas).
 ```
 
 El alias `@/` apunta a `src/`.
@@ -116,6 +125,9 @@ Todo sale de `src/theme/index.ts`. No escribas colores sueltos en las pantallas.
 | Principal y "Clientes" | `#D2461E` (naranja) |
 | "Amigos" | `#16734F` (verde) |
 | "Yo" (personal) | `#1C1B18` (negro) |
+| Barrita de carga normal y borde de huecos | `#A39C8E` (gris, `cargaNormal`) |
+
+Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
 - Títulos con Fraunces (600 y 700). Resto con DM Sans (400, 500 y 700).
 - Esquinas redondeadas de 14 a 18 px, mucho aire, sin degradados.
@@ -138,6 +150,11 @@ Todo sale de `src/theme/index.ts`. No escribas colores sueltos en las pantallas.
 - `Pantalla` — contenedor de pantalla con fondo, márgenes y scroll. Se aparta del
   teclado (`KeyboardAvoidingView`) y admite `ref` para hacer scroll.
 - `Proximamente` — relleno provisional para pestañas sin hacer.
+- `BotonFlotante` — botón redondo naranja con "+", fijo abajo a la derecha. Va al
+  lado de `Pantalla` (no dentro), en un `View` con `flex: 1`.
+- `Casilla` — casilla para marcar como hecho (44 px).
+- `Interruptor` — fila con texto, ayuda y un interruptor sí/no.
+- `SelectorFecha` — día con − y + y atajos Hoy, Mañana y En una semana.
 
 ## Idioma y formatos
 
@@ -151,7 +168,7 @@ Todo sale de `src/theme/index.ts`. No escribas colores sueltos en las pantallas.
   prefijo `organizy:`).
 - `src/data/db.ts`: `obtenerBD()` abre `organizy.db` y aplica migraciones. Para crear
   tablas, añade una función al final de `MIGRACIONES` (la versión se guarda en
-  `PRAGMA user_version`). Aún no hay tablas.
+  `PRAGMA user_version`). Migración 1: tabla `eventos`. Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -159,6 +176,23 @@ Todo sale de `src/theme/index.ts`. No escribas colores sueltos en las pantallas.
   - En pantallas: `const { perfil } = usePerfil()` (se actualiza solo al guardar).
   - Fuera de pantallas: `await leerPerfil()`.
   - `guardarPerfil`, `completarBienvenida`, `repetirBienvenida`.
+- `src/data/eventos/`: tipo `Evento` en `tipos.ts` (título, fecha "AAAA-MM-DD",
+  horas "HH:MM" o null, tipo `cliente|amigos|yo`, lugar, notas, repetición,
+  flexible + duración + hecha, foco, ejemplo).
+  - En pantallas: `const { cargado, eventos } = useEventos()`.
+  - Para cambiar: `guardarEvento` (crea o actualiza), `borrarEvento`, `marcarHecha`,
+    `moverTareas`, `crearEventosEjemplo`, `borrarEventosEjemplo`, `nuevoId`.
+  - El guardado real está en `repositorio.ts` (SQLite, móvil) y `repositorio.web.ts`
+    (AsyncStorage, clave `organizy:eventos`). Metro elige el archivo según la
+    plataforma; los dos cumplen el tipo `RepositorioEventos`. Nada de la web debe
+    importar `db.ts`.
+- `src/data/energia.ts`: `useEnergia(dia)` guarda "a-tope", "normal" o "tranqui" en
+  `organizy:energia:AAAA-MM-DD`.
+- `src/services/agenda/` (funciones puras, con pruebas en `__tests__`):
+  `eventosDelDia`, `ocurreEnDia` (repeticiones), `tareasPendientes`,
+  `calcularHuecos`, `cargaDelDia`, `fraseResumen`, `repartirTareas`,
+  `siguienteEvento`, `bloqueDeFocoQuePisa`, `colocarEnCarriles`, `ventanaDelDia`.
+  Tiempos en minutos desde medianoche (`Intervalo`).
 
 ## Fase 2: bienvenida y perfil (decisiones)
 
@@ -191,11 +225,49 @@ Todo sale de `src/theme/index.ts`. No escribas colores sueltos en las pantallas.
   Android). Se puede cerrar y no vuelve a salir. Añadirla a la pantalla de inicio
   evita que Safari borre los datos tras 7 días sin usarla.
 
+## Fase 3: calendario, Hoy y Semana (decisiones)
+
+- **SQLite no funciona en la web publicada**: expo-sqlite en navegador necesita
+  `SharedArrayBuffer` y las cabeceras COOP/COEP, que GitHub Pages no permite. Por eso
+  los eventos van a SQLite en el móvil y a AsyncStorage (localStorage) en la web,
+  con la misma interfaz (`src/data/eventos/`).
+- Eventos con hora fija: fin después del inicio y el mismo día (no cruzan la
+  medianoche). Las tareas flexibles no tienen hora ni se repiten; tienen fecha
+  prevista, duración (15, 30, 60 o 120 min) y casilla de hecha. Las de días
+  anteriores sin hacer aparecen hoy.
+- Repetición: cada día, cada semana (mismo día de la semana) o cada mes (mismo
+  número; los meses sin ese día se saltan). Editar o borrar afecta a toda la serie.
+- Lugar: "Sin lugar", un sitio habitual del perfil o "Otra dirección" (se buscan sus
+  coordenadas con `buscarCoordenadas`; sin conexión se guarda solo el texto). Si la
+  dirección no cambia al editar, se conservan sus coordenadas.
+- Aviso "Esto pisa tu bloque de foco. ¿Seguro?" al guardar un evento (nuevo o
+  editado) que se solapa con un bloque de foco de ese día. Las confirmaciones (foco y
+  borrar) son tarjetas dentro de la pantalla, no `Alert`, porque `Alert` no hace
+  nada en la web.
+- Hoy: fecha "Jueves 24 sept", saludo, energía, frase resumen, tarjeta "Siguiente"
+  (el que está en curso o el próximo, hasta 7 días), lista con huecos y tareas.
+  Huecos libres: de 1 h o más, desde ahora (redondeado al cuarto de hora) hasta la
+  hora de acostarse, empezando como pronto al levantarse.
+- Energía: A tope coloca las tareas primero en el momento en que rinde más
+  (mañana 6-14, tarde 14-21, noche 21-24); Normal las reparte por turnos entre los
+  huecos; Tranqui deja 2 y ofrece "Pasar el resto a mañana". Para colocar tareas
+  valen huecos de 15 min o más. Las tareas solo muestran una hora sugerida: nunca
+  mueven eventos.
+- Semana: carga = (horas de eventos, sin contar dos veces lo solapado, + duración
+  de tareas pendientes) / horas de jornada del perfil. Más del 80 % = naranja.
+  Cambiar de semana con flechas o deslizando sobre la tira de días; "Hoy" aparece
+  cuando no se está en hoy. Línea de horas a 56 px por hora; los solapados van en
+  columnas; los bloques de foco en negro con "Protegido".
+- Eventos de ejemplo: en modo desarrollo se crean solos la primera vez
+  (`organizy:ejemplosCreados`). En Perfil > Pruebas hay botones para crearlos y
+  borrarlos también en la web publicada (allí no hay modo desarrollo).
+- La hora actual se refresca cada minuto (`useAhora`).
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
 - [x] 2. Formulario de bienvenida y perfil.
-- [ ] 3. Calendario: pantallas Hoy y Semana.
+- [x] 3. Calendario: pantallas Hoy y Semana.
 - [ ] 4. Avisos (notificaciones).
 - [ ] 5. Captura rápida con IA.
 - [ ] 6. Mapa, tráfico, radares y rutas.

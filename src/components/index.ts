@@ -1,12 +1,16 @@
 export { AvisoPantallaInicio } from './AvisoPantallaInicio';
 export { BarraProgreso } from './BarraProgreso';
 export { Boton } from './Boton';
+export { BotonFlotante } from './BotonFlotante';
 export { BotonInicial } from './BotonInicial';
 export { CampoTexto } from './CampoTexto';
+export { Casilla } from './Casilla';
+export { Interruptor } from './Interruptor';
 export { Pantalla } from './Pantalla';
 export { Proximamente } from './Proximamente';
 export { Selector, type Opcion } from './Selector';
 export { SelectorDias } from './SelectorDias';
+export { SelectorFecha } from './SelectorFecha';
 export { SelectorHora } from './SelectorHora';
 export { Tarjeta } from './Tarjeta';
 export { Texto } from './Texto';

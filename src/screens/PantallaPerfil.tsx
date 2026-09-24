@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Boton, Pantalla, Texto, Titulo } from '@/components';
+import { borrarEventosEjemplo, crearEventosEjemplo } from '@/data/eventos';
 import { guardarPerfil, repetirBienvenida, usePerfil } from '@/data/perfil';
 import {
   abrirAjustesDelTelefono,
@@ -38,6 +39,7 @@ export function PantallaPerfil() {
   const [errores, setErrores] = useState<Errores>({});
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [avisoEjemplos, setAvisoEjemplos] = useState<string | null>(null);
   const [permisos, setPermisos] = useState<EstadosPermisos>({
     ubicacion: undefined,
     notificaciones: undefined,
@@ -155,6 +157,26 @@ export function PantallaPerfil() {
         Vuelve a mostrar el formulario de bienvenida. Tus datos se conservan.
       </Texto>
       <Boton variante="secundario" titulo="Repetir bienvenida" onPress={repetirBienvenida} />
+
+      <Texto secundario style={estilos.separado}>
+        Eventos de ejemplo para probar Hoy y Semana.
+        {__DEV__ ? ' En modo desarrollo se crean solos la primera vez.' : ''} Tus eventos no se tocan.
+      </Texto>
+      <Boton
+        variante="secundario"
+        titulo="Crear eventos de ejemplo"
+        onPress={async () => setAvisoEjemplos(`Creados ${await crearEventosEjemplo()} eventos de ejemplo.`)}
+      />
+      <Boton
+        variante="secundario"
+        titulo="Borrar eventos de ejemplo"
+        onPress={async () => setAvisoEjemplos(`Borrados ${await borrarEventosEjemplo()} eventos de ejemplo.`)}
+      />
+      {avisoEjemplos ? (
+        <Texto fuerte style={estilos.guardado} accessibilityLiveRegion="polite">
+          {avisoEjemplos}
+        </Texto>
+      ) : null}
     </Pantalla>
   );
 }
@@ -171,4 +193,5 @@ const estilos = StyleSheet.create({
   pulsado: { opacity: 0.6 },
   seccion: { marginTop: espacio.m },
   guardado: { color: colores.amigos, marginTop: espacio.xs },
+  separado: { marginTop: espacio.s },
 });

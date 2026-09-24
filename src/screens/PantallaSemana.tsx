@@ -1,5 +1,370 @@
-import { Proximamente } from '@/components';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useState } from 'react';
+import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
+
+import { BotonFlotante, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
+import { useEventos, type Evento } from '@/data/eventos';
+import { usePerfil } from '@/data/perfil';
+import {
+  cargaDelDia,
+  colocarEnCarriles,
+  duracionTarea,
+  eventosDelDia,
+  intervaloDe,
+  minutosDeJornada,
+  tareasPendientes,
+  ventanaDelDia,
+} from '@/services/agenda';
+import {
+  DIAS_SEMANA_LETRA,
+  claveDia,
+  fechaDesdeClave,
+  formatearDiaCorto,
+  formatearDuracion,
+  horaDesdeMinutos,
+  inicioDeSemana,
+  minutosDelDia,
+  nombreMes,
+  numeroSemana,
+  sumarDias,
+  type ClaveDia,
+} from '@/services/fechas';
+import { alturaTactil, colorTipo, colores, espacio, fuentes, radio, tamanos } from '@/theme';
+
+import { abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
+import { useAhora } from './calendario/useAhora';
+
+const ALTURA_BARRA = 44;
+const PX_POR_HORA = 56;
 
 export function PantallaSemana() {
-  return <Proximamente titulo="Semana" />;
+  const ahora = useAhora();
+  const hoy = claveDia(ahora);
+  const [elegido, setElegido] = useState<ClaveDia>(hoy);
+  const { perfil } = usePerfil();
+  const { eventos } = useEventos();
+
+  const lunes = claveDia(inicioDeSemana(fechaDesdeClave(elegido)));
+  const dias = Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
+  const jornada = minutosDeJornada(perfil);
+  const fechaElegida = fechaDesdeClave(elegido);
+
+  const cambiarSemana = (semanas: number) => setElegido((actual) => sumarDias(actual, 7 * semanas));
+  // Deslizar a los lados sobre la tira de días cambia de semana.
+  const [deslizar] = useState(() =>
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -50) setElegido((actual) => sumarDias(actual, 7));
+        else if (g.dx > 50) setElegido((actual) => sumarDias(actual, -7));
+      },
+    }),
+  );
+
+  const delDia = eventosDelDia(eventos, elegido);
+  const tareas = eventos.filter((e) => e.flexible && e.fecha === elegido);
+
+  return (
+    <View style={estilos.contenedor}>
+      <Pantalla contentContainerStyle={estilos.contenido}>
+        <View style={estilos.cabecera}>
+          <View style={estilos.textos}>
+            <Titulo>{nombreMes(fechaDesdeClave(sumarDias(lunes, 3)))}</Titulo>
+            <Texto secundario>Semana {numeroSemana(fechaElegida)}</Texto>
+          </View>
+          <BotonIcono icono="chevron-back" etiqueta="Semana anterior" onPress={() => cambiarSemana(-1)} />
+          <BotonIcono icono="chevron-forward" etiqueta="Semana siguiente" onPress={() => cambiarSemana(1)} />
+        </View>
+
+        <View style={estilos.leyendaFila}>
+          <View style={estilos.leyenda}>
+            <Leyenda color={colorTipo.cliente} texto="Clientes" />
+            <Leyenda color={colorTipo.amigos} texto="Amigos" />
+            <Leyenda color={colorTipo.yo} texto="Yo" />
+          </View>
+          {elegido !== hoy ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Volver a hoy"
+              onPress={() => setElegido(hoy)}
+              style={({ pressed }) => [estilos.botonHoy, pressed && estilos.pulsado]}>
+              <Texto fuerte pequeno>
+                Hoy
+              </Texto>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <Tarjeta style={estilos.tira} {...deslizar.panHandlers}>
+          {dias.map((dia, i) => {
+            const ocupados = eventosDelDia(eventos, dia).map(intervaloDe);
+            const minutosTareas = tareasPendientes(eventos, dia, hoy).reduce((t, e) => t + duracionTarea(e), 0);
+            const carga = cargaDelDia(ocupados, minutosTareas, jornada);
+            const esElegido = dia === elegido;
+            const fecha = fechaDesdeClave(dia);
+            return (
+              <Pressable
+                key={dia}
+                accessibilityRole="button"
+                accessibilityLabel={`${formatearDiaCorto(fecha)}, ${Math.round(carga.proporcion * 100)} % ocupado`}
+                accessibilityState={{ selected: esElegido }}
+                onPress={() => setElegido(dia)}
+                style={({ pressed }) => [estilos.dia, pressed && estilos.pulsado]}>
+                <Texto pequeno secundario>
+                  {DIAS_SEMANA_LETRA[i]}
+                </Texto>
+                <View style={[estilos.numero, esElegido && estilos.numeroElegido]}>
+                  <Texto
+                    fuerte
+                    style={[esElegido && estilos.numeroTextoElegido, !esElegido && dia === hoy && estilos.numeroHoy]}>
+                    {fecha.getDate()}
+                  </Texto>
+                </View>
+                <View style={estilos.barraFondo}>
+                  <View
+                    style={[
+                      estilos.barra,
+                      {
+                        height: Math.min(carga.proporcion, 1) * ALTURA_BARRA,
+                        backgroundColor: carga.alta ? colores.principal : colores.cargaNormal,
+                      },
+                    ]}
+                  />
+                </View>
+              </Pressable>
+            );
+          })}
+        </Tarjeta>
+
+        <Titulo nivel={2} style={estilos.seccion}>
+          {elegido === hoy ? `Hoy, ${formatearDiaCorto(fechaElegida)}` : formatearDiaCorto(fechaElegida)}
+        </Titulo>
+
+        {delDia.length === 0 && tareas.length === 0 ? (
+          <Texto secundario>Nada previsto este día.</Texto>
+        ) : null}
+        {delDia.length > 0 ? (
+          <LineaDeHoras
+            eventos={delDia}
+            ventana={ventanaDelDia(perfil)}
+            minutoAhora={elegido === hoy ? minutosDelDia(ahora) : null}
+          />
+        ) : null}
+
+        {tareas.length > 0 ? (
+          <>
+            <Titulo nivel={3} style={estilos.seccion}>
+              Sin hora fija
+            </Titulo>
+            {tareas.map((tarea) => (
+              <Pressable
+                key={tarea.id}
+                accessibilityRole="button"
+                onPress={() => abrirEvento(tarea.id)}
+                style={({ pressed }) => [estilos.tarea, pressed && estilos.pulsado]}>
+                <Ionicons
+                  name={tarea.hecha ? 'checkbox' : 'square-outline'}
+                  size={22}
+                  color={colores.texto}
+                />
+                <Texto style={[estilos.textos, tarea.hecha && estilos.tachada]}>{tarea.titulo}</Texto>
+                <Texto pequeno secundario>
+                  {formatearDuracion(duracionTarea(tarea))}
+                </Texto>
+              </Pressable>
+            ))}
+          </>
+        ) : null}
+      </Pantalla>
+      <BotonFlotante etiqueta="Añadir evento" onPress={() => nuevoEvento(elegido)} />
+    </View>
+  );
 }
+
+type PropsLinea = {
+  eventos: Evento[];
+  ventana: { inicio: number; fin: number };
+  minutoAhora: number | null;
+};
+
+// Día con su línea de horas: cada evento ocupa la altura de lo que dura.
+function LineaDeHoras({ eventos, ventana, minutoAhora }: PropsLinea) {
+  const tramos = eventos.map(intervaloDe);
+  const desde = Math.floor(Math.min(ventana.inicio, ...tramos.map((t) => t.inicio)) / 60) * 60;
+  const hasta = Math.ceil(Math.max(ventana.fin, ...tramos.map((t) => t.fin)) / 60) * 60;
+  const y = (minuto: number) => ((minuto - desde) / 60) * PX_POR_HORA;
+  const horas = Array.from({ length: (hasta - desde) / 60 + 1 }, (_, i) => desde + i * 60);
+
+  return (
+    <View style={[estilos.linea, { height: y(hasta) }]}>
+      {horas.map((minuto) => (
+        <View key={minuto} style={[estilos.marcaHora, { top: y(minuto) }]}>
+          <Texto pequeno secundario style={estilos.etiquetaHora}>
+            {horaDesdeMinutos(minuto)}
+          </Texto>
+          <View style={estilos.rayaHora} />
+        </View>
+      ))}
+
+      <View style={estilos.zonaEventos}>
+        {colocarEnCarriles(eventos, intervaloDe).map(({ elemento: evento, carril, carriles }) => {
+          const { inicio, fin } = intervaloDe(evento);
+          const ancho = 100 / carriles;
+          return (
+            <Pressable
+              key={evento.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${rangoHoras(evento)}, ${evento.titulo}${evento.foco ? ', protegido' : ''}`}
+              onPress={() => abrirEvento(evento.id)}
+              style={({ pressed }) => [
+                estilos.bloque,
+                evento.foco ? estilos.bloqueFoco : { borderLeftColor: colorTipo[evento.tipo] },
+                {
+                  top: y(inicio) + 1,
+                  height: Math.max(y(fin) - y(inicio) - 2, 26),
+                  left: `${carril * ancho}%`,
+                  width: `${ancho}%`,
+                },
+                pressed && estilos.pulsado,
+              ]}>
+              <Texto pequeno fuerte numberOfLines={1} style={evento.foco && estilos.textoClaro}>
+                {evento.titulo}
+              </Texto>
+              {fin - inicio >= 45 ? (
+                <Texto pequeno numberOfLines={1} style={evento.foco ? estilos.textoClaro : estilos.secundario}>
+                  {evento.foco ? `Protegido · ${rangoHoras(evento)}` : rangoHoras(evento)}
+                </Texto>
+              ) : null}
+            </Pressable>
+          );
+        })}
+        {minutoAhora !== null && minutoAhora >= desde && minutoAhora <= hasta ? (
+          <View style={[estilos.ahora, { top: y(minutoAhora) }]} accessibilityLabel="Ahora" />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function Leyenda({ color, texto }: { color: string; texto: string }) {
+  return (
+    <View style={estilos.leyendaItem}>
+      <View style={[estilos.punto, { backgroundColor: color }]} />
+      <Texto pequeno secundario>
+        {texto}
+      </Texto>
+    </View>
+  );
+}
+
+type PropsIcono = {
+  icono: 'chevron-back' | 'chevron-forward';
+  etiqueta: string;
+  onPress: () => void;
+};
+
+function BotonIcono({ icono, etiqueta, onPress }: PropsIcono) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={etiqueta}
+      onPress={onPress}
+      style={({ pressed }) => [estilos.botonIcono, pressed && estilos.pulsado]}>
+      <Ionicons name={icono} size={22} color={colores.texto} />
+    </Pressable>
+  );
+}
+
+const ANCHO_HORAS = 48;
+
+const estilos = StyleSheet.create({
+  contenedor: { flex: 1, backgroundColor: colores.fondo },
+  contenido: { paddingBottom: 120 }, // deja sitio al botón "+"
+  cabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
+  textos: { flex: 1 },
+  botonIcono: {
+    width: alturaTactil,
+    height: alturaTactil,
+    borderRadius: alturaTactil / 2,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    backgroundColor: colores.tarjeta,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pulsado: { opacity: 0.7 },
+  leyendaFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  leyenda: { flexDirection: 'row', gap: espacio.m },
+  leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs },
+  punto: { width: 10, height: 10, borderRadius: 5 },
+  botonHoy: {
+    minHeight: alturaTactil,
+    paddingHorizontal: espacio.m,
+    borderRadius: radio.chip,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    backgroundColor: colores.tarjeta,
+    justifyContent: 'center',
+  },
+  tira: { flexDirection: 'row', paddingHorizontal: espacio.xs, gap: 0 },
+  dia: { flex: 1, alignItems: 'center', gap: espacio.xs, paddingVertical: espacio.xs },
+  numero: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numeroElegido: { backgroundColor: colores.texto },
+  numeroTextoElegido: { color: colores.fondo },
+  numeroHoy: { color: colores.principal },
+  barraFondo: {
+    width: 8,
+    height: ALTURA_BARRA,
+    borderRadius: radio.chip,
+    backgroundColor: colores.fondo,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  barra: { width: '100%', borderRadius: radio.chip },
+  seccion: { marginTop: espacio.s },
+  linea: { position: 'relative', marginTop: espacio.s },
+  marcaHora: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -9,
+  },
+  etiquetaHora: { width: ANCHO_HORAS, fontFamily: fuentes.textoMedio, fontSize: 12 },
+  rayaHora: { flex: 1, height: 1, backgroundColor: colores.borde },
+  zonaEventos: { position: 'absolute', top: 0, bottom: 0, left: ANCHO_HORAS, right: 0 },
+  bloque: {
+    position: 'absolute',
+    paddingHorizontal: espacio.s,
+    paddingVertical: 2,
+    backgroundColor: colores.tarjeta,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderLeftWidth: 4,
+    borderRadius: radio.pequeno - 4,
+    overflow: 'hidden',
+  },
+  bloqueFoco: { backgroundColor: colores.texto, borderColor: colores.texto },
+  textoClaro: { color: colores.fondo },
+  secundario: { color: colores.textoSecundario, fontSize: tamanos.pequeno },
+  ahora: { position: 'absolute', left: -4, right: 0, height: 2, backgroundColor: colores.principal },
+  tarea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.s,
+    minHeight: alturaTactil + 8,
+    paddingHorizontal: espacio.m,
+    backgroundColor: colores.tarjeta,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.normal,
+  },
+  tachada: { textDecorationLine: 'line-through' },
+});

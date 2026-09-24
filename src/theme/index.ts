@@ -15,6 +15,16 @@ export const colores = {
   clientes: '#D2461E',
   amigos: '#16734F',
   yo: '#1C1B18',
+
+  // Barrita de carga en Semana cuando el día va normal (si pasa del 80 %, naranja)
+  cargaNormal: '#A39C8E',
+} as const;
+
+// Color de cada tipo de evento (Cliente, Amigos, Yo)
+export const colorTipo = {
+  cliente: colores.clientes,
+  amigos: colores.amigos,
+  yo: colores.yo,
 } as const;
 
 export const fuentes = {
@@ -52,4 +62,4 @@ export const radio = {
 // Altura mínima de cualquier cosa que se pueda pulsar
 export const alturaTactil = 44;
 
-export const tema = { colores, fuentes, tamanos, espacio, radio, alturaTactil };
+export const tema = { colores, colorTipo, fuentes, tamanos, espacio, radio, alturaTactil };

@@ -26,6 +26,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Si alguna prueba falla, no se publica
+      - run: npm test
       - run: npx expo export --platform web
       # GitHub Pages ignora las carpetas que empiezan por "_" si no hay este archivo
       - run: touch dist/.nojekyll

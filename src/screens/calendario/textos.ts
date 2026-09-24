@@ -1,0 +1,47 @@
+import { router } from 'expo-router';
+
+import type { Opcion } from '@/components';
+import type { Evento, Repeticion, TipoEvento } from '@/data/eventos';
+import type { Energia } from '@/services/agenda';
+import type { ClaveDia } from '@/services/fechas';
+
+// Textos y atajos compartidos por Hoy, Semana y la ficha de evento.
+
+export const OPCIONES_TIPO: Opcion<TipoEvento>[] = [
+  { valor: 'cliente', etiqueta: 'Cliente' },
+  { valor: 'amigos', etiqueta: 'Amigos' },
+  { valor: 'yo', etiqueta: 'Yo' },
+];
+
+export const OPCIONES_REPETICION: Opcion<Repeticion>[] = [
+  { valor: 'nunca', etiqueta: 'No se repite' },
+  { valor: 'diaria', etiqueta: 'Cada día' },
+  { valor: 'semanal', etiqueta: 'Cada semana' },
+  { valor: 'mensual', etiqueta: 'Cada mes' },
+];
+
+export const OPCIONES_DURACION: Opcion<'15' | '30' | '60' | '120'>[] = [
+  { valor: '15', etiqueta: '15 min' },
+  { valor: '30', etiqueta: '30 min' },
+  { valor: '60', etiqueta: '1 h' },
+  { valor: '120', etiqueta: '2 h' },
+];
+
+export const OPCIONES_ENERGIA: Opcion<Energia>[] = [
+  { valor: 'a-tope', etiqueta: 'A tope' },
+  { valor: 'normal', etiqueta: 'Normal' },
+  { valor: 'tranqui', etiqueta: 'Tranqui' },
+];
+
+// "09:30 – 10:30"
+export function rangoHoras(evento: Evento): string {
+  return `${evento.horaInicio ?? ''} – ${evento.horaFin ?? ''}`;
+}
+
+export function abrirEvento(id: string) {
+  router.push({ pathname: '/evento', params: { id } });
+}
+
+export function nuevoEvento(fecha: ClaveDia) {
+  router.push({ pathname: '/evento', params: { fecha } });
+}

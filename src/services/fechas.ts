@@ -82,3 +82,67 @@ export function horaDesdeMinutos(minutos: number): string {
   const m = total % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+
+// --- Días como texto "AAAA-MM-DD" (fase 3) ---
+// Los eventos guardan su fecha así, en la hora local del dispositivo. Se pueden
+// comparar como texto: "2026-09-23" < "2026-09-24".
+
+export type ClaveDia = string;
+
+// Fecha -> "2026-09-24"
+export function claveDia(fecha: Date): ClaveDia {
+  const a = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, '0');
+  const d = String(fecha.getDate()).padStart(2, '0');
+  return `${a}-${m}-${d}`;
+}
+
+// "2026-09-24" -> Date a las 00:00 (hora local)
+export function fechaDesdeClave(clave: ClaveDia): Date {
+  const [a, m, d] = clave.split('-').map(Number);
+  return new Date(a, m - 1, d);
+}
+
+export function sumarDias(clave: ClaveDia, dias: number): ClaveDia {
+  const fecha = fechaDesdeClave(clave);
+  fecha.setDate(fecha.getDate() + dias);
+  return claveDia(fecha);
+}
+
+// Minutos desde medianoche de una fecha: 18:05 -> 1085.
+export function minutosDelDia(fecha: Date): number {
+  return fecha.getHours() * 60 + fecha.getMinutes();
+}
+
+const formatoDiaSemana = new Intl.DateTimeFormat(LOCALE, { weekday: 'long' });
+const formatoMesCorto = new Intl.DateTimeFormat(LOCALE, { month: 'short' });
+const formatoMes = new Intl.DateTimeFormat(LOCALE, { month: 'long' });
+
+// "Jueves 24 sept"
+export function formatearDiaCorto(fecha: Date): string {
+  const mes = formatoMesCorto.format(fecha).replace('.', '');
+  return capitalizar(`${formatoDiaSemana.format(fecha)} ${fecha.getDate()} ${mes}`);
+}
+
+// "Septiembre"
+export function nombreMes(fecha: Date): string {
+  return capitalizar(formatoMes.format(fecha));
+}
+
+// Número de semana según la norma europea (ISO 8601): la semana 1 es la que
+// contiene el primer jueves del año.
+export function numeroSemana(fecha: Date): number {
+  const jueves = inicioDeSemana(fecha);
+  jueves.setDate(jueves.getDate() + 3);
+  const primeroDeEnero = new Date(jueves.getFullYear(), 0, 1);
+  const dias = Math.round((jueves.getTime() - primeroDeEnero.getTime()) / 86400000);
+  return Math.floor(dias / 7) + 1;
+}
+
+// 120 -> "2 h", 90 -> "1 h 30 min", 45 -> "45 min"
+export function formatearDuracion(minutos: number): string {
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
