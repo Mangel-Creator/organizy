@@ -40,6 +40,31 @@ alarmas. En español de España.
 - Antes de dar algo por terminado: `npx tsc --noEmit` sin errores.
 - Windows + PowerShell 5.1: encadena comandos con `;`, no con `&&`.
 
+### Indicaciones del usuario entre sesiones (lo más importante)
+
+El usuario trabaja con varias sesiones abiertas a la vez (una por fase o tema).
+Sus indicaciones mandan sobre el prompt de la fase, **dijera lo que dijera en la
+sesión que fuera**:
+
+- Si en una sesión da una indicación que afecta al proyecto en general (qué es la
+  app, para quién, diseño, forma de trabajar, decisiones técnicas), apúntala en
+  este archivo (en su sección o en "Decisiones del usuario"), haz commit en `main`
+  y avisa a las otras sesiones de Organizy que estén abiertas (ListAgents +
+  SendMessage) con un resumen corto.
+- Si solo afecta a lo que se hace en esa sesión, no hace falta compartirla.
+- Si afecta solo a otra sesión concreta, díselo solo a esa sesión.
+- Al empezar o retomar trabajo, relee este archivo en `main`: puede haber cambiado
+  desde otra sesión.
+- Si una indicación nueva choca con otra anterior, manda la más reciente; si hay
+  duda, pregunta al usuario.
+
+### Decisiones del usuario
+
+- 23/09/2026 — App para todo el mundo con los datos de cada usuario privados; web
+  para los demás y app para el dueño (ver "Para quién y dónde funciona").
+- 24/09/2026 — Direcciones en la web con OpenStreetMap.
+- 24/09/2026 — Sus indicaciones valen para todas las sesiones (ver arriba).
+
 ## Tecnología
 
 - Expo SDK 57 (React Native 0.86) con TypeScript.
