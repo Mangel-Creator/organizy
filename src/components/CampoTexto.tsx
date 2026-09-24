@@ -45,11 +45,11 @@ const estilos = StyleSheet.create({
     fontSize: tamanos.normal,
     color: colores.texto,
   },
-  campoError: { borderColor: colores.principal, borderWidth: 2 },
+  campoError: { borderColor: colores.aviso, borderWidth: 2 },
   error: {
     fontFamily: fuentes.textoMedio,
     fontSize: tamanos.pequeno,
-    color: colores.principal,
+    color: colores.aviso,
   },
   ayuda: {
     fontFamily: fuentes.texto,

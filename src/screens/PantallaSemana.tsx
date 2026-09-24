@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, LayoutAnimationConfig } from 'react-native-reanimated';
 
 import { BotonFlotante, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
+import { useDensidad } from '@/data/densidad';
 import { useEventos, type Evento } from '@/data/eventos';
 import { usePerfil } from '@/data/perfil';
 import {
@@ -35,7 +37,9 @@ import { abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
 import { useAhora } from './calendario/useAhora';
 
 const ALTURA_BARRA = 44;
-const PX_POR_HORA = 56;
+// Al cambiar de día, lo de ese día aparece con un fundido corto para que se note el
+// cambio. No se anima al abrir la pantalla ni con "reducir movimiento" activado.
+const CAMBIO_DE_DIA = FadeIn.duration(160);
 
 export function PantallaSemana() {
   const ahora = useAhora();
@@ -126,7 +130,7 @@ export function PantallaSemana() {
                       estilos.barra,
                       {
                         height: Math.min(carga.proporcion, 1) * ALTURA_BARRA,
-                        backgroundColor: carga.alta ? colores.principal : colores.cargaNormal,
+                        backgroundColor: carga.alta ? colores.aviso : colores.cargaNormal,
                       },
                     ]}
                   />
@@ -136,45 +140,49 @@ export function PantallaSemana() {
           })}
         </Tarjeta>
 
-        <Titulo nivel={2} style={estilos.seccion}>
-          {elegido === hoy ? `Hoy, ${formatearDiaCorto(fechaElegida)}` : formatearDiaCorto(fechaElegida)}
-        </Titulo>
-
-        {delDia.length === 0 && tareas.length === 0 ? (
-          <Texto secundario>Nada previsto este día.</Texto>
-        ) : null}
-        {delDia.length > 0 ? (
-          <LineaDeHoras
-            eventos={delDia}
-            ventana={ventanaDelDia(perfil)}
-            minutoAhora={elegido === hoy ? minutosDelDia(ahora) : null}
-          />
-        ) : null}
-
-        {tareas.length > 0 ? (
-          <>
-            <Titulo nivel={3} style={estilos.seccion}>
-              Sin hora fija
+        <LayoutAnimationConfig skipEntering>
+          <Animated.View key={elegido} entering={CAMBIO_DE_DIA} style={estilos.contenidoDia}>
+            <Titulo nivel={2} style={estilos.seccion}>
+              {elegido === hoy ? `Hoy, ${formatearDiaCorto(fechaElegida)}` : formatearDiaCorto(fechaElegida)}
             </Titulo>
-            {tareas.map((tarea) => (
-              <Pressable
-                key={tarea.id}
-                accessibilityRole="button"
-                onPress={() => abrirEvento(tarea.id)}
-                style={({ pressed }) => [estilos.tarea, pressed && estilos.pulsado]}>
-                <Ionicons
-                  name={tarea.hecha ? 'checkbox' : 'square-outline'}
-                  size={22}
-                  color={colores.texto}
-                />
-                <Texto style={[estilos.textos, tarea.hecha && estilos.tachada]}>{tarea.titulo}</Texto>
-                <Texto pequeno secundario>
-                  {formatearDuracion(duracionTarea(tarea))}
-                </Texto>
-              </Pressable>
-            ))}
-          </>
-        ) : null}
+
+            {delDia.length === 0 && tareas.length === 0 ? (
+              <Texto secundario>Nada previsto este día.</Texto>
+            ) : null}
+            {delDia.length > 0 ? (
+              <LineaDeHoras
+                eventos={delDia}
+                ventana={ventanaDelDia(perfil)}
+                minutoAhora={elegido === hoy ? minutosDelDia(ahora) : null}
+              />
+            ) : null}
+
+            {tareas.length > 0 ? (
+              <>
+                <Titulo nivel={3} style={estilos.seccion}>
+                  Sin hora fija
+                </Titulo>
+                {tareas.map((tarea) => (
+                  <Pressable
+                    key={tarea.id}
+                    accessibilityRole="button"
+                    onPress={() => abrirEvento(tarea.id)}
+                    style={({ pressed }) => [estilos.tarea, pressed && estilos.pulsado]}>
+                    <Ionicons
+                      name={tarea.hecha ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={colores.texto}
+                    />
+                    <Texto style={[estilos.textos, tarea.hecha && estilos.tachada]}>{tarea.titulo}</Texto>
+                    <Texto pequeno secundario>
+                      {formatearDuracion(duracionTarea(tarea))}
+                    </Texto>
+                  </Pressable>
+                ))}
+              </>
+            ) : null}
+          </Animated.View>
+        </LayoutAnimationConfig>
       </Pantalla>
       <BotonFlotante etiqueta="Añadir evento" onPress={() => nuevoEvento(elegido)} />
     </View>
@@ -192,7 +200,8 @@ function LineaDeHoras({ eventos, ventana, minutoAhora }: PropsLinea) {
   const tramos = eventos.map(intervaloDe);
   const desde = Math.floor(Math.min(ventana.inicio, ...tramos.map((t) => t.inicio)) / 60) * 60;
   const hasta = Math.ceil(Math.max(ventana.fin, ...tramos.map((t) => t.fin)) / 60) * 60;
-  const y = (minuto: number) => ((minuto - desde) / 60) * PX_POR_HORA;
+  const { medidas } = useDensidad();
+  const y = (minuto: number) => ((minuto - desde) / 60) * medidas.pxPorHora;
   const horas = Array.from({ length: (hasta - desde) / 60 + 1 }, (_, i) => desde + i * 60);
 
   return (
@@ -230,7 +239,7 @@ function LineaDeHoras({ eventos, ventana, minutoAhora }: PropsLinea) {
               <Texto pequeno fuerte numberOfLines={1} style={evento.foco && estilos.textoClaro}>
                 {evento.titulo}
               </Texto>
-              {fin - inicio >= 45 ? (
+              {y(fin) - y(inicio) >= 40 ? (
                 <Texto pequeno numberOfLines={1} style={evento.foco ? estilos.textoClaro : estilos.secundario}>
                   {evento.foco ? `Protegido · ${rangoHoras(evento)}` : rangoHoras(evento)}
                 </Texto>
@@ -328,6 +337,7 @@ const estilos = StyleSheet.create({
   },
   barra: { width: '100%', borderRadius: radio.chip },
   seccion: { marginTop: espacio.s },
+  contenidoDia: { gap: espacio.m },
   linea: { position: 'relative', marginTop: espacio.s },
   marcaHora: {
     position: 'absolute',

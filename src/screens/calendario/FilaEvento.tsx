@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Texto } from '@/components';
+import { useDensidad } from '@/data/densidad';
 import type { Evento } from '@/data/eventos';
 import { usePerfil } from '@/data/perfil';
 import { resolverLugar } from '@/services/agenda';
@@ -19,6 +20,8 @@ type Props = {
 // Al pulsarlo se abre su ficha.
 export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
   const { perfil } = usePerfil();
+  const { medidas } = useDensidad();
+  const textoFila = { fontSize: medidas.texto, lineHeight: medidas.interlineado };
   const negro = focoEnNegro && evento.foco;
   const lugar = resolverLugar(evento.lugar, perfil);
   const detalle = [lugar?.nombre ?? lugar?.direccion, evento.foco && !negro ? 'Bloque de foco' : null]
@@ -32,12 +35,13 @@ export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
       onPress={() => abrirEvento(evento.id)}
       style={({ pressed }) => [
         estilos.fila,
+        { minHeight: medidas.altoFila, paddingVertical: medidas.rellenoFila },
         negro && estilos.filaNegra,
         pasado && estilos.pasado,
         pressed && estilos.pulsado,
       ]}>
       <View style={estilos.horas}>
-        <Texto fuerte style={negro && estilos.textoClaro}>
+        <Texto fuerte style={[textoFila, negro && estilos.textoClaro]}>
           {evento.horaInicio}
         </Texto>
         <Texto pequeno secundario style={negro && estilos.textoClaro}>
@@ -46,7 +50,7 @@ export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
       </View>
       <View style={[estilos.punto, { backgroundColor: negro ? colores.fondo : colorTipo[evento.tipo] }]} />
       <View style={estilos.textos}>
-        <Texto fuerte style={negro && estilos.textoClaro} numberOfLines={2}>
+        <Texto fuerte style={[textoFila, negro && estilos.textoClaro]} numberOfLines={2}>
           {evento.titulo}
         </Texto>
         {negro ? (
@@ -75,9 +79,7 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espacio.m,
-    minHeight: 64,
     paddingHorizontal: espacio.m,
-    paddingVertical: espacio.s,
     backgroundColor: colores.tarjeta,
     borderWidth: 1,
     borderColor: colores.borde,
@@ -85,7 +87,7 @@ const estilos = StyleSheet.create({
   },
   filaNegra: { backgroundColor: colores.texto, borderColor: colores.texto },
   pasado: { opacity: 0.5 },
-  pulsado: { opacity: 0.75 },
+  pulsado: { opacity: 0.75, transform: [{ scale: 0.99 }] },
   horas: { width: 48 },
   punto: { width: 10, height: 10, borderRadius: 5 },
   textos: { flex: 1, gap: 2 },

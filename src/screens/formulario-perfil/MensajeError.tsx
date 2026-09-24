@@ -14,5 +14,5 @@ export function MensajeError({ texto }: { texto?: string | null }) {
 }
 
 const estilos = StyleSheet.create({
-  error: { color: colores.principal, marginTop: espacio.xs },
+  error: { color: colores.aviso, marginTop: espacio.xs },
 });

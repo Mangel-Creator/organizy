@@ -22,7 +22,7 @@ const estilos = StyleSheet.create({
     color: colores.texto,
     fontFamily: fuentes.titulo,
   },
-  n1: { fontSize: tamanos.tituloGrande, lineHeight: 40 },
+  n1: { fontSize: tamanos.tituloGrande, lineHeight: 40, letterSpacing: -0.5 },
   n2: { fontSize: tamanos.titulo, lineHeight: 32 },
   n3: { fontSize: tamanos.grande, lineHeight: 24 },
 });

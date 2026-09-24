@@ -2,22 +2,27 @@
 // Si quieres cambiar un color, cámbialo en este archivo y se actualiza en toda la app.
 
 export const colores = {
-  fondo: '#F3EFE6',
+  fondo: '#F4F1EA',
   tarjeta: '#FFFFFF',
-  texto: '#1C1B18',
+  texto: '#1A1C24',
   textoSecundario: '#5E5A52',
-  borde: '#D9D2C3',
+  borde: '#DDD6C8',
 
-  principal: '#D2461E',
+  // Azul tinta: botones, "+", pestaña activa, interruptores y el día de hoy.
+  principal: '#2B4BD8',
   textoSobrePrincipal: '#FFFFFF',
 
-  // Colores por tipo de evento
-  clientes: '#D2461E',
-  amigos: '#16734F',
-  yo: '#1C1B18',
+  // Granate: errores, avisos ("pisa tu bloque de foco") y días muy cargados.
+  aviso: '#A1172F',
 
-  // Barrita de carga en Semana cuando el día va normal (si pasa del 80 %, naranja)
-  cargaNormal: '#A39C8E',
+  // Colores por tipo de evento. Cada color significa una sola cosa:
+  // el naranja es solo Clientes, el verde solo Amigos y el negro solo Yo.
+  clientes: '#C4461E',
+  amigos: '#16734F',
+  yo: '#1A1C24',
+
+  // Barrita de carga en Semana cuando el día va normal y borde de los huecos libres
+  cargaNormal: '#8A8374',
 } as const;
 
 // Color de cada tipo de evento (Cliente, Amigos, Yo)

@@ -44,7 +44,7 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderColor: colores.borde,
   },
-  pulsado: { opacity: 0.8 },
+  pulsado: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   desactivado: { opacity: 0.45 },
   texto: { fontFamily: fuentes.textoFuerte, fontSize: tamanos.normal },
   textoPrincipal: { color: colores.textoSobrePrincipal },

@@ -38,11 +38,7 @@ const estilos = StyleSheet.create({
     backgroundColor: colores.principal,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colores.texto,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    boxShadow: '0 4px 12px rgba(26, 28, 36, 0.22)', // sombra suave del color del texto
   },
-  pulsado: { opacity: 0.85 },
+  pulsado: { opacity: 0.9, transform: [{ scale: 0.94 }] },
 });
