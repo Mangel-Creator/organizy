@@ -222,6 +222,6 @@ const estilos = StyleSheet.create({
   },
   pulsado: { opacity: 0.6 },
   seccion: { marginTop: espacio.m },
-  guardado: { color: colores.amigos, marginTop: espacio.xs },
+  guardado: { color: colores.texto, marginTop: espacio.xs }, // el verde es solo de Amigos
   separado: { marginTop: espacio.s },
 });

@@ -551,5 +551,5 @@ const estilos = StyleSheet.create({
   grupo: { gap: espacio.s },
   lugar: { gap: 2, paddingVertical: espacio.s },
   notas: { minHeight: 96, paddingTop: espacio.s, textAlignVertical: 'top' },
-  aviso: { borderColor: colores.principal, borderWidth: 2, gap: espacio.m },
+  aviso: { borderColor: colores.aviso, borderWidth: 2, gap: espacio.m },
 });

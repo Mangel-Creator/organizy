@@ -149,5 +149,5 @@ const estilos = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
   flex: { flex: 1 },
   alerta: { borderColor: colores.aviso, borderWidth: 2, gap: espacio.m },
-  bien: { color: colores.amigos },
+  bien: { color: colores.texto }, // el verde es solo de Amigos
 });
