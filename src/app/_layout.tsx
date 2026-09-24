@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 
 import { cargarEventos } from '@/data/eventos';
 import { cargarPerfil, usePerfil } from '@/data/perfil';
+import { vigilarActualizacionesWeb } from '@/services/actualizacionWeb';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { colores } from '@/theme';
@@ -51,6 +52,9 @@ export default function LayoutRaiz() {
     // Programa los avisos de los próximos días y los mantiene al día (solo en el móvil).
     return iniciarAvisos();
   }, []);
+
+  // En la web, recarga sola si se ha publicado una versión nueva.
+  useEffect(() => vigilarActualizacionesWeb(), []);
 
   useEffect(() => {
     if (listo) {

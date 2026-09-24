@@ -16,6 +16,9 @@ alarmas. En español de España.
     `main`. Se añade a la pantalla de inicio como app web (`src/app/+html.tsx`).
     `baseUrl` es `/organizy` (en `app.json`); en desarrollo la web está en
     `http://localhost:8081/`.
+    La web **se actualiza sola** (`src/services/actualizacionWeb.ts`): al abrirla, o al
+    volver tras 30 s fuera, compara el archivo principal publicado con el que usa y,
+    si ha cambiado, recarga (una vez por versión, sin bucles).
   - **App** para el dueño, en su iPhone con Expo Go (cuenta de Expo `mangel_creator`,
     proyecto vinculado con `eas init`). En el futuro, app en las tiendas.
 - **Lo que no puede hacer la web** (quedará solo para la app): alarma que suena como
@@ -80,6 +83,8 @@ sesión que fuera**:
   Si algo no encaja, crea una subcarpeta con nombre claro y añádela al `LEEME.md`.
   Al terminar cada fase, guarda ahí su guía de prueba y su resumen. El código sigue
   solo en `C:\proyectos\organizy`.
+- 24/09/2026 — La web se actualiza sola al publicar una versión nueva (ver "Para
+  quién y dónde funciona").
 
 ## Tecnología
 
