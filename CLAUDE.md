@@ -85,6 +85,10 @@ sesión que fuera**:
   solo en `C:\proyectos\organizy`.
 - 24/09/2026 — La web se actualiza sola al publicar una versión nueva (ver "Para
   quién y dónde funciona").
+- 24/09/2026 — Diseño "cuaderno cálido" con una regla: cada color significa una sola
+  cosa (azul tinta = pulsar, naranja = Clientes, verde = Amigos, negro = Yo, granate =
+  aviso). Cada persona elige la densidad en Perfil > "Cómo se ve" (por defecto
+  Equilibrado). Alguna animación suave, sin excesos. Ver "Diseño" y `BRIEF.md`.
 
 ## Tecnología
 
@@ -137,18 +141,24 @@ El alias `@/` apunta a `src/`.
 ## Diseño
 
 Todo sale de `src/theme/index.ts`. No escribas colores sueltos en las pantallas.
+El porqué de cada decisión está en `BRIEF.md` (raíz del repositorio).
 
-| Uso | Color |
-|---|---|
-| Fondo | `#F3EFE6` |
-| Tarjetas | `#FFFFFF` |
-| Texto principal | `#1C1B18` |
-| Texto secundario | `#5E5A52` |
-| Bordes | `#D9D2C3` |
-| Principal y "Clientes" | `#D2461E` (naranja) |
-| "Amigos" | `#16734F` (verde) |
-| "Yo" (personal) | `#1C1B18` (negro) |
-| Barrita de carga normal y borde de huecos | `#A39C8E` (gris, `cargaNormal`) |
+**Cada color significa una sola cosa.** No uses el naranja ni el verde para nada que
+no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de "hecho").
+
+| Uso | Token | Color |
+|---|---|---|
+| Fondo | `fondo` | `#F4F1EA` |
+| Tarjetas | `tarjeta` | `#FFFFFF` |
+| Texto principal | `texto` | `#1A1C24` |
+| Texto secundario | `textoSecundario` | `#5E5A52` |
+| Bordes | `borde` | `#DDD6C8` |
+| Pulsar: botón principal, "+", pestaña activa, interruptores, hoy | `principal` | `#2B4BD8` (azul tinta) |
+| Errores, avisos, días cargados (>80 %) | `aviso` | `#A1172F` (granate) |
+| "Clientes" | `clientes` | `#C4461E` (naranja) |
+| "Amigos" | `amigos` | `#16734F` (verde) |
+| "Yo" (personal) | `yo` | `#1A1C24` (negro) |
+| Barrita de carga normal y borde de huecos | `cargaNormal` | `#8A8374` (gris) |
 
 Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
@@ -156,26 +166,47 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 - Esquinas redondeadas de 14 a 18 px, mucho aire, sin degradados.
 - Todo lo pulsable mide 44 px de alto como mínimo (`alturaTactil`).
 - Solo modo claro.
+- Nada de `opacity` para "apagar" texto (baja del contraste mínimo): quita el fondo
+  blanco y usa `textoSecundario`, como las filas de eventos pasados.
+- La tarjeta "Siguiente" de Hoy va del color del tipo de su evento (`colorTipo`).
+
+### Densidad (`src/data/densidad.ts`)
+
+Cada persona elige en Perfil > "Cómo se ve": Con aire, Equilibrado (por defecto) o
+Compacto. Se guarda en `organizy:densidad`. En pantallas:
+`const { medidas } = useDensidad()` (alto y relleno de fila, separación, tamaño de
+texto y `pxPorHora` de Semana). Solo afecta a las listas de Hoy y a la línea de horas de
+Semana; los formularios no cambian. Ninguna fila baja de 44 px.
+
+### Movimiento
+
+Poco y con sentido, con `react-native-reanimated` (ya viene en Expo Go): la casilla da
+un pequeño salto al marcarla, las filas de Hoy se recolocan deslizándose
+(`LinearTransition`) y Semana hace un fundido corto al cambiar de día. Envuelve las
+listas en `<LayoutAnimationConfig skipEntering>` para que no se anime nada al abrir la
+pantalla. Las animaciones de Reanimated respetan solas "reducir movimiento". Con el
+React Compiler, usa `valor.get()` y `valor.set()`, no `valor.value`. Al pulsar, los
+botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones infinitas.
 
 ### Componentes (`src/components`)
 
-- `Boton` — `variante="principal"` (naranja) o `"secundario"` (blanco con borde).
+- `Boton` — `variante="principal"` (azul tinta) o `"secundario"` (blanco con borde).
 - `Tarjeta` — caja blanca redondeada.
 - `Titulo` — Fraunces, `nivel` 1, 2 o 3.
 - `Texto` — DM Sans, con `secundario`, `fuerte` y `pequeno`.
-- `CampoTexto` — campo con `etiqueta`, `ayuda` y `error` (borde y mensaje en naranja).
+- `CampoTexto` — campo con `etiqueta`, `ayuda` y `error` (borde y mensaje en granate, `aviso`).
 - `Selector` — chips para elegir una opción; la elegida con fondo oscuro y texto claro.
 - `SelectorDias` — L M X J V S D, varios a la vez (lunes = 0).
 - `SelectorHora` — hora "HH:MM" con botones − y + de 15 en 15 minutos.
-- `BarraProgreso` — "Paso 1 de 2" con barra naranja.
+- `BarraProgreso` — "Paso 1 de 2" con barra azul.
 - `AvisoPantallaInicio` — solo en la web del móvil: cómo añadirla a la pantalla de inicio.
 - `BotonInicial` — botón redondo con la inicial del nombre (abre Perfil).
 - `Pantalla` — contenedor de pantalla con fondo, márgenes y scroll. Se aparta del
   teclado (`KeyboardAvoidingView`) y admite `ref` para hacer scroll.
 - `Proximamente` — relleno provisional para pestañas sin hacer.
-- `BotonFlotante` — botón redondo naranja con "+", fijo abajo a la derecha. Va al
+- `BotonFlotante` — botón redondo azul con "+", fijo abajo a la derecha. Va al
   lado de `Pantalla` (no dentro), en un `View` con `flex: 1`.
-- `Casilla` — casilla para marcar como hecho (44 px).
+- `Casilla` — casilla para marcar como hecho (44 px); da un pequeño salto al marcarla.
 - `Interruptor` — fila con texto, ayuda y un interruptor sí/no.
 - `SelectorFecha` — día con − y + y atajos Hoy, Mañana y En una semana.
 

@@ -74,8 +74,15 @@ Nada baja nunca de 44 px de alto para pulsar.
 
 ## Movimiento
 
-Sutil. No se preguntó: se asume por ser una app de uso diario. Solo el aviso visual
-al pulsar (que ya existe). No se añaden animaciones nuevas.
+Alguna animación suave, sin excesos (lo pidió el usuario). Solo donde explica algo:
+
+- La casilla de una tarea da un pequeño salto al marcarla.
+- Las filas de Hoy se recolocan deslizándose (por ejemplo, la tarea hecha baja a "Hecha").
+- Semana hace un fundido corto (160 ms) al cambiar de día, para que se note el cambio.
+- Los botones y filas se hunden un poco al pulsarlos.
+
+Nada se anima al abrir una pantalla, no hay pulsos ni movimientos que se repitan, y todo
+se desactiva si el móvil tiene "reducir movimiento".
 
 ## Cómo se construye
 
@@ -83,5 +90,7 @@ al pulsar (que ya existe). No se añaden animaciones nuevas.
 - Densidad en `src/data/densidad.ts`: `useDensidad()` devuelve el nivel y sus medidas;
   `guardarDensidad(nivel)` la cambia y la app se actualiza sola.
 - Imágenes: ninguna. Iconos: solo Ionicons.
+- Filas apagadas (eventos pasados, tareas hechas) sin opacidad: sin fondo blanco y con
+  texto secundario, para no bajar del contraste mínimo.
 - Revisión en la web a 375 px: contraste medido, nada que se salga por los lados,
   zonas de toque de 44 px, y luego `npx tsc --noEmit`, `npx expo lint` y `npm test`.
