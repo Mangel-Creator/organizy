@@ -70,6 +70,15 @@ sesión que fuera**:
   reinstales: enlaza su `node_modules` al de la carpeta principal (junction), haz el
   commit ahí, llévalo a `main`, y al terminar quita el enlace y borra el worktree y
   su rama.
+- 24/09/2026 — Carpeta del usuario ordenada en subcarpetas:
+  `C:\Users\usuario\OneDrive\PERSONAL\Organizy` (índice en su `LEEME.md`). Todo lo
+  que no sea código y sea para el usuario va a su subcarpeta, nunca suelto en la raíz:
+  `Prompts` (PDF originales y prompts añadidos), `Guías de prueba`
+  (`Fase NN - Nombre.md`, una por fase), `Diseño`, `Capturas` (subcarpeta `Fase NN`),
+  `QR y enlaces` (QR y `Enlaces.md`) y `Notas y decisiones` (`Fase NN - Resumen.md`).
+  Si algo no encaja, crea una subcarpeta con nombre claro y añádela al `LEEME.md`.
+  Al terminar cada fase, guarda ahí su guía de prueba y su resumen. El código sigue
+  solo en `C:\proyectos\organizy`.
 
 ## Tecnología
 
