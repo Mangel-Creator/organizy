@@ -183,7 +183,8 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   prefijo `organizy:`).
 - `src/data/db.ts`: `obtenerBD()` abre `organizy.db` y aplica migraciones. Para crear
   tablas, añade una función al final de `MIGRACIONES` (la versión se guarda en
-  `PRAGMA user_version`). Migración 1: tabla `eventos`. Solo se usa en Android e iOS.
+  `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
+  `lugar_tipo` y `lugar_sitio_id`. Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -192,8 +193,8 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   - Fuera de pantallas: `await leerPerfil()`.
   - `guardarPerfil`, `completarBienvenida`, `repetirBienvenida`.
 - `src/data/eventos/`: tipo `Evento` en `tipos.ts` (título, fecha "AAAA-MM-DD",
-  horas "HH:MM" o null, tipo `cliente|amigos|yo`, lugar, notas, repetición,
-  flexible + duración + hecha, foco, ejemplo).
+  horas "HH:MM" o null, tipo `cliente|amigos|yo`, lugar (`LugarEvento`: casa, sitio
+  por id u otro), notas, repetición, flexible + duración + hecha, foco, ejemplo).
   - En pantallas: `const { cargado, eventos } = useEventos()`.
   - Para cambiar: `guardarEvento` (crea o actualiza), `borrarEvento`, `marcarHecha`,
     `moverTareas`, `crearEventosEjemplo`, `borrarEventosEjemplo`, `nuevoId`.
@@ -206,7 +207,8 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 - `src/services/agenda/` (funciones puras, con pruebas en `__tests__`):
   `eventosDelDia`, `ocurreEnDia` (repeticiones), `tareasPendientes`,
   `calcularHuecos`, `cargaDelDia`, `fraseResumen`, `repartirTareas`,
-  `siguienteEvento`, `bloqueDeFocoQuePisa`, `colocarEnCarriles`, `ventanaDelDia`.
+  `siguienteEvento`, `bloqueDeFocoQuePisa`, `colocarEnCarriles`, `ventanaDelDia`,
+  `resolverLugar`, `sitioTrabajo`.
   Tiempos en minutos desde medianoche (`Intervalo`).
 
 ## Fase 2: bienvenida y perfil (decisiones)
@@ -252,9 +254,21 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   anteriores sin hacer aparecen hoy.
 - Repetición: cada día, cada semana (mismo día de la semana) o cada mes (mismo
   número; los meses sin ese día se saltan). Editar o borrar afecta a toda la serie.
-- Lugar: "Sin lugar", un sitio habitual del perfil o "Otra dirección" (se buscan sus
-  coordenadas con `buscarCoordenadas`; sin conexión se guarda solo el texto). Si la
-  dirección no cambia al editar, se conservan sus coordenadas.
+- Lugar: "Sin lugar", "Casa" (vivienda del perfil), "Trabajo", los demás sitios
+  habituales u "Otro sitio" (dirección exacta; coordenadas con `buscarCoordenadas`,
+  sin conexión solo el texto). Casa y los sitios se guardan como **referencia**
+  (`{ tipo: 'casa' }` o `{ tipo: 'sitio', sitioId }`), no como copia: se muestran con
+  `resolverLugar(lugar, perfil)`, así que al cambiar la dirección en Perfil los
+  eventos se actualizan solos. "Otro sitio" sí guarda la dirección tal cual.
+- Si el perfil no tiene un sitio "Trabajo" (`sitioTrabajo`), el chip "Trabajo" de la
+  ficha pide su dirección y lo crea en el perfil al guardar el evento.
+- En Perfil los sitios habituales se pueden editar (botón del lápiz) conservando su
+  id. Si se borra un sitio, sus eventos se quedan sin lugar.
+- En la ficha y en la tarjeta "Siguiente" se ve el nombre del sitio y debajo la
+  dirección; en las listas, solo el nombre.
+- Eventos guardados con el formato antiguo de lugar (`{ nombre, direccion,
+  coordenadas }`): se leen como "Otro sitio" (`normalizarLugar` en la web; migración
+  2 de SQLite en el móvil).
 - Aviso "Esto pisa tu bloque de foco. ¿Seguro?" al guardar un evento (nuevo o
   editado) que se solapa con un bloque de foco de ese día. Las confirmaciones (foco y
   borrar) son tarjetas dentro de la pantalla, no `Alert`, porque `Alert` no hace

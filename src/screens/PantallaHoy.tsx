@@ -14,7 +14,7 @@ import {
 } from '@/components';
 import { useEnergia } from '@/data/energia';
 import { marcarHecha, moverTareas, useEventos, type Evento } from '@/data/eventos';
-import { usePerfil, type MomentoDelDia } from '@/data/perfil';
+import { usePerfil, type MomentoDelDia, type Perfil } from '@/data/perfil';
 import {
   calcularHuecos,
   duracionTarea,
@@ -22,6 +22,7 @@ import {
   fraseResumen,
   intervaloDe,
   repartirTareas,
+  resolverLugar,
   siguienteEvento,
   tareasPendientes,
   ventanaDelDia,
@@ -116,7 +117,7 @@ export function PantallaHoy() {
               {frase}
             </Texto>
 
-            {siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} /> : null}
+            {siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
 
             <Titulo nivel={2} style={estilos.seccion}>
               Tu día
@@ -190,7 +191,9 @@ export function PantallaHoy() {
 }
 
 // Tarjeta naranja con el próximo evento (o el que está en curso).
-function TarjetaSiguiente({ siguiente, hoy }: { siguiente: Siguiente; hoy: string }) {
+type PropsSiguiente = { siguiente: Siguiente; hoy: string; perfil: Perfil | null };
+
+function TarjetaSiguiente({ siguiente, hoy, perfil }: PropsSiguiente) {
   const { evento, dia, enCurso } = siguiente;
   const cuando = enCurso
     ? 'Ahora'
@@ -199,7 +202,8 @@ function TarjetaSiguiente({ siguiente, hoy }: { siguiente: Siguiente; hoy: strin
       : dia === sumarDias(hoy, 1)
         ? 'Mañana'
         : formatearDiaCorto(fechaDesdeClave(dia));
-  const lugar = evento.lugar?.nombre ?? evento.lugar?.direccion;
+  // Nombre del sitio (Casa, Trabajo...) y debajo su dirección.
+  const lugar = resolverLugar(evento.lugar, perfil);
 
   return (
     <Pressable
@@ -213,7 +217,16 @@ function TarjetaSiguiente({ siguiente, hoy }: { siguiente: Siguiente; hoy: strin
       <Titulo nivel={2} style={estilos.claro}>
         {evento.titulo}
       </Titulo>
-      {lugar ? <Texto style={estilos.claro}>{lugar}</Texto> : null}
+      {lugar?.nombre ? (
+        <Texto fuerte style={estilos.claro}>
+          {lugar.nombre}
+        </Texto>
+      ) : null}
+      {lugar ? (
+        <Texto pequeno style={estilos.claro}>
+          {lugar.direccion}
+        </Texto>
+      ) : null}
     </Pressable>
   );
 }

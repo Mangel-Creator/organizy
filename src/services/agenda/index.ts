@@ -3,6 +3,7 @@
 export * from './carga';
 export * from './carriles';
 export * from './huecos';
+export * from './lugar';
 export * from './ocurrencias';
 export * from './reparto';
 export * from './resumen';

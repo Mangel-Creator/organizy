@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Texto } from '@/components';
 import type { Evento } from '@/data/eventos';
+import { usePerfil } from '@/data/perfil';
+import { resolverLugar } from '@/services/agenda';
 import { colorTipo, colores, espacio, radio } from '@/theme';
 
 import { abrirEvento } from './textos';
@@ -16,8 +18,10 @@ type Props = {
 // Un evento con hora fija: hora, punto del color de su tipo, título y lugar.
 // Al pulsarlo se abre su ficha.
 export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
+  const { perfil } = usePerfil();
   const negro = focoEnNegro && evento.foco;
-  const detalle = [evento.lugar?.nombre ?? evento.lugar?.direccion, evento.foco && !negro ? 'Bloque de foco' : null]
+  const lugar = resolverLugar(evento.lugar, perfil);
+  const detalle = [lugar?.nombre ?? lugar?.direccion, evento.foco && !negro ? 'Bloque de foco' : null]
     .filter(Boolean)
     .join(' · ');
 

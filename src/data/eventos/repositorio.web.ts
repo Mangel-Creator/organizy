@@ -1,6 +1,6 @@
 import { guardarAjuste, leerAjuste } from '@/data/ajustes';
 
-import type { Evento, RepositorioEventos } from './tipos';
+import { normalizarLugar, type Evento, type RepositorioEventos } from './tipos';
 
 // Guardado de eventos en la versión web.
 //
@@ -11,8 +11,10 @@ import type { Evento, RepositorioEventos } from './tipos';
 
 const CLAVE = 'eventos';
 
-function leer(): Promise<Evento[]> {
-  return leerAjuste<Evento[]>(CLAVE, []);
+async function leer(): Promise<Evento[]> {
+  const eventos = await leerAjuste<Evento[]>(CLAVE, []);
+  // Convierte los lugares guardados con el formato antiguo (ver normalizarLugar).
+  return eventos.map((e) => ({ ...e, lugar: normalizarLugar(e.lugar) }));
 }
 
 export const repositorio: RepositorioEventos = {

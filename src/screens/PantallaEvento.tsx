@@ -26,8 +26,14 @@ import {
   type Repeticion,
   type TipoEvento,
 } from '@/data/eventos';
-import { usePerfil, type SitioHabitual } from '@/data/perfil';
-import { bloqueDeFocoQuePisa } from '@/services/agenda';
+import { guardarPerfil, usePerfil, type Perfil, type SitioHabitual } from '@/data/perfil';
+import {
+  NOMBRE_CASA,
+  NOMBRE_TRABAJO,
+  bloqueDeFocoQuePisa,
+  resolverLugar,
+  sitioTrabajo,
+} from '@/services/agenda';
 import {
   claveDia,
   horaDesdeMinutos,
@@ -76,7 +82,7 @@ export function PantallaEvento() {
       key={id ?? 'nuevo'}
       evento={evento}
       fechaInicial={fecha ?? claveDia(new Date())}
-      sitios={perfil?.sitios ?? []}
+      perfil={perfil}
       eventos={eventos}
     />
   );
@@ -95,8 +101,11 @@ type Borrador = {
   hecha: boolean;
   foco: boolean;
   repeticion: Repeticion;
-  lugar: string; // "ninguno", "otro" o "sitio:<id>"
+  // "ninguno", "casa", "sitio:<id>", "nuevo-trabajo" (si el perfil aún no tiene
+  // Trabajo) u "otro" (dirección exacta).
+  lugar: string;
   direccion: string; // solo si lugar = "otro"
+  direccionTrabajo: string; // solo si lugar = "nuevo-trabajo"
   notas: string;
 };
 
@@ -108,7 +117,15 @@ function horaPorDefecto(fecha: ClaveDia): string {
   return horaDesdeMinutos(Math.min(Math.ceil(minutosDelDia(new Date()) / 60) * 60, 22 * 60));
 }
 
-function borradorInicial(evento: Evento | null, fecha: ClaveDia, sitios: SitioHabitual[]): Borrador {
+function lugarInicial(lugar: LugarEvento | null, perfil: Perfil | null): string {
+  if (!lugar) return 'ninguno';
+  if (lugar.tipo === 'casa') return 'casa';
+  if (lugar.tipo === 'otro') return 'otro';
+  // Si el sitio se borró del perfil, el evento se queda sin lugar.
+  return perfil?.sitios.some((s) => s.id === lugar.sitioId) ? `sitio:${lugar.sitioId}` : 'ninguno';
+}
+
+function borradorInicial(evento: Evento | null, fecha: ClaveDia, perfil: Perfil | null): Borrador {
   if (!evento) {
     const inicio = horaPorDefecto(fecha);
     return {
@@ -124,12 +141,10 @@ function borradorInicial(evento: Evento | null, fecha: ClaveDia, sitios: SitioHa
       repeticion: 'nunca',
       lugar: 'ninguno',
       direccion: '',
+      direccionTrabajo: '',
       notas: '',
     };
   }
-  const sitio = sitios.find(
-    (s) => s.nombre === evento.lugar?.nombre && s.direccion === evento.lugar?.direccion,
-  );
   const inicio = evento.horaInicio ?? horaPorDefecto(evento.fecha);
   return {
     titulo: evento.titulo,
@@ -142,8 +157,9 @@ function borradorInicial(evento: Evento | null, fecha: ClaveDia, sitios: SitioHa
     hecha: evento.hecha,
     foco: evento.foco,
     repeticion: evento.repeticion,
-    lugar: sitio ? `sitio:${sitio.id}` : evento.lugar ? 'otro' : 'ninguno',
-    direccion: sitio ? '' : (evento.lugar?.direccion ?? ''),
+    lugar: lugarInicial(evento.lugar, perfil),
+    direccion: evento.lugar?.tipo === 'otro' ? evento.lugar.direccion : '',
+    direccionTrabajo: '',
     notas: evento.notas,
   };
 }
@@ -151,12 +167,12 @@ function borradorInicial(evento: Evento | null, fecha: ClaveDia, sitios: SitioHa
 type Props = {
   evento: Evento | null;
   fechaInicial: ClaveDia;
-  sitios: SitioHabitual[];
+  perfil: Perfil | null;
   eventos: Evento[];
 };
 
-function Formulario({ evento, fechaInicial, sitios, eventos }: Props) {
-  const [b, setBorrador] = useState<Borrador>(() => borradorInicial(evento, fechaInicial, sitios));
+function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
+  const [b, setBorrador] = useState<Borrador>(() => borradorInicial(evento, fechaInicial, perfil));
   const [errores, setErrores] = useState<Errores>({});
   const [ocupado, setOcupado] = useState(false);
   const [focoPisado, setFocoPisado] = useState<{ bloque: Evento; nuevo: Evento } | null>(null);
@@ -181,31 +197,62 @@ function Formulario({ evento, fechaInicial, sitios, eventos }: Props) {
     cambiar({ horaInicio, horaFin: horaDesdeMinutos(minutosDesdeHora(b.horaFin) + diferencia) });
   };
 
+  // Casa, Trabajo, los demás sitios del perfil y "Otro sitio". Si el perfil no tiene
+  // Trabajo, el chip "Trabajo" deja escribir su dirección y lo crea en el perfil.
+  const trabajo = sitioTrabajo(perfil);
   const opcionesLugar: Opcion<string>[] = [
     { valor: 'ninguno', etiqueta: 'Sin lugar' },
-    ...sitios.map((s) => ({ valor: `sitio:${s.id}`, etiqueta: s.nombre })),
-    { valor: 'otro', etiqueta: 'Otra dirección' },
+    { valor: 'casa', etiqueta: NOMBRE_CASA },
+    { valor: trabajo ? `sitio:${trabajo.id}` : 'nuevo-trabajo', etiqueta: NOMBRE_TRABAJO },
+    ...(perfil?.sitios ?? [])
+      .filter((s) => s.id !== trabajo?.id)
+      .map((s) => ({ valor: `sitio:${s.id}`, etiqueta: s.nombre })),
+    { valor: 'otro', etiqueta: 'Otro sitio' },
   ];
+
+  // Casa y los sitios del perfil se guardan como referencia (no como copia).
+  const referencia = (): LugarEvento | null => {
+    if (b.lugar === 'casa') return { tipo: 'casa' };
+    if (b.lugar.startsWith('sitio:')) return { tipo: 'sitio', sitioId: b.lugar.slice('sitio:'.length) };
+    return null;
+  };
+  const lugarElegido = resolverLugar(referencia(), perfil);
 
   // Calcula el lugar del evento. Devuelve un texto de error si no encuentra la dirección.
   const calcularLugar = async (): Promise<LugarEvento | null | string> => {
     if (b.lugar === 'ninguno') return null;
-    if (b.lugar.startsWith('sitio:')) {
-      const sitio = sitios.find((s) => `sitio:${s.id}` === b.lugar);
-      return sitio ? { nombre: sitio.nombre, direccion: sitio.direccion, coordenadas: sitio.coordenadas } : null;
-    }
+    if (b.lugar === 'nuevo-trabajo') return crearTrabajo();
+    if (b.lugar !== 'otro') return referencia();
     const direccion = b.direccion.trim();
     // Si la dirección no ha cambiado, se conservan sus coordenadas.
-    if (evento?.lugar && evento.lugar.direccion === direccion && evento.lugar.coordenadas) {
+    if (evento?.lugar?.tipo === 'otro' && evento.lugar.direccion === direccion && evento.lugar.coordenadas) {
       return evento.lugar;
     }
     const resultado = await buscarCoordenadas(direccion);
     if (resultado.estado === 'no-encontrado') return MENSAJE_NO_ENCONTRADO;
     return {
-      nombre: null,
+      tipo: 'otro',
       direccion,
       coordenadas: resultado.estado === 'encontrado' ? resultado.coordenadas : null,
     };
+  };
+
+  // Guarda "Trabajo" en los sitios habituales del perfil y devuelve la referencia.
+  const crearTrabajo = async (): Promise<LugarEvento | string> => {
+    if (!perfil) return 'Completa antes tu perfil.';
+    const direccion = b.direccionTrabajo.trim();
+    const resultado = await buscarCoordenadas(direccion);
+    if (resultado.estado === 'no-encontrado') return MENSAJE_NO_ENCONTRADO;
+    const sitio: SitioHabitual = {
+      id: nuevoId(),
+      nombre: NOMBRE_TRABAJO,
+      direccion,
+      coordenadas: resultado.estado === 'encontrado' ? resultado.coordenadas : null,
+    };
+    await guardarPerfil({ ...perfil, sitios: [...perfil.sitios, sitio] });
+    // Si luego sale el aviso del bloque de foco, que no lo cree otra vez.
+    setBorrador((actual) => ({ ...actual, lugar: `sitio:${sitio.id}`, direccionTrabajo: '' }));
+    return { tipo: 'sitio', sitioId: sitio.id };
   };
 
   const guardar = async () => {
@@ -216,6 +263,9 @@ function Formulario({ evento, fechaInicial, sitios, eventos }: Props) {
     }
     if (b.lugar === 'otro' && !b.direccion.trim()) {
       nuevosErrores.direccion = 'Escribe la dirección o elige «Sin lugar».';
+    }
+    if (b.lugar === 'nuevo-trabajo' && !b.direccionTrabajo.trim()) {
+      nuevosErrores.direccion = 'Escribe la dirección de tu trabajo o elige otro lugar.';
     }
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length > 0) return;
@@ -344,22 +394,39 @@ function Formulario({ evento, fechaInicial, sitios, eventos }: Props) {
           valor={b.lugar}
           alCambiar={(lugar) => cambiar({ lugar })}
         />
+        {lugarElegido ? (
+          <Tarjeta style={estilos.lugar}>
+            <Texto fuerte>{lugarElegido.nombre}</Texto>
+            <Texto pequeno secundario>
+              {lugarElegido.direccion}
+            </Texto>
+          </Tarjeta>
+        ) : null}
         {b.lugar === 'otro' ? (
-          <>
-            <CampoTexto
-              placeholder="Calle, número y municipio"
-              value={b.direccion}
-              onChangeText={(direccion) => cambiar({ direccion })}
-              autoCapitalize="words"
-              accessibilityLabel="Dirección"
-              error={errores.direccion}
-            />
-            {usaOpenStreetMap ? (
-              <Texto pequeno secundario>
-                {ATRIBUCION_OPENSTREETMAP}
-              </Texto>
-            ) : null}
-          </>
+          <CampoTexto
+            placeholder="Calle, número y municipio"
+            value={b.direccion}
+            onChangeText={(direccion) => cambiar({ direccion })}
+            autoCapitalize="words"
+            accessibilityLabel="Dirección exacta"
+            error={errores.direccion}
+          />
+        ) : null}
+        {b.lugar === 'nuevo-trabajo' ? (
+          <CampoTexto
+            etiqueta="Dirección de tu trabajo"
+            placeholder="Calle, número y municipio"
+            value={b.direccionTrabajo}
+            onChangeText={(direccionTrabajo) => cambiar({ direccionTrabajo })}
+            autoCapitalize="words"
+            ayuda="Aún no está en tu perfil. Al guardar lo añado a tus sitios habituales."
+            error={errores.direccion}
+          />
+        ) : null}
+        {usaOpenStreetMap && (b.lugar === 'otro' || b.lugar === 'nuevo-trabajo') ? (
+          <Texto pequeno secundario>
+            {ATRIBUCION_OPENSTREETMAP}
+          </Texto>
         ) : null}
       </View>
 
@@ -441,6 +508,7 @@ const estilos = StyleSheet.create({
   pulsado: { opacity: 0.6 },
   fila: { flexDirection: 'row', gap: espacio.m },
   grupo: { gap: espacio.s },
+  lugar: { gap: 2, paddingVertical: espacio.s },
   notas: { minHeight: 96, paddingTop: espacio.s, textAlignVertical: 'top' },
   aviso: { borderColor: colores.principal, borderWidth: 2, gap: espacio.m },
 });

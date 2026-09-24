@@ -34,14 +34,15 @@ export function crearEjemplos(hoy: ClaveDia): Evento[] {
     fijo(1, hoy, '09:30', '10:30', {
       titulo: 'Reunión con Laura',
       tipo: 'cliente',
-      lugar: { nombre: null, direccion: 'Calle Mayor 12, Madrid', coordenadas: null },
+      lugar: { tipo: 'otro', direccion: 'Calle Mayor 12, Madrid', coordenadas: null },
     }),
     fijo(2, hoy, '11:00', '13:00', { titulo: 'Preparar la propuesta', tipo: 'yo', foco: true }),
     fijo(3, hoy, '15:00', '16:00', { titulo: 'Visita a obra con Andrés', tipo: 'cliente' }),
     fijo(4, hoy, '21:00', '23:00', {
       titulo: 'Cena con Marta y Jorge',
       tipo: 'amigos',
-      notas: 'Reservado a nombre de Marta.',
+      lugar: { tipo: 'casa' },
+      notas: 'Cenamos en casa. Traen el postre.',
     }),
     // Mañana: día bastante lleno
     fijo(5, dia(1), '08:30', '10:30', { titulo: 'Bloque de foco: facturas', tipo: 'yo', foco: true }),

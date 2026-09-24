@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
-import type { Evento } from '@/data/eventos/tipos';
+import { normalizarLugar, type Evento } from '@/data/eventos/tipos';
+import type { Perfil } from '@/data/perfil';
 import {
   FRASE_DIA_LIBRE,
   bloqueDeFocoQuePisa,
@@ -11,7 +12,9 @@ import {
   fraseResumen,
   ocurreEnDia,
   repartirTareas,
+  resolverLugar,
   siguienteEvento,
+  sitioTrabajo,
   tareasPendientes,
   unirIntervalos,
 } from '@/services/agenda';
@@ -242,6 +245,53 @@ describe('siguiente evento y bloques de foco', () => {
     expect(bloqueDeFocoQuePisa(evento({ horaInicio: '11:00', horaFin: '12:00' }), [foco])).toBeNull();
     // Editar el propio bloque de foco no avisa
     expect(bloqueDeFocoQuePisa(foco, [foco])).toBeNull();
+  });
+});
+
+describe('lugar de los eventos', () => {
+  const perfil: Perfil = {
+    nombre: 'Ana',
+    vivienda: { direccion: 'Chamberí, Madrid', coordenadas: { latitud: 40.43, longitud: -3.7 } },
+    sitios: [{ id: 't1', nombre: ' trabajo ', direccion: 'Calle Alcalá 50, Madrid', coordenadas: null }],
+    transporte: 'coche',
+    uso: 'ambos',
+    horario: {
+      levantarse: '07:00',
+      acostarse: '23:00',
+      empiezoTrabajo: '09:00',
+      terminoTrabajo: '18:00',
+      diasTrabajo: [0, 1, 2, 3, 4],
+    },
+    rindeMas: 'manana',
+    antelacionAvisoMin: 30,
+  };
+
+  it('Casa y los sitios se leen del perfil de ahora (si te mudas, cambian solos)', () => {
+    expect(resolverLugar({ tipo: 'casa' }, perfil)).toEqual({ nombre: 'Casa', ...perfil.vivienda });
+    const mudado = { ...perfil, vivienda: { direccion: 'Getafe', coordenadas: null } };
+    expect(resolverLugar({ tipo: 'casa' }, mudado)?.direccion).toBe('Getafe');
+    expect(resolverLugar({ tipo: 'sitio', sitioId: 't1' }, perfil)?.direccion).toBe('Calle Alcalá 50, Madrid');
+  });
+
+  it('otro sitio guarda su dirección tal cual; un sitio borrado se queda sin lugar', () => {
+    const otro = { tipo: 'otro' as const, direccion: 'Calle Mayor 1', coordenadas: null };
+    expect(resolverLugar(otro, null)).toEqual({ nombre: null, direccion: 'Calle Mayor 1', coordenadas: null });
+    expect(resolverLugar({ tipo: 'sitio', sitioId: 'no-existe' }, perfil)).toBeNull();
+  });
+
+  it('encuentra el sitio Trabajo aunque tenga espacios o minúsculas', () => {
+    expect(sitioTrabajo(perfil)?.id).toBe('t1');
+    expect(sitioTrabajo({ ...perfil, sitios: [] })).toBeNull();
+  });
+
+  it('los lugares guardados con el formato antiguo pasan a "otro sitio"', () => {
+    expect(normalizarLugar({ nombre: null, direccion: 'Calle Mayor 1', coordenadas: null })).toEqual({
+      tipo: 'otro',
+      direccion: 'Calle Mayor 1',
+      coordenadas: null,
+    });
+    expect(normalizarLugar({ tipo: 'casa' })).toEqual({ tipo: 'casa' });
+    expect(normalizarLugar(null)).toBeNull();
   });
 });
 

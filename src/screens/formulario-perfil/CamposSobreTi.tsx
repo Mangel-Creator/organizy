@@ -87,35 +87,56 @@ type PropsSitios = {
   alCambiar: (sitios: SitioHabitual[]) => void;
 };
 
-// Lista de sitios habituales: se pueden añadir y quitar. Opcional.
+// Lista de sitios habituales: se pueden añadir, editar y quitar. Opcional.
+// Al editar un sitio se conserva su id: los eventos que lo usan (ver
+// data/eventos) pasan a apuntar solos a la dirección nueva.
 function SitiosHabituales({ sitios, alCambiar }: PropsSitios) {
   const [nombre, setNombre] = useState('');
   const [direccion, setDireccion] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
+  const [editando, setEditando] = useState<SitioHabitual | null>(null);
+
+  const limpiar = () => {
+    setNombre('');
+    setDireccion('');
+    setError(null);
+    setEditando(null);
+  };
+
+  const empezarEdicion = (sitio: SitioHabitual) => {
+    setEditando(sitio);
+    setNombre(sitio.nombre);
+    setDireccion(sitio.direccion);
+    setError(null);
+  };
 
   const anadir = async () => {
     if (!nombre.trim() || !direccion.trim()) {
       setError('Escribe el nombre del sitio y su dirección.');
       return;
     }
-    setBuscando(true);
-    const resultado = await buscarCoordenadas(direccion.trim());
-    setBuscando(false);
-    if (resultado.estado === 'no-encontrado') {
-      setError(MENSAJE_NO_ENCONTRADO);
-      return;
+    // Si solo cambia el nombre, se conservan las coordenadas.
+    const mismaDireccion = editando && editando.direccion === direccion.trim();
+    let coordenadas = mismaDireccion ? editando.coordenadas : null;
+    if (!mismaDireccion) {
+      setBuscando(true);
+      const resultado = await buscarCoordenadas(direccion.trim());
+      setBuscando(false);
+      if (resultado.estado === 'no-encontrado') {
+        setError(MENSAJE_NO_ENCONTRADO);
+        return;
+      }
+      coordenadas = resultado.estado === 'encontrado' ? resultado.coordenadas : null;
     }
-    const nuevo: SitioHabitual = {
-      id: `${Date.now()}`,
+    const sitio: SitioHabitual = {
+      id: editando?.id ?? `${Date.now()}`,
       nombre: nombre.trim(),
       direccion: direccion.trim(),
-      coordenadas: resultado.estado === 'encontrado' ? resultado.coordenadas : null,
+      coordenadas,
     };
-    alCambiar([...sitios, nuevo]);
-    setNombre('');
-    setDireccion('');
-    setError(null);
+    alCambiar(editando ? sitios.map((s) => (s.id === editando.id ? sitio : s)) : [...sitios, sitio]);
+    limpiar();
   };
 
   return (
@@ -137,8 +158,18 @@ function SitiosHabituales({ sitios, alCambiar }: PropsSitios) {
           </View>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={`Editar ${sitio.nombre}`}
+            onPress={() => empezarEdicion(sitio)}
+            style={({ pressed }) => [estilos.quitar, pressed && estilos.pulsado]}>
+            <Ionicons name="create-outline" size={22} color={colores.textoSecundario} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel={`Quitar ${sitio.nombre}`}
-            onPress={() => alCambiar(sitios.filter((s) => s.id !== sitio.id))}
+            onPress={() => {
+              if (editando?.id === sitio.id) limpiar();
+              alCambiar(sitios.filter((s) => s.id !== sitio.id));
+            }}
             style={({ pressed }) => [estilos.quitar, pressed && estilos.pulsado]}>
             <Ionicons name="close" size={22} color={colores.textoSecundario} />
           </Pressable>
@@ -146,6 +177,11 @@ function SitiosHabituales({ sitios, alCambiar }: PropsSitios) {
       ))}
 
       <Tarjeta>
+        {editando ? (
+          <Texto fuerte>
+            Editando «{editando.nombre}». Los eventos que lo usan se actualizan solos.
+          </Texto>
+        ) : null}
         <CampoTexto
           etiqueta="Nombre del sitio"
           placeholder="Trabajo"
@@ -170,10 +206,11 @@ function SitiosHabituales({ sitios, alCambiar }: PropsSitios) {
         />
         <Boton
           variante="secundario"
-          titulo={buscando ? 'Buscando…' : 'Añadir sitio'}
+          titulo={buscando ? 'Buscando…' : editando ? 'Guardar sitio' : 'Añadir sitio'}
           disabled={buscando}
           onPress={anadir}
         />
+        {editando ? <Boton variante="secundario" titulo="Cancelar" onPress={limpiar} /> : null}
         {usaOpenStreetMap ? (
           <Texto pequeno secundario>
             {ATRIBUCION_OPENSTREETMAP}

@@ -36,6 +36,15 @@ const MIGRACIONES: Migracion[] = [
       CREATE INDEX eventos_fecha ON eventos (fecha);
     `);
   },
+  // 2. Lugar como referencia: "casa", "sitio" (con lugar_sitio_id) u "otro".
+  //    Los lugares que ya había eran copias de la dirección: pasan a "otro".
+  async (bd) => {
+    await bd.execAsync(`
+      ALTER TABLE eventos ADD COLUMN lugar_tipo TEXT;
+      ALTER TABLE eventos ADD COLUMN lugar_sitio_id TEXT;
+      UPDATE eventos SET lugar_tipo = 'otro' WHERE lugar_direccion IS NOT NULL;
+    `);
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;
