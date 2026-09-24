@@ -15,6 +15,7 @@ import {
   contarAvisosProgramados,
   enviarAvisoDePrueba,
   horaCierre,
+  probarAvisoDeHoy,
   reprogramarAvisos,
   textoAntelacion,
 } from '@/services/avisos';
@@ -77,12 +78,13 @@ export function SeccionAvisos({ permiso, alActivarPermiso }: Props) {
   const sinPermiso = permiso !== undefined && permiso !== 'concedido';
   const antelacion = perfil?.antelacionAvisoMin ?? 30;
 
-  const probar = async () => {
+  // Sin tipo: un aviso genérico. Con tipo: el resumen o el cierre de hoy tal cual.
+  const probar = async (tipo?: 'resumen-manana' | 'cierre-dia') => {
     if (permiso !== 'concedido') {
       alActivarPermiso();
       return;
     }
-    await enviarAvisoDePrueba();
+    await (tipo ? probarAvisoDeHoy(tipo) : enviarAvisoDePrueba());
     setMensajePrueba('Listo. Te llegará en 5 segundos (puedes bloquear el móvil).');
   };
 
@@ -135,7 +137,16 @@ export function SeccionAvisos({ permiso, alActivarPermiso }: Props) {
         Se programan los próximos 7 días y se renuevan cada vez que abres la app.
         {programados !== null ? ` Ahora hay ${programados} programados.` : ''}
       </Texto>
-      <Boton variante="secundario" titulo="Enviar un aviso de prueba" onPress={probar} />
+      <Texto pequeno secundario>
+        Para probarlos sin esperar: llegan en 5 segundos con el contenido de hoy.
+      </Texto>
+      <Boton variante="secundario" titulo="Enviar un aviso de prueba" onPress={() => probar()} />
+      <Boton
+        variante="secundario"
+        titulo="Probar el resumen de la mañana"
+        onPress={() => probar('resumen-manana')}
+      />
+      <Boton variante="secundario" titulo="Probar el cierre del día" onPress={() => probar('cierre-dia')} />
       {mensajePrueba ? (
         <Texto fuerte style={estilos.bien} accessibilityLiveRegion="polite">
           {mensajePrueba}

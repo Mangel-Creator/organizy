@@ -7,9 +7,15 @@ import { tareasPendientes } from '@/services/agenda';
 import { sumarDias } from '@/services/fechas';
 import { consultarPermiso } from '@/services/permisos';
 
-import { planificarAvisos } from './planificar';
+import { avisoDeHoy, planificarAvisos } from './planificar';
 // En el móvil carga programar.ts (expo-notifications) y en la web programar.web.ts.
-import { avisosDisponibles, escucharRespuestas, prepararAvisos, programarAvisos } from './programar';
+import {
+  avisosDisponibles,
+  enviarAvisoDePrueba,
+  escucharRespuestas,
+  prepararAvisos,
+  programarAvisos,
+} from './programar';
 import type { RespuestaAviso } from './programar';
 
 // Avisos (notificaciones locales, fase 4). Sin servidor: todo se programa en el móvil.
@@ -20,6 +26,15 @@ import type { RespuestaAviso } from './programar';
 
 export { avisosDisponibles, escucharRespuestas };
 export { contarAvisosProgramados, enviarAvisoDePrueba } from './programar';
+
+// Envía en 5 segundos el resumen de la mañana o el cierre del día de hoy, tal
+// cual (con sus botones), para probarlos sin esperar a su hora.
+export async function probarAvisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia'): Promise<void> {
+  const { perfil } = await cargarPerfil();
+  if (!perfil) return;
+  const [eventos, ajustes] = await Promise.all([leerEventos(), leerAjustesAvisos()]);
+  await enviarAvisoDePrueba(avisoDeHoy(tipo, { ahora: new Date(), eventos, perfil, ajustes }));
+}
 export type { RespuestaAviso } from './programar';
 export { horaCierre, textoAntelacion } from './planificar';
 

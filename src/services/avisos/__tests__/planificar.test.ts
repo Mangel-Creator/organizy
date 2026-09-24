@@ -7,6 +7,7 @@ import {
   FRASE_BUENAS_NOCHES,
   FRASE_DIA_JUSTO,
   MAX_AVISOS,
+  avisoDeHoy,
   horaCierre,
   listaTareas,
   planificarAvisos,
@@ -186,6 +187,20 @@ describe('cierre del día', () => {
     );
     expect(avisos[0].id).toBe('cierre-dia:2026-09-24');
     expect(avisos[0].cuando).toEqual(new Date(2026, 8, 25, 0, 30));
+  });
+});
+
+describe('avisos de prueba', () => {
+  it('el cierre de hoy aunque sea de día y con los botones', () => {
+    const mediodia = new Date(2026, 8, 24, 12, 0);
+    const ctx = { ahora: mediodia, eventos: [tarea('Llamar')], perfil, ajustes: AJUSTES_AVISOS_POR_DEFECTO };
+    const cierre = avisoDeHoy('cierre-dia', ctx);
+    expect(cierre.categoria).toBe('cierre-dia');
+    expect(cierre.dia).toBe('2026-09-24');
+    expect(avisoDeHoy('resumen-manana', ctx).cuerpo).toMatch(/^Hoy: 1 tarea pendiente/);
+    // Sin pendientes y con "No avisar", la prueba da las buenas noches igualmente.
+    const vacio = { ...ctx, eventos: [], ajustes: { ...AJUSTES_AVISOS_POR_DEFECTO, cierreSinPendientes: 'nada' as const } };
+    expect(avisoDeHoy('cierre-dia', vacio).cuerpo).toBe(FRASE_BUENAS_NOCHES);
   });
 });
 

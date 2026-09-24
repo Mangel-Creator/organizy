@@ -16,7 +16,7 @@ export async function contarAvisosProgramados(): Promise<number> {
   return 0;
 }
 
-export async function enviarAvisoDePrueba(): Promise<void> {}
+export async function enviarAvisoDePrueba(_aviso?: AvisoPlanificado): Promise<void> {}
 
 export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir'; datos: DatosAviso };
 

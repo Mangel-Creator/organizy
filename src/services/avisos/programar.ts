@@ -86,16 +86,24 @@ export async function contarAvisosProgramados(): Promise<number> {
   return (await Notifications.getAllScheduledNotificationsAsync()).length;
 }
 
-// Para probar desde Perfil que los avisos llegan (en 5 segundos).
-export async function enviarAvisoDePrueba(): Promise<void> {
+// Para probar desde Perfil que los avisos llegan (en 5 segundos). Sin aviso,
+// uno genérico; con aviso (por ejemplo el cierre de hoy), ese mismo con sus botones.
+export async function enviarAvisoDePrueba(aviso?: AvisoPlanificado): Promise<void> {
   await prepararAvisos();
   await Notifications.scheduleNotificationAsync({
     identifier: `${PREFIJO_PRUEBA}${Date.now()}`,
-    content: contenido('Aviso de prueba', 'Si ves esto, los avisos de Organizy funcionan.', {
-      tipo: 'prueba',
-      dia: claveDia(new Date()),
-      destino: { pantalla: 'hoy' },
-    }),
+    content: aviso
+      ? contenido(
+          aviso.titulo,
+          aviso.cuerpo,
+          { tipo: aviso.tipo, dia: aviso.dia, destino: aviso.destino },
+          aviso.categoria,
+        )
+      : contenido('Aviso de prueba', 'Si ves esto, los avisos de Organizy funcionan.', {
+          tipo: 'prueba',
+          dia: claveDia(new Date()),
+          destino: { pantalla: 'hoy' },
+        }),
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(Date.now() + 5000),

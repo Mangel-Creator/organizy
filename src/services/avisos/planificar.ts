@@ -196,6 +196,14 @@ const GENERADORES: Generador[] = [
   { activo: (a) => a.cierreDia, generar: avisoCierreDia },
 ];
 
+// Para probar desde Perfil: el resumen o el cierre de hoy tal cual llegarían,
+// aunque su hora no sea ahora (y el cierre, aunque no quede nada pendiente).
+export function avisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia', ctx: ContextoAvisos): AvisoPlanificado {
+  const hoy = claveDia(ctx.ahora);
+  if (tipo === 'resumen-manana') return avisoResumenManana(ctx, hoy)[0];
+  return avisoCierreDia({ ...ctx, ajustes: { ...ctx.ajustes, cierreSinPendientes: 'buenas-noches' } }, hoy)[0];
+}
+
 export function planificarAvisos(ctx: ContextoAvisos, dias = DIAS_A_PROGRAMAR): AvisoPlanificado[] {
   const hoy = claveDia(ctx.ahora);
   const activos = GENERADORES.filter((g) => g.activo(ctx.ajustes));
