@@ -64,6 +64,12 @@ sesión que fuera**:
   para los demás y app para el dueño (ver "Para quién y dónde funciona").
 - 24/09/2026 — Direcciones en la web con OpenStreetMap.
 - 24/09/2026 — Sus indicaciones valen para todas las sesiones (ver arriba).
+- 24/09/2026 — Sin worktrees: se trabaja directamente en `C:\proyectos\organizy`,
+  rama `main` (los worktrees obligan a reinstalar `node_modules` y a fusionar). Si
+  una sesión se abre igualmente en un worktree y no deja escribir fuera de él, no
+  reinstales: enlaza su `node_modules` al de la carpeta principal (junction), haz el
+  commit ahí, llévalo a `main`, y al terminar quita el enlace y borra el worktree y
+  su rama.
 
 ## Tecnología
 
