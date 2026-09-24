@@ -298,6 +298,7 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 - [x] 2. Formulario de bienvenida y perfil.
 - [x] 3. Calendario: pantallas Hoy y Semana.
 - [ ] 4. Avisos (notificaciones).
+- [ ] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
 - [ ] 5. Captura rápida con IA.
 - [ ] 6. Mapa, tráfico, radares y rutas.
 - [ ] 7. Alarmas.
