@@ -114,6 +114,43 @@ sesión que fuera**:
   iPhone sin el ordenador exige esa cuenta (no hay vía gratis desde Windows). Prepara
   el código para ese paso (app.json, permisos, EAS) sin obligarle a pagar antes.
 
+## Cómo prueba el usuario en el iPhone
+
+- **A diario, la web** en la pantalla de inicio: funciona con cualquier wifi o datos,
+  sin el ordenador, y se actualiza sola en cuanto una sesión sube a `main`. Por eso
+  **cada sesión, al terminar, sube su trabajo a `main`** (con tsc, lint y pruebas
+  pasando) y comprueba con `gh run list` que se ha publicado.
+- **La app, en Expo Go con túnel**, siempre con la **misma dirección**:
+  `exp://uv-pnzw-mangel_creator-8083.exp.direct`. Sale de `.expo/settings.json`
+  (`urlRandomness`, no está en git: no lo borres) más el puerto 8083 y la cuenta de
+  Expo `mangel_creator` con la que está iniciada la sesión de Expo CLI.
+  - Arráncalo con `preview_start` y el nombre `organizy-tunel` (`.claude/launch.json`).
+    Vale desde cualquier sesión, también desde un worktree: usa las rutas de
+    `C:\proyectos\organizy`. Nunca con otro puerto: cambiaría la dirección.
+  - Solo una sesión a la vez: si el puerto 8083 ya está en uso, el túnel ya está en
+    marcha y no hay que hacer nada.
+  - En el iPhone: Expo Go → "Development servers" → Organizy, o escribir la dirección
+    en Safari.
+  - Funciona con cualquier wifi o datos, pero **solo con el ordenador encendido** y el
+    túnel en marcha. Los avisos ya programados siguen llegando aunque el ordenador
+    esté apagado (hasta 7 días); lo que necesita el ordenador es abrir la app.
+- **App propia sin el ordenador**: solo con la cuenta de desarrollador de Apple (ver
+  la decisión del 25/09/2026). Ya está `eas.json` con los perfiles `preview`
+  (instalación directa en su iPhone) y `production` (TestFlight/App Store), cada uno
+  con su canal. **No instales todavía `expo-updates`** ni pongas `runtimeVersion` o
+  `updates.url` en `app.json`: Expo Go no carga esas publicaciones y dejaría de
+  funcionar el túnel (lo comprobó la sesión 02 el 24/09). Plan para cuando tenga la
+  cuenta, en este orden:
+  1. `npx expo install expo-updates` y `npx eas-cli@latest update:configure`.
+  2. `npx eas-cli@latest build --profile preview --platform ios` (el usuario registra
+     su iPhone con `eas device:create` y entra con su cuenta de Apple; nunca le pidas
+     la contraseña).
+  3. Un workflow de GitHub que, al subir a `main`, ejecute
+     `npx eas-cli@latest update --channel preview --auto`. Necesita el secreto
+     `EXPO_TOKEN` en GitHub, que crea y pega el propio usuario (expo.dev → Access
+     tokens); nunca lo escribas tú.
+  4. Desde entonces la app se actualiza sola al abrirla, sin el ordenador.
+
 ## Tecnología
 
 - Expo SDK 57 (React Native 0.86) con TypeScript.

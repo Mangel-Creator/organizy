@@ -24,6 +24,19 @@
         "8082"
       ],
       "port": 8082
+    },
+    {
+      "name": "organizy-tunel",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:\\proyectos\\organizy\\node_modules\\expo\\bin\\cli",
+        "start",
+        "C:\\proyectos\\organizy",
+        "--tunnel",
+        "--port",
+        "8083"
+      ],
+      "port": 8083
     }
   ]
 }
