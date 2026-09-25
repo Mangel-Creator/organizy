@@ -136,8 +136,8 @@ describe('resumen de la mañana', () => {
     const avisos = planificar([evento({ tipo: 'cliente' })], { eventos: false, cierreDia: false });
     expect(avisos).toHaveLength(1);
     expect(hora(avisos[0].cuando)).toBe('07:30');
-    expect(avisos[0].titulo).toBe('Buenos días, Ana');
-    expect(avisos[0].cuerpo).toMatch(/^Hoy: 1 cliente/);
+    expect(avisos[0].titulo).toBe('¿Qué toca hoy, Ana?');
+    expect(avisos[0].cuerpo).toMatch(/^Tienes un cliente\./);
     expect(avisos[0].cuerpo).not.toContain(FRASE_DIA_JUSTO);
   });
 
@@ -197,7 +197,7 @@ describe('avisos de prueba', () => {
     const cierre = avisoDeHoy('cierre-dia', ctx);
     expect(cierre.categoria).toBe('cierre-dia');
     expect(cierre.dia).toBe('2026-09-24');
-    expect(avisoDeHoy('resumen-manana', ctx).cuerpo).toMatch(/^Hoy: 1 tarea pendiente/);
+    expect(avisoDeHoy('resumen-manana', ctx).cuerpo).toMatch(/^Tienes una tarea\./);
     // Sin pendientes y con "No avisar", la prueba da las buenas noches igualmente.
     const vacio = { ...ctx, eventos: [], ajustes: { ...AJUSTES_AVISOS_POR_DEFECTO, cierreSinPendientes: 'nada' as const } };
     expect(avisoDeHoy('cierre-dia', vacio).cuerpo).toBe(FRASE_BUENAS_NOCHES);

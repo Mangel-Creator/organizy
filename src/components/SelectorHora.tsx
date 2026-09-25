@@ -68,10 +68,5 @@ const estilos = StyleSheet.create({
     backgroundColor: colores.fondo,
   },
   pulsado: { opacity: 0.7 },
-  hora: {
-    fontFamily: fuentes.textoFuerte,
-    fontSize: tamanos.grande,
-    color: colores.texto,
-    fontVariant: ['tabular-nums'],
-  },
+  hora: { fontFamily: fuentes.horaFuerte, fontSize: tamanos.grande, color: colores.texto },
 });

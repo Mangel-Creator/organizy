@@ -117,10 +117,10 @@ export function perfilDesdeBorrador(b: Borrador): Perfil {
 // Devuelve el borrador (con coordenadas si se han encontrado) y los errores.
 export async function comprobarPaso1(b: Borrador): Promise<{ borrador: Borrador; errores: Errores }> {
   const errores: Errores = {};
-  if (!b.nombre.trim()) errores.nombre = 'Escribe tu nombre.';
-  if (!b.vivienda.direccion.trim()) errores.vivienda = 'Escribe tu municipio o barrio.';
-  if (!b.transporte) errores.transporte = 'Elige una opción.';
-  if (!b.uso) errores.uso = 'Elige una opción.';
+  if (!b.nombre.trim()) errores.nombre = '¿Cómo te llamo? Escribe tu nombre.';
+  if (!b.vivienda.direccion.trim()) errores.vivienda = 'Dime dónde vives, que lo uso para el tráfico.';
+  if (!b.transporte) errores.transporte = 'Elige una.';
+  if (!b.uso) errores.uso = 'Elige una.';
 
   let borrador = b;
   if (!errores.vivienda && !b.vivienda.coordenadas) {
@@ -139,10 +139,10 @@ export async function comprobarPaso1(b: Borrador): Promise<{ borrador: Borrador;
 export function comprobarPaso2(b: Borrador): Errores {
   const errores: Errores = {};
   if (minutosDesdeHora(b.terminoTrabajo) <= minutosDesdeHora(b.empiezoTrabajo)) {
-    errores.terminoTrabajo = 'La hora de terminar tiene que ser después de la de empezar.';
+    errores.terminoTrabajo = 'Tienes que terminar de trabajar después de empezar.';
   }
-  if (!b.rindeMas) errores.rindeMas = 'Elige una opción.';
-  if (!b.antelacion) errores.antelacion = 'Elige una opción.';
+  if (!b.rindeMas) errores.rindeMas = 'Elige una.';
+  if (!b.antelacion) errores.antelacion = 'Elige una.';
   return errores;
 }
 

@@ -47,7 +47,7 @@ const estilos = StyleSheet.create({
   caja: {
     width: 24,
     height: 24,
-    borderRadius: 7,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: colores.texto,
     alignItems: 'center',

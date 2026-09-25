@@ -59,7 +59,7 @@ const estilos = StyleSheet.create({
     maxWidth: 48,
     aspectRatio: 1,
     minHeight: alturaTactil,
-    borderRadius: radio.chip,
+    borderRadius: radio.pequeno,
     borderWidth: 1,
     borderColor: colores.borde,
     backgroundColor: colores.tarjeta,

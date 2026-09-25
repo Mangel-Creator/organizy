@@ -80,7 +80,7 @@ export function PantallaEvento() {
     return (
       <Pantalla>
         <BotonVolver />
-        <Texto>Este evento ya no existe.</Texto>
+        <Texto>Este evento ya no está: se habrá borrado.</Texto>
       </Pantalla>
     );
   }
@@ -262,7 +262,7 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
 
   // Guarda "Trabajo" en los sitios habituales del perfil y devuelve la referencia.
   const crearTrabajo = async (): Promise<LugarEvento | string> => {
-    if (!perfil) return 'Completa antes tu perfil.';
+    if (!perfil) return 'Primero rellena tu perfil.';
     const direccion = b.direccionTrabajo.trim();
     const resultado = await buscarCoordenadas(direccion);
     if (resultado.estado === 'no-encontrado') return MENSAJE_NO_ENCONTRADO;
@@ -280,15 +280,15 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
 
   const guardar = async () => {
     const nuevosErrores: Errores = {};
-    if (!b.titulo.trim()) nuevosErrores.titulo = 'Escribe un título.';
+    if (!b.titulo.trim()) nuevosErrores.titulo = 'Ponle un título.';
     if (!b.flexible && minutosDesdeHora(b.horaFin) <= minutosDesdeHora(b.horaInicio)) {
-      nuevosErrores.horaFin = 'La hora de fin tiene que ser después de la de inicio.';
+      nuevosErrores.horaFin = 'Tiene que terminar después de empezar.';
     }
     if (b.lugar === 'otro' && !b.direccion.trim()) {
-      nuevosErrores.direccion = 'Escribe la dirección o elige «Sin lugar».';
+      nuevosErrores.direccion = 'Pon la dirección o elige «Sin lugar».';
     }
     if (b.lugar === 'nuevo-trabajo' && !b.direccionTrabajo.trim()) {
-      nuevosErrores.direccion = 'Escribe la dirección de tu trabajo o elige otro lugar.';
+      nuevosErrores.direccion = 'Pon la dirección de tu trabajo o elige otro lugar.';
     }
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length > 0) return;
@@ -482,11 +482,11 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
 
       {focoPisado ? (
         <Tarjeta style={estilos.aviso} accessibilityLiveRegion="assertive">
-          <Titulo nivel={3}>Esto pisa tu bloque de foco. ¿Seguro?</Titulo>
+          <Titulo nivel={3}>Ojo, esto pisa tu bloque de foco. ¿Lo guardo igual?</Titulo>
           <Texto secundario>
             «{focoPisado.bloque.titulo}», {rangoHoras(focoPisado.bloque)}.
           </Texto>
-          <Boton titulo="Sí, guardar igualmente" disabled={ocupado} onPress={() => guardarDeVerdad(focoPisado.nuevo)} />
+          <Boton titulo="Sí, guárdalo" disabled={ocupado} onPress={() => guardarDeVerdad(focoPisado.nuevo)} />
           <Boton variante="secundario" titulo="Cambiar la hora" onPress={() => setFocoPisado(null)} />
         </Tarjeta>
       ) : (
@@ -503,11 +503,11 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
             <Titulo nivel={3}>¿Borrar «{evento.titulo}»?</Titulo>
             <Texto secundario>
               {evento.repeticion !== 'nunca'
-                ? 'Se borran todas las repeticiones. No se puede deshacer.'
-                : 'No se puede deshacer.'}
+                ? 'Se borran todas las repeticiones y no hay vuelta atrás.'
+                : 'Luego no hay vuelta atrás.'}
             </Texto>
             <Boton titulo="Sí, borrar" onPress={borrar} />
-            <Boton variante="secundario" titulo="No, dejarlo" onPress={() => setConfirmarBorrado(false)} />
+            <Boton variante="secundario" titulo="No, déjalo" onPress={() => setConfirmarBorrado(false)} />
           </Tarjeta>
         ) : (
           <Boton

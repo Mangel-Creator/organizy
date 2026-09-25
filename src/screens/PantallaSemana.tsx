@@ -147,7 +147,7 @@ export function PantallaSemana() {
             </Titulo>
 
             {delDia.length === 0 && tareas.length === 0 ? (
-              <Texto secundario>Nada previsto este día.</Texto>
+              <Texto secundario>Este día lo tienes libre.</Texto>
             ) : null}
             {delDia.length > 0 ? (
               <LineaDeHoras
@@ -167,7 +167,11 @@ export function PantallaSemana() {
                     key={tarea.id}
                     accessibilityRole="button"
                     onPress={() => abrirEvento(tarea.id)}
-                    style={({ pressed }) => [estilos.tarea, pressed && estilos.pulsado]}>
+                    style={({ pressed }) => [
+                    estilos.tarea,
+                    { borderLeftColor: colorTipo[tarea.tipo] },
+                    pressed && estilos.pulsado,
+                  ]}>
                     <Ionicons
                       name={tarea.hecha ? 'checkbox' : 'square-outline'}
                       size={22}
@@ -294,7 +298,7 @@ const estilos = StyleSheet.create({
   botonIcono: {
     width: alturaTactil,
     height: alturaTactil,
-    borderRadius: alturaTactil / 2,
+    borderRadius: radio.normal,
     borderWidth: 1,
     borderColor: colores.borde,
     backgroundColor: colores.tarjeta,
@@ -309,7 +313,7 @@ const estilos = StyleSheet.create({
   botonHoy: {
     minHeight: alturaTactil,
     paddingHorizontal: espacio.m,
-    borderRadius: radio.chip,
+    borderRadius: radio.pequeno,
     borderWidth: 1,
     borderColor: colores.borde,
     backgroundColor: colores.tarjeta,
@@ -320,7 +324,7 @@ const estilos = StyleSheet.create({
   numero: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radio.pequeno,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -347,7 +351,7 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     marginTop: -9,
   },
-  etiquetaHora: { width: ANCHO_HORAS, fontFamily: fuentes.textoMedio, fontSize: 12 },
+  etiquetaHora: { width: ANCHO_HORAS, fontFamily: fuentes.hora, fontSize: 12 },
   rayaHora: { flex: 1, height: 1, backgroundColor: colores.borde },
   zonaEventos: { position: 'absolute', top: 0, bottom: 0, left: ANCHO_HORAS, right: 0 },
   bloque: {
@@ -355,13 +359,10 @@ const estilos = StyleSheet.create({
     paddingHorizontal: espacio.s,
     paddingVertical: 2,
     backgroundColor: colores.tarjeta,
-    borderWidth: 1,
-    borderColor: colores.borde,
-    borderLeftWidth: 4,
-    borderRadius: radio.pequeno - 4,
+    borderLeftWidth: 4, // barra del color de su tipo
     overflow: 'hidden',
   },
-  bloqueFoco: { backgroundColor: colores.texto, borderColor: colores.texto },
+  bloqueFoco: { backgroundColor: colores.texto, borderLeftColor: colores.texto },
   textoClaro: { color: colores.fondo },
   secundario: { color: colores.textoSecundario, fontSize: tamanos.pequeno },
   ahora: { position: 'absolute', left: -4, right: 0, height: 2, backgroundColor: colores.principal },
@@ -372,9 +373,7 @@ const estilos = StyleSheet.create({
     minHeight: alturaTactil + 8,
     paddingHorizontal: espacio.m,
     backgroundColor: colores.tarjeta,
-    borderWidth: 1,
-    borderColor: colores.borde,
-    borderRadius: radio.normal,
+    borderLeftWidth: 4, // barra del color de su tipo
   },
   tachada: { textDecorationLine: 'line-through' },
 });

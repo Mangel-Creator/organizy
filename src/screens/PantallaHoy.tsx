@@ -1,4 +1,6 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from 'react-native-reanimated';
 
@@ -42,7 +44,7 @@ import {
   saludoSegunHora,
   sumarDias,
 } from '@/services/fechas';
-import { colorTipo, colores, espacio, radio } from '@/theme';
+import { colorTipo, colorTipoSobreTinta, colores, espacio, fuentes, tamanos } from '@/theme';
 
 import { ConfirmacionMovidas } from './calendario/ConfirmacionMovidas';
 import { FilaEvento } from './calendario/FilaEvento';
@@ -80,7 +82,15 @@ export function PantallaHoy() {
   const separacion = { gap: medidas.separacion };
 
   const nombre = perfil?.nombre ?? '';
-  const saludo = saludoSegunHora(ahora) + (nombre ? `, ${nombre}` : '');
+  const saludo = saludoSegunHora(ahora, nombre);
+
+  // La cabecera es oscura: mientras Hoy está a la vista, la hora y la batería van en blanco.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, []),
+  );
   const rindeMas = perfil?.rindeMas ?? 'manana';
 
   // Huecos a partir de ahora (redondeado al cuarto de hora) dentro del horario del perfil.
@@ -121,18 +131,27 @@ export function PantallaHoy() {
 
   return (
     <View style={estilos.contenedor}>
-      <Pantalla contentContainerStyle={estilos.contenido}>
+      <Pantalla contentContainerStyle={estilos.contenido} colorArriba={colores.tinta}>
+        {/* Cabecera oscura: fecha, saludo, resumen del día y lo siguiente. */}
         <View style={estilos.cabecera}>
-          <View style={estilos.textos}>
-            <Texto secundario>{formatearDiaCorto(ahora)}</Texto>
-            <Titulo>{saludo}</Titulo>
+          <View style={estilos.cabeceraFila}>
+            <View style={estilos.textos}>
+              <Texto style={estilos.fechaTinta}>{formatearDiaCorto(ahora)}</Texto>
+              <Titulo style={estilos.textoTinta}>{saludo}</Titulo>
+            </View>
+            <BotonInicial nombre={nombre} sobreTinta onPress={() => router.push('/perfil')} />
           </View>
-          <BotonInicial nombre={nombre} onPress={() => router.push('/perfil')} />
+          {cargado ? (
+            <Texto style={estilos.resumen} accessibilityLiveRegion="polite">
+              {frase}
+            </Texto>
+          ) : null}
+          {cargado && siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
         </View>
         <AvisoPantallaInicio />
 
         <Selector
-          etiqueta="¿Con cuánta energía vas hoy?"
+          etiqueta="¿Cómo vas de energía?"
           opciones={OPCIONES_ENERGIA}
           valor={energia}
           alCambiar={setEnergia}
@@ -140,18 +159,13 @@ export function PantallaHoy() {
 
         {cargado ? (
           <>
-            <Texto style={estilos.resumen} accessibilityLiveRegion="polite">
-              {frase}
-            </Texto>
             <ConfirmacionMovidas />
-
-            {siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
 
             <Titulo nivel={2} style={estilos.seccion}>
               Tu día
             </Titulo>
             {lista.length === 0 ? (
-              <Texto secundario>No tienes nada con hora fija hoy.</Texto>
+              <Texto secundario>Nada con hora por hoy.</Texto>
             ) : (
               <LayoutAnimationConfig skipEntering>
                 <View style={separacion}>
@@ -220,16 +234,16 @@ export function PantallaHoy() {
   );
 }
 
-// Tarjeta con el próximo evento (o el que está en curso), del color de su tipo:
-// naranja si es de un cliente, verde si es con amigos y negro si es tuyo.
+// Lo siguiente (o lo que está en curso), dentro de la cabecera oscura. La barra de la
+// izquierda lleva el color de su tipo, en su versión clara para que se vea sobre la tinta.
 type PropsSiguiente = { siguiente: Siguiente; hoy: string; perfil: Perfil | null };
 
 function TarjetaSiguiente({ siguiente, hoy, perfil }: PropsSiguiente) {
   const { evento, dia, enCurso } = siguiente;
   const cuando = enCurso
-    ? 'Ahora'
+    ? 'Ahora mismo'
     : dia === hoy
-      ? 'Siguiente'
+      ? 'Lo siguiente'
       : dia === sumarDias(hoy, 1)
         ? 'Mañana'
         : formatearDiaCorto(fechaDesdeClave(dia));
@@ -243,23 +257,18 @@ function TarjetaSiguiente({ siguiente, hoy, perfil }: PropsSiguiente) {
       onPress={() => abrirEvento(evento.id)}
       style={({ pressed }) => [
         estilos.siguiente,
-        { backgroundColor: colorTipo[evento.tipo] },
+        { borderLeftColor: colorTipoSobreTinta[evento.tipo] },
         pressed && estilos.pulsado,
       ]}>
-      <Texto pequeno fuerte style={estilos.claro}>
-        {cuando.toLocaleUpperCase('es-ES')} · {rangoHoras(evento)}
+      <Texto pequeno style={estilos.horaTinta}>
+        {cuando} · {rangoHoras(evento)}
       </Texto>
-      <Titulo nivel={2} style={estilos.claro}>
+      <Titulo nivel={3} style={estilos.textoTinta}>
         {evento.titulo}
       </Titulo>
-      {lugar?.nombre ? (
-        <Texto fuerte style={estilos.claro}>
-          {lugar.nombre}
-        </Texto>
-      ) : null}
       {lugar ? (
-        <Texto pequeno style={estilos.claro}>
-          {lugar.direccion}
+        <Texto pequeno style={estilos.fechaTinta}>
+          {[lugar.nombre, lugar.direccion].filter(Boolean).join(' · ')}
         </Texto>
       ) : null}
     </Pressable>
@@ -272,6 +281,7 @@ function FilaTarea({ tarea, detalle, apagada }: FilaTareaLista) {
     <View
       style={[
         estilos.tarea,
+        { borderLeftColor: apagada ? colores.cargaNormal : colorTipo[tarea.tipo] },
         { minHeight: medidas.altoFila, paddingVertical: Math.max(medidas.rellenoFila - 4, 0) },
         apagada && estilos.apagada,
       ]}>
@@ -304,16 +314,30 @@ function FilaTarea({ tarea, detalle, apagada }: FilaTareaLista) {
 const estilos = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   contenido: { paddingBottom: 120 }, // deja sitio al botón "+"
-  cabecera: { flexDirection: 'row', alignItems: 'flex-start', gap: espacio.m },
-  textos: { flex: 1 },
-  resumen: { fontSize: 18, lineHeight: 26 },
+  // La cabecera ocupa todo el ancho: se come el margen de Pantalla.
+  cabecera: {
+    marginHorizontal: -espacio.l,
+    marginTop: -espacio.l,
+    paddingHorizontal: espacio.l,
+    paddingTop: espacio.m,
+    paddingBottom: espacio.l,
+    backgroundColor: colores.tinta,
+    gap: espacio.m,
+  },
+  cabeceraFila: { flexDirection: 'row', alignItems: 'flex-start', gap: espacio.m },
+  textos: { flex: 1, gap: espacio.xs },
+  fechaTinta: { color: colores.textoSecundarioSobreTinta },
+  textoTinta: { color: colores.textoSobreTinta },
+  horaTinta: { color: colores.textoSecundarioSobreTinta, fontFamily: fuentes.hora },
+  resumen: { color: colores.textoSobreTinta, fontSize: tamanos.normal, lineHeight: 24 },
   seccion: { marginTop: espacio.m },
   siguiente: {
-    borderRadius: radio.grande,
-    padding: espacio.m,
-    gap: espacio.xs,
+    backgroundColor: colores.tintaSuave,
+    borderLeftWidth: 4,
+    paddingHorizontal: espacio.m,
+    paddingVertical: espacio.s + 4,
+    gap: 2,
   },
-  claro: { color: colores.textoSobrePrincipal },
   pulsado: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   tarea: {
     flexDirection: 'row',
@@ -321,9 +345,7 @@ const estilos = StyleSheet.create({
     gap: espacio.xs,
     paddingRight: espacio.m,
     backgroundColor: colores.tarjeta,
-    borderWidth: 1,
-    borderColor: colores.borde,
-    borderRadius: radio.normal,
+    borderLeftWidth: 4, // barra del color de su tipo
   },
   tareaTextos: { flex: 1, minHeight: 44, justifyContent: 'center' },
   // Sin opacidad, para que el texto siga pasando el contraste mínimo.

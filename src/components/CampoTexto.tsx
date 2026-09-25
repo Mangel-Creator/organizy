@@ -38,7 +38,7 @@ const estilos = StyleSheet.create({
     minHeight: alturaTactil + 6,
     backgroundColor: colores.tarjeta,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.bordeCampo,
     borderRadius: radio.pequeno,
     paddingHorizontal: espacio.m,
     fontFamily: fuentes.texto,

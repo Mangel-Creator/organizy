@@ -4,10 +4,11 @@ import { alturaTactil, colores, fuentes, tamanos } from '@/theme';
 
 type Props = Omit<PressableProps, 'children'> & {
   nombre: string;
+  sobreTinta?: boolean; // en la cabecera oscura de Hoy
 };
 
 // Botón redondo con la inicial del nombre (lleva a Perfil).
-export function BotonInicial({ nombre, style, ...resto }: Props) {
+export function BotonInicial({ nombre, sobreTinta, style, ...resto }: Props) {
   const inicial = nombre.trim().charAt(0).toLocaleUpperCase('es-ES') || '?';
   return (
     <Pressable
@@ -16,6 +17,7 @@ export function BotonInicial({ nombre, style, ...resto }: Props) {
       hitSlop={4}
       style={(estado) => [
         estilos.boton,
+        sobreTinta && estilos.botonSobreTinta,
         estado.pressed && estilos.pulsado,
         typeof style === 'function' ? style(estado) : style,
       ]}
@@ -34,6 +36,7 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  botonSobreTinta: { backgroundColor: colores.tintaSuave },
   pulsado: { opacity: 0.8 },
   letra: { fontFamily: fuentes.tituloFuerte, fontSize: tamanos.grande, color: colores.fondo },
 });

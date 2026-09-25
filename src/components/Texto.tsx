@@ -8,7 +8,7 @@ type Props = TextProps & {
   pequeno?: boolean;
 };
 
-// Texto normal de la app con la letra DM Sans.
+// Texto normal de la app con la letra IBM Plex Sans.
 export function Texto({ secundario, fuerte, pequeno, style, ...resto }: Props) {
   return (
     <Text

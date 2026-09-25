@@ -129,7 +129,7 @@ function avisoResumenManana({ eventos, perfil }: ContextoAvisos, dia: ClaveDia):
       tipo: 'resumen-manana',
       dia,
       cuando,
-      titulo: `${saludoSegunHora(cuando)}${nombre ? `, ${nombre}` : ''}`,
+      titulo: saludoSegunHora(cuando, nombre),
       cuerpo: fraseDeLaManana(eventos, perfil, dia),
       destino: { pantalla: 'hoy' },
     },

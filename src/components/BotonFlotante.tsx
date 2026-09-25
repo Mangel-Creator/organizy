@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, type PressableProps } from 'react-native';
 
-import { colores, espacio } from '@/theme';
+import { colores, espacio, radio } from '@/theme';
 
 type Props = Omit<PressableProps, 'children'> & {
   etiqueta: string; // lo que lee el lector de pantalla, por ejemplo "Añadir evento"
@@ -9,7 +9,7 @@ type Props = Omit<PressableProps, 'children'> & {
 
 const TAMANO = 60;
 
-// Botón redondo naranja con un "+", fijo abajo a la derecha de la pantalla.
+// Botón azul con un "+", fijo abajo a la derecha de la pantalla.
 // Va dentro de un contenedor con flex: 1, al lado (no dentro) de <Pantalla>.
 export function BotonFlotante({ etiqueta, style, ...resto }: Props) {
   return (
@@ -34,7 +34,7 @@ const estilos = StyleSheet.create({
     bottom: espacio.l,
     width: TAMANO,
     height: TAMANO,
-    borderRadius: TAMANO / 2,
+    borderRadius: radio.grande + 4, // cuadrado de esquinas suaves, como en una agenda
     backgroundColor: colores.principal,
     alignItems: 'center',
     justifyContent: 'center',

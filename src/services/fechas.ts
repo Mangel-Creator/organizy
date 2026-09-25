@@ -62,11 +62,12 @@ export const DIAS_SEMANA_LETRA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
 
 // "Buenos días" de 6:00 a 13:59, "Buenas tardes" de 14:00 a 20:59 y
 // "Buenas noches" el resto, como se dice en España.
-export function saludoSegunHora(fecha: Date): string {
+// Saludo cercano según la hora: "¿Qué toca hoy, Miguel?" hasta las 13:59, "¿Qué queda hoy…?"
+// por la tarde (14:00-20:59) y "¿Qué tal el día…?" por la noche (21:00-23:59).
+export function saludoSegunHora(fecha: Date, nombre = ''): string {
   const hora = fecha.getHours();
-  if (hora >= 6 && hora < 14) return 'Buenos días';
-  if (hora >= 14 && hora < 21) return 'Buenas tardes';
-  return 'Buenas noches';
+  const base = hora < 14 ? '¿Qué toca hoy' : hora < 21 ? '¿Qué queda hoy' : '¿Qué tal el día';
+  return `${base}${nombre ? `, ${nombre}` : ''}?`;
 }
 
 // "07:30" -> 450 (minutos desde medianoche).

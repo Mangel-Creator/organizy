@@ -147,7 +147,7 @@ describe('frase resumen', () => {
   it('cuenta clientes, planes y el hueco libre', () => {
     const eventos = [evento({ tipo: 'cliente' }), evento({ tipo: 'cliente' }), evento({ tipo: 'amigos' })];
     expect(fraseResumen({ eventos, tareasPendientes: 0, huecos: [tramo('17:00', '19:00')] })).toBe(
-      'Hoy: 2 clientes, 1 plan con amigos y un hueco libre de 17:00 a 19:00.',
+      'Tienes 2 clientes y un plan con amigos. Hueco libre: de 17:00 a 19:00.',
     );
   });
 
@@ -157,12 +157,12 @@ describe('frase resumen', () => {
       tareasPendientes: 2,
       huecos: [tramo('08:00', '09:00'), tramo('17:00', '20:00')],
     });
-    expect(frase).toBe('Hoy: 1 bloque de foco, 2 tareas pendientes y 2 huecos libres (el mayor, de 17:00 a 20:00).');
+    expect(frase).toBe('Tienes un bloque de foco y 2 tareas. Tu mejor hueco: de 17:00 a 20:00.');
   });
 
   it('sin huecos lo dice', () => {
     expect(fraseResumen({ eventos: [evento({ tipo: 'amigos' })], tareasPendientes: 0, huecos: [] })).toBe(
-      'Hoy: 1 plan con amigos. Sin huecos libres.',
+      'Tienes un plan con amigos. No te queda ningún hueco libre.',
     );
   });
 });

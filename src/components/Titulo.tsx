@@ -6,7 +6,7 @@ type Props = TextProps & {
   nivel?: 1 | 2 | 3;
 };
 
-// Título con la letra Fraunces. Nivel 1 es el más grande.
+// Título con la letra IBM Plex Sans. Nivel 1 es el más grande.
 export function Titulo({ nivel = 1, style, ...resto }: Props) {
   return (
     <Text
@@ -22,7 +22,7 @@ const estilos = StyleSheet.create({
     color: colores.texto,
     fontFamily: fuentes.titulo,
   },
-  n1: { fontSize: tamanos.tituloGrande, lineHeight: 40, letterSpacing: -0.5 },
-  n2: { fontSize: tamanos.titulo, lineHeight: 32 },
+  n1: { fontSize: tamanos.tituloGrande, lineHeight: 36, letterSpacing: -0.5 },
+  n2: { fontSize: tamanos.titulo, lineHeight: 28, letterSpacing: -0.2 },
   n3: { fontSize: tamanos.grande, lineHeight: 24 },
 });

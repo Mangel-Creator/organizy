@@ -3,14 +3,15 @@ import { horaDesdeMinutos } from '@/services/fechas';
 
 import type { Intervalo } from './huecos';
 
-// Frase que resume el día, hecha con reglas sencillas (sin IA).
-// "Hoy: 2 clientes, 1 plan con amigos y un hueco libre de 17:00 a 19:00."
+// Frase que resume el día, hecha con reglas sencillas (sin IA), en tono cercano.
+// "Tienes 2 clientes y un plan con amigos. Hueco libre: de 17:00 a 19:00."
 
 export const FRASE_DIA_LIBRE = 'Día libre. ¿Lo aprovechamos?';
 
-function contar(n: number, singular: string, plural: string): string | null {
+// contar(1, "un cliente", "clientes") -> "un cliente"; contar(2, ...) -> "2 clientes"
+function contar(n: number, uno: string, plural: string): string | null {
   if (n === 0) return null;
-  return `${n} ${n === 1 ? singular : plural}`;
+  return n === 1 ? uno : `${n} ${plural}`;
 }
 
 // "a", "a y b", "a, b y c"
@@ -34,21 +35,16 @@ export function fraseResumen({ eventos, tareasPendientes, huecos }: Datos): stri
 
   const normales = eventos.filter((e) => !e.foco);
   const partes = [
-    contar(normales.filter((e) => e.tipo === 'cliente').length, 'cliente', 'clientes'),
-    contar(normales.filter((e) => e.tipo === 'amigos').length, 'plan con amigos', 'planes con amigos'),
-    contar(normales.filter((e) => e.tipo === 'yo').length, 'cosa tuya', 'cosas tuyas'),
-    contar(eventos.length - normales.length, 'bloque de foco', 'bloques de foco'),
-    contar(tareasPendientes, 'tarea pendiente', 'tareas pendientes'),
+    contar(normales.filter((e) => e.tipo === 'cliente').length, 'un cliente', 'clientes'),
+    contar(normales.filter((e) => e.tipo === 'amigos').length, 'un plan con amigos', 'planes con amigos'),
+    contar(normales.filter((e) => e.tipo === 'yo').length, 'una cosa tuya', 'cosas tuyas'),
+    contar(eventos.length - normales.length, 'un bloque de foco', 'bloques de foco'),
+    contar(tareasPendientes, 'una tarea', 'tareas'),
   ].filter((p): p is string => p !== null);
 
-  if (huecos.length === 0) {
-    return `Hoy: ${unirConY(partes)}. Sin huecos libres.`;
-  }
-  if (huecos.length === 1) {
-    partes.push(`un hueco libre ${tramo(huecos[0])}`);
-  } else {
-    const mayor = huecos.reduce((a, b) => (b.fin - b.inicio > a.fin - a.inicio ? b : a));
-    partes.push(`${huecos.length} huecos libres (el mayor, ${tramo(mayor)})`);
-  }
-  return `Hoy: ${unirConY(partes)}.`;
+  const tienes = `Tienes ${unirConY(partes)}.`;
+  if (huecos.length === 0) return `${tienes} No te queda ningún hueco libre.`;
+  if (huecos.length === 1) return `${tienes} Hueco libre: ${tramo(huecos[0])}.`;
+  const mayor = huecos.reduce((a, b) => (b.fin - b.inicio > a.fin - a.inicio ? b : a));
+  return `${tienes} Tu mejor hueco: ${tramo(mayor)}.`;
 }

@@ -88,7 +88,7 @@ const estilos = StyleSheet.create({
   atajo: {
     minHeight: alturaTactil,
     paddingHorizontal: espacio.m,
-    borderRadius: radio.chip,
+    borderRadius: radio.pequeno,
     borderWidth: 1,
     borderColor: colores.borde,
     backgroundColor: colores.tarjeta,

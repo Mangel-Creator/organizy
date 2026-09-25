@@ -92,12 +92,12 @@ export function PantallaPerfil() {
     setErrores(todos);
     if (hayErrores(todos)) {
       setOcupado(false);
-      setAviso('Revisa los campos marcados en naranja.');
+      setAviso('Revisa lo que está marcado en rojo.');
       return;
     }
     await guardarPerfil(perfilDesdeBorrador(paso1.borrador));
     setOcupado(false);
-    setAviso('Cambios guardados.');
+    setAviso('Guardado.');
   };
 
   const activar = async (permiso: Permiso) => {
@@ -138,7 +138,7 @@ export function PantallaPerfil() {
           disabled={ocupado}
           onPress={guardar}
         />
-        {aviso === 'Cambios guardados.' ? (
+        {aviso === 'Guardado.' ? (
           <Texto fuerte style={estilos.guardado} accessibilityLiveRegion="polite">
             {aviso}
           </Texto>
