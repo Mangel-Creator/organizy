@@ -28,7 +28,15 @@ jobs:
       - run: npm ci
       # Si alguna prueba falla, no se publica
       - run: npm test
+      # Dirección y clave PÚBLICA de Supabase (captura con IA). Son variables del
+      # repositorio (Settings > Secrets and variables > Actions > Variables), no secretos:
+      # la clave pública puede ir en la web. Sin ellas, la web funciona sin la IA.
       - run: npx expo export --platform web
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+          # Clave de TomTom solo para dibujar el tráfico en el mapa web (fase 6).
+          EXPO_PUBLIC_TOMTOM_MAPA_KEY: ${{ vars.TOMTOM_MAPA_KEY }}
       # GitHub Pages ignora las carpetas que empiezan por "_" si no hay este archivo
       - run: touch dist/.nojekyll
       # Si alguien abre una ruta directa (por ejemplo /semana) y no existe, carga la app igualmente
