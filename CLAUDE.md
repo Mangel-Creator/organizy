@@ -583,6 +583,9 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   descanso (si justo después empieza otro bloque) y "Hora de ir a dormir". Se apagan uno
   a uno en la sección (`Epoca.avisos`). En la web no hay avisos: la sección lo explica.
   La hora de salir usa un tiempo elegido a mano hasta que la fase 6 dé trayectos reales.
+  **Pendiente**: la fase 6 ya los da (`calcularRutas` con `llegada` y `horaDeSalida`, ver
+  "Fase 6"); conectarlo dejando el tiempo a mano como respaldo (sin servidor o en
+  transporte público).
 - Al terminar (o con "Terminar la época hoy") la app vuelve sola al ritmo normal y Hoy
   enseña una vez el resumen: horas hechas, bloques completados e hitos superados.
 - Época de ejemplo (3 exámenes, algunos bloques hechos): en desarrollo se crea sola la
@@ -731,6 +734,9 @@ eventos, solo cuenta usos.
   unas 60. Con 2.500 gratis al día llega para unas 80-150 personas al día, a 0 €. En la
   web, cada vista del mapa gasta unos 30-60 trozos de mapa de los 50.000 diarios.
   Supabase gratis: 500.000 llamadas a funciones al mes.
+- **Para la fase 7 (alarma de salida)**: usar las mismas salidas (`leerSalidas`,
+  `suscribirseSalidas`) y no duplicar con el "Sal ya" (por ejemplo, apagar el aviso de esa
+  cita si ya tiene alarma).
 
 ## Hoja de ruta
 
