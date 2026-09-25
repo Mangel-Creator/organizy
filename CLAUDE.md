@@ -123,6 +123,15 @@ sesión que fuera**:
   detrás del servidor, nunca en la app. **Los colores del tráfico sobre la carretera son
   la única excepción** a "cada color significa una sola cosa", y solo dentro del mapa
   (son el código que todo el mundo reconoce); fuera del mapa la regla sigue igual.
+- 25/09/2026 (más tarde, sustituye a lo de "se paga más adelante") — **Ha elegido pagar
+  ya la cuenta de desarrollador de Apple** para tener la app propia en el iPhone sin
+  depender del ordenador. Plan: (1) él se da de alta en el Apple Developer Program
+  (lo hace y lo paga él; Apple puede tardar hasta 48 h en activarla); (2) cuando esté
+  activa, la sesión "Organizy · 02 Bienvenida" (o la que él diga) prepara app.json
+  (bundleIdentifier), expo-updates y la build con EAS, y la manda a TestFlight;
+  (3) después, las mejoras le llegan con EAS Update sin reinstalar. Las credenciales
+  de Apple las escribe siempre él en su terminal; nunca en el código ni en el chat.
+  Hasta que esté activa, sigue con la web y Expo Go con túnel.
 
 ## Cómo prueba el usuario en el iPhone
 
