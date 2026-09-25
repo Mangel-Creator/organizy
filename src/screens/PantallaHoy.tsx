@@ -47,6 +47,7 @@ import {
 } from '@/services/fechas';
 import { colorTipo, colorTipoSobreTinta, colores, espacio, fuentes, tamanos } from '@/theme';
 
+import { CapturaRapida } from './captura/CapturaRapida';
 import { ConfirmacionMovidas } from './calendario/ConfirmacionMovidas';
 import { FilaEvento } from './calendario/FilaEvento';
 import { TarjetaHueco } from './calendario/TarjetaHueco';
@@ -161,6 +162,7 @@ export function PantallaHoy() {
           {cargado && siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
         </View>
         {epoca ? <FranjaEpoca epoca={epoca} hoy={hoy} /> : null}
+        <CapturaRapida hoy={hoy} />
         <AvisoPantallaInicio />
         {cargado && !epoca ? <BotonEpoca /> : null}
         <ResumenFinEpoca epocas={epocas} registro={registro} hoy={hoy} />

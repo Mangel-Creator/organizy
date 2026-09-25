@@ -35,6 +35,7 @@ import {
   sitioTrabajo,
 } from '@/services/agenda';
 import { avisosDisponibles } from '@/services/avisos';
+import { leerBorrador, type BorradorFicha } from '@/services/captura/borrador';
 import {
   claveDia,
   horaDesdeMinutos,
@@ -64,7 +65,7 @@ function volver() {
 }
 
 export function PantallaEvento() {
-  const { id, fecha } = useLocalSearchParams<{ id?: string; fecha?: string }>();
+  const { id, fecha, propuesta } = useLocalSearchParams<{ id?: string; fecha?: string; propuesta?: string }>();
   const { cargado, eventos } = useEventos();
   const { perfil } = usePerfil();
 
@@ -86,8 +87,9 @@ export function PantallaEvento() {
   }
   return (
     <Formulario
-      key={id ?? 'nuevo'}
+      key={id ?? propuesta ?? 'nuevo'}
       evento={evento}
+      rellenar={evento ? null : leerBorrador(propuesta)}
       fechaInicial={fecha ?? claveDia(new Date())}
       perfil={perfil}
       eventos={eventos}
@@ -145,22 +147,29 @@ function lugarInicial(lugar: LugarEvento | null, perfil: Perfil | null): string 
   return perfil?.sitios.some((s) => s.id === lugar.sitioId) ? `sitio:${lugar.sitioId}` : 'ninguno';
 }
 
-function borradorInicial(evento: Evento | null, fecha: ClaveDia, perfil: Perfil | null): Borrador {
+function borradorInicial(
+  evento: Evento | null,
+  fecha: ClaveDia,
+  perfil: Perfil | null,
+  rellenar: BorradorFicha | null,
+): Borrador {
   if (!evento) {
-    const inicio = horaPorDefecto(fecha);
+    // "rellenar" trae lo que ha entendido la captura rápida (o solo la frase).
+    const dia = rellenar?.fecha ?? fecha;
+    const inicio = rellenar?.horaInicio ?? horaPorDefecto(dia);
     return {
-      titulo: '',
-      tipo: 'yo',
-      fecha,
+      titulo: rellenar?.titulo ?? '',
+      tipo: rellenar?.tipo ?? 'yo',
+      fecha: dia,
       horaInicio: inicio,
-      horaFin: horaDesdeMinutos(minutosDesdeHora(inicio) + 60),
-      flexible: false,
-      duracion: '30',
+      horaFin: rellenar?.horaFin ?? horaDesdeMinutos(minutosDesdeHora(inicio) + 60),
+      flexible: rellenar?.flexible ?? false,
+      duracion: (OPCIONES_DURACION.find((o) => o.valor === String(rellenar?.duracionMin))?.valor ?? '30') as Duracion,
       hecha: false,
       foco: false,
       repeticion: 'nunca',
       aviso: avisoInicial(null, perfil),
-      lugar: 'ninguno',
+      lugar: lugarInicial(rellenar?.lugar ?? null, perfil),
       direccion: '',
       direccionTrabajo: '',
       notas: '',
@@ -188,13 +197,14 @@ function borradorInicial(evento: Evento | null, fecha: ClaveDia, perfil: Perfil 
 
 type Props = {
   evento: Evento | null;
+  rellenar: BorradorFicha | null;
   fechaInicial: ClaveDia;
   perfil: Perfil | null;
   eventos: Evento[];
 };
 
-function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
-  const [b, setBorrador] = useState<Borrador>(() => borradorInicial(evento, fechaInicial, perfil));
+function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) {
+  const [b, setBorrador] = useState<Borrador>(() => borradorInicial(evento, fechaInicial, perfil, rellenar));
   const antelacionPerfil = antelacionDelPerfil(perfil);
   const [errores, setErrores] = useState<Errores>({});
   const [ocupado, setOcupado] = useState(false);
@@ -347,6 +357,11 @@ function Formulario({ evento, fechaInicial, perfil, eventos }: Props) {
     <Pantalla ref={scroll}>
       <BotonVolver />
       <Titulo>{evento ? `Editar ${nombre}` : b.flexible ? 'Nueva tarea' : 'Nuevo evento'}</Titulo>
+      {rellenar?.mensaje ? (
+        <Texto secundario accessibilityLiveRegion="polite">
+          {rellenar.mensaje}
+        </Texto>
+      ) : null}
 
       <CampoTexto
         etiqueta="Título"
