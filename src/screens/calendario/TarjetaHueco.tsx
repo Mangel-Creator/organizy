@@ -4,7 +4,7 @@ import { Texto } from '@/components';
 import { useDensidad } from '@/data/densidad';
 import type { Intervalo } from '@/services/agenda';
 import { formatearDuracion, horaDesdeMinutos } from '@/services/fechas';
-import { colores, espacio, radio } from '@/theme';
+import { colores, espacio, fuentes, radio } from '@/theme';
 
 // Hueco libre de 1 hora o más: tarjeta con borde discontinuo.
 export function TarjetaHueco({ hueco }: { hueco: Intervalo }) {
@@ -12,10 +12,10 @@ export function TarjetaHueco({ hueco }: { hueco: Intervalo }) {
   return (
     <View style={[estilos.tarjeta, { minHeight: medidas.altoFila - 4, paddingVertical: medidas.rellenoFila }]}>
       <View style={estilos.horas}>
-        <Texto pequeno secundario>
+        <Texto pequeno secundario style={estilos.hora}>
           {horaDesdeMinutos(hueco.inicio)}
         </Texto>
-        <Texto pequeno secundario>
+        <Texto pequeno secundario style={estilos.hora}>
           {horaDesdeMinutos(hueco.fin)}
         </Texto>
       </View>
@@ -38,5 +38,6 @@ const estilos = StyleSheet.create({
     borderRadius: radio.normal,
   },
   horas: { width: 48 },
+  hora: { fontFamily: fuentes.hora },
   texto: { flex: 1, color: colores.textoSecundario },
 });

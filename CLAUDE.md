@@ -139,6 +139,13 @@ sesión que fuera**:
   como app de verdad y preparada para ese paso. No le propongas pagar la cuenta salvo
   que lo pida o una fase la necesite de verdad; si pregunta cómo usar la app sin el
   ordenador, recuérdale que solo se puede con esa cuenta (o con la web).
+- 25/09/2026 (sustituye al "cuaderno cálido") — El diseño anterior "se notaba mucho que
+  era hecho por una IA" (sobre todo, todas las tarjetas iguales). Elegido: **"agenda
+  nocturna"** con la paleta de siempre: letra IBM Plex (horas en Plex Mono), cabecera
+  oscura en Hoy, filas planas con barra de color y esquinas más rectas. Y **tono cercano
+  en toda la app**: nada de "Buenos días"; tuteo, frases cortas y algún giro coloquial
+  suave ("¿Qué toca hoy?", "Día libre", "Ojo, esto pisa tu bloque de foco"), sin emojis
+  ni exclamaciones de colega. Ver "Diseño" y `BRIEF.md`.
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -182,7 +189,7 @@ sesión que fuera**:
 - Expo SDK 57 (React Native 0.86) con TypeScript.
 - Expo Router (rutas en `src/app/`), pestañas con `Tabs` de `expo-router`.
 - Iconos: `@expo/vector-icons` (Ionicons).
-- Letras: `@expo-google-fonts/fraunces` y `@expo-google-fonts/dm-sans`.
+- Letras: `@expo-google-fonts/ibm-plex-sans` e `@expo-google-fonts/ibm-plex-mono`.
 - Guardado local: AsyncStorage (ajustes) y expo-sqlite (datos como eventos; en la
   web, AsyncStorage: ver "Fase 3").
 - Se prueba con Expo Go mientras no haga falta código nativo propio.
@@ -239,7 +246,10 @@ no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de
 | Tarjetas | `tarjeta` | `#FFFFFF` |
 | Texto principal | `texto` | `#1A1C24` |
 | Texto secundario | `textoSecundario` | `#5E5A52` |
-| Bordes | `borde` | `#DDD6C8` |
+| Bordes (separadores, decorativo) | `borde` | `#DDD6C8` |
+| Borde de los campos de texto | `bordeCampo` | `#958D81` |
+| Cabecera oscura de Hoy / "Lo siguiente" | `tinta` / `tintaSuave` | `#1A1C24` / `#2E313C` |
+| Texto sobre la cabecera | `textoSobreTinta` / `textoSecundarioSobreTinta` | `#FFFFFF` / `#B9BCC8` |
 | Pulsar: botón principal, "+", pestaña activa, interruptores, hoy | `principal` | `#2B4BD8` (azul tinta) |
 | Errores, avisos, días cargados (>80 %) | `aviso` | `#A1172F` (granate) |
 | "Clientes" | `clientes` | `#C4461E` (naranja) |
@@ -249,13 +259,27 @@ no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de
 
 Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
-- Títulos con Fraunces (600 y 700). Resto con DM Sans (400, 500 y 700).
-- Esquinas redondeadas de 14 a 18 px, mucho aire, sin degradados.
+- Letra IBM Plex Sans (títulos 600, texto 400, etiquetas 500, destacado 600). **Las horas
+  van en IBM Plex Mono** (`fuentes.hora` y `fuentes.horaFuerte`), como un reloj.
+- **Hoy empieza con una cabecera oscura** (`colores.tinta`) a todo lo ancho: fecha, saludo,
+  resumen y "Lo siguiente". Dentro, texto en `textoSobreTinta` y `textoSecundarioSobreTinta`,
+  y los colores de tipo en su versión clara (`colorTipoSobreTinta`): los normales no se
+  ven sobre la tinta. `Pantalla colorArriba` pinta la franja de la hora.
+- **Filas planas, no tarjetas**: eventos y tareas son filas blancas sin borde con una
+  barra de 4 px a la izquierda (`borderLeftWidth: 4`, `borderLeftColor: colorTipo[tipo]`)
+  y sin esquinas redondeadas. Las cajas (`Tarjeta`) son blancas y sin borde; solo los
+  campos de texto llevan borde (`bordeCampo`).
+- Esquinas más rectas: `radio.pequeno` 6 (chips, campos), `normal` 8 (botones),
+  `grande` 10 (cajas); `radio.chip` (redondo) solo para interruptores y barras. Sin
+  degradados.
+- **Tono cercano** en todos los textos: tuteo, frases cortas, algún giro coloquial
+  suave, sin emojis ni exclamaciones. Ejemplos en `BRIEF.md` > "Tono".
 - Todo lo pulsable mide 44 px de alto como mínimo (`alturaTactil`).
 - Solo modo claro.
 - Nada de `opacity` para "apagar" texto (baja del contraste mínimo): quita el fondo
   blanco y usa `textoSecundario`, como las filas de eventos pasados.
-- La tarjeta "Siguiente" de Hoy va del color del tipo de su evento (`colorTipo`).
+- La tarjeta "Lo siguiente" de Hoy va dentro de la cabecera, con la barra del color de
+  su tipo (`colorTipoSobreTinta`).
 
 ### Densidad (`src/data/densidad.ts`)
 
@@ -278,20 +302,22 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 ### Componentes (`src/components`)
 
 - `Boton` — `variante="principal"` (azul tinta) o `"secundario"` (blanco con borde).
-- `Tarjeta` — caja blanca redondeada.
-- `Titulo` — Fraunces, `nivel` 1, 2 o 3.
-- `Texto` — DM Sans, con `secundario`, `fuerte` y `pequeno`.
+- `Tarjeta` — caja blanca y plana, sin borde.
+- `Titulo` — IBM Plex Sans 600, `nivel` 1, 2 o 3.
+- `Texto` — IBM Plex Sans, con `secundario`, `fuerte` y `pequeno`.
 - `CampoTexto` — campo con `etiqueta`, `ayuda` y `error` (borde y mensaje en granate, `aviso`).
 - `Selector` — chips para elegir una opción; la elegida con fondo oscuro y texto claro.
 - `SelectorDias` — L M X J V S D, varios a la vez (lunes = 0).
 - `SelectorHora` — hora "HH:MM" con botones − y + de 15 en 15 minutos.
 - `BarraProgreso` — "Paso 1 de 2" con barra azul.
 - `AvisoPantallaInicio` — solo en la web del móvil: cómo añadirla a la pantalla de inicio.
-- `BotonInicial` — botón redondo con la inicial del nombre (abre Perfil).
+- `BotonInicial` — botón redondo con la inicial del nombre (abre Perfil); `sobreTinta`
+  para la cabecera oscura.
 - `Pantalla` — contenedor de pantalla con fondo, márgenes y scroll. Se aparta del
-  teclado (`KeyboardAvoidingView`) y admite `ref` para hacer scroll.
+  teclado (`KeyboardAvoidingView`) y admite `ref` para hacer scroll. `colorArriba` pinta
+  la franja de la hora y la batería (Hoy la pone en `tinta`).
 - `Proximamente` — relleno provisional para pestañas sin hacer.
-- `BotonFlotante` — botón redondo azul con "+", fijo abajo a la derecha. Va al
+- `BotonFlotante` — botón azul cuadrado de esquinas suaves con "+", fijo abajo a la derecha. Va al
   lado de `Pantalla` (no dentro), en un `View` con `flex: 1`.
 - `Casilla` — casilla para marcar como hecho (44 px); da un pequeño salto al marcarla.
 - `Interruptor` — fila con texto, ayuda y un interruptor sí/no.
@@ -364,8 +390,9 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
     las calcula al abrir la app. Si no encuentra un sitio, pide escribirlo de otra forma.
 - Horas con botones − y + (no hay selector de hora nativo que funcione igual en
   Expo Go y en web). Días de trabajo por defecto de lunes a viernes.
-- Saludo en Hoy con `saludoSegunHora` (`fechas.ts`): días de 6:00 a 13:59, tardes
-  de 14:00 a 20:59 y noches el resto.
+- Saludo en Hoy con `saludoSegunHora(fecha, nombre)` (`fechas.ts`): "¿Qué toca hoy,
+  Miguel?" hasta las 13:59, "¿Qué queda hoy…?" de 14:00 a 20:59 y "¿Qué tal el día…?"
+  de 21:00 a 23:59. También es el título del aviso del resumen de la mañana.
 - Perfil no usa la cabecera del Stack: lleva su propio botón "Hoy" para volver, así
   el apartado del teclado no necesita calcular la altura de la cabecera.
 - Librerías añadidas: `expo-location` y `expo-notifications` (con sus plugins en
@@ -407,7 +434,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   editado) que se solapa con un bloque de foco de ese día. Las confirmaciones (foco y
   borrar) son tarjetas dentro de la pantalla, no `Alert`, porque `Alert` no hace
   nada en la web.
-- Hoy: fecha "Jueves 24 sept", saludo, energía, frase resumen, tarjeta "Siguiente"
+- Hoy: fecha "Jueves 24 sept", saludo, energía, frase resumen, tarjeta "Lo siguiente"
   (el que está en curso o el próximo, hasta 7 días), lista con huecos y tareas.
   Huecos libres: de 1 h o más, desde ahora (redondeado al cuarto de hora) hasta la
   hora de acostarse, empezando como pronto al levantarse.
@@ -417,7 +444,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   valen huecos de 15 min o más. Las tareas solo muestran una hora sugerida: nunca
   mueven eventos.
 - Semana: carga = (horas de eventos, sin contar dos veces lo solapado, + duración
-  de tareas pendientes) / horas de jornada del perfil. Más del 80 % = naranja.
+  de tareas pendientes) / horas de jornada del perfil. Más del 80 % = granate (`aviso`).
   Cambiar de semana con flechas o deslizando sobre la tira de días; "Hoy" aparece
   cuando no se está en hoy. Línea de horas a 56 px por hora; los solapados van en
   columnas; los bloques de foco en negro con "Protegido".
