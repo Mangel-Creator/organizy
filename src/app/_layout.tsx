@@ -1,9 +1,11 @@
+import { IBMPlexMono_500Medium, IBMPlexMono_600SemiBold } from '@expo-google-fonts/ibm-plex-mono';
 import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_700Bold,
-} from '@expo-google-fonts/dm-sans';
-import { Fraunces_600SemiBold, Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
+  IBMPlexSans_400Regular,
+  IBMPlexSans_500Medium,
+  IBMPlexSans_600SemiBold,
+  IBMPlexSans_700Bold,
+  useFonts,
+} from '@expo-google-fonts/ibm-plex-sans';
 import { DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -34,11 +36,12 @@ const temaNavegacion = {
 
 export default function LayoutRaiz() {
   const [letrasListas, errorLetras] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_700Bold,
+    IBMPlexSans_400Regular,
+    IBMPlexSans_500Medium,
+    IBMPlexSans_600SemiBold,
+    IBMPlexSans_700Bold,
+    IBMPlexMono_500Medium,
+    IBMPlexMono_600SemiBold,
   });
 
   const { cargado: perfilCargado, bienvenidaCompletada } = usePerfil();
