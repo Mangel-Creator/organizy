@@ -25,6 +25,7 @@ import {
   type ClaveDia,
 } from '@/services/fechas';
 
+import { avisosDeEpoca, type EpocaParaAvisos } from './epoca';
 import type { AvisoPlanificado } from './tipos';
 
 // Qué avisos hay que programar en los próximos días. Funciones puras (sin
@@ -50,6 +51,8 @@ export type ContextoAvisos = {
   eventos: Evento[];
   perfil: Perfil;
   ajustes: AjustesAvisos;
+  // Época dorada de estos días con su plan (fase 4b). Sin época, no cambia nada.
+  epoca?: EpocaParaAvisos | null;
 };
 
 type Generador = {
@@ -194,6 +197,8 @@ const GENERADORES: Generador[] = [
   { activo: (a) => a.eventos, generar: avisosDeEventos },
   { activo: (a) => a.resumenManana, generar: avisoResumenManana },
   { activo: (a) => a.cierreDia, generar: avisoCierreDia },
+  // Época dorada: cada aviso se apaga desde la sección de la época (Epoca.avisos).
+  { activo: () => true, generar: (ctx, dia) => avisosDeEpoca(ctx.epoca, ctx.perfil, dia) },
 ];
 
 // Para probar desde Perfil: el resumen o el cierre de hoy tal cual llegarían,

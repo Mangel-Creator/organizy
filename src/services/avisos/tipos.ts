@@ -3,9 +3,16 @@ import type { ClaveDia } from '@/services/fechas';
 // Tipos de los avisos (notificaciones locales). Sin nada de expo-notifications:
 // así la planificación se puede probar con Jest.
 
-// Tipos de aviso que existen. Para añadir uno (por ejemplo "inicio-bloque" u
-// "hora-dormir" en la fase 4b), añádelo aquí y crea su generador en planificar.ts.
-export type TipoAviso = 'evento' | 'resumen-manana' | 'cierre-dia';
+// Tipos de aviso que existen. Para añadir uno, añádelo aquí y crea su generador
+// en planificar.ts. Los "epoca-..." son de la Época dorada (services/avisos/epoca.ts).
+export type TipoAviso =
+  | 'evento'
+  | 'resumen-manana'
+  | 'cierre-dia'
+  | 'epoca-salir'
+  | 'epoca-bloque'
+  | 'epoca-descanso'
+  | 'epoca-dormir';
 
 // Adónde lleva la app al tocar el aviso.
 export type Destino = { pantalla: 'hoy' } | { pantalla: 'evento'; id: string };

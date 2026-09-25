@@ -31,6 +31,10 @@ export const colores = {
 
   // Barrita de carga en Semana cuando el día va normal y borde de los huecos libres
   cargaNormal: '#8A8374',
+
+  // Dorado: solo para la Época dorada (franja, bloques de estudio, días con hito).
+  // Encima va texto oscuro (colores.texto): el blanco no se lee bien.
+  dorado: '#B7892B',
 } as const;
 
 // Color de cada tipo de evento (Cliente, Amigos, Yo)

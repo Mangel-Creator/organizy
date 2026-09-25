@@ -1,13 +1,16 @@
 import { AppState } from 'react-native';
 
+import { leerAjuste } from '@/data/ajustes';
 import { leerAjustesAvisos, suscribirseAjustesAvisos } from '@/data/avisos';
+import { leerEpocas, suscribirseEpocas } from '@/data/epocas';
 import { leerEventos, moverTareas, suscribirseEventos } from '@/data/eventos';
 import { cargarPerfil, suscribirsePerfil } from '@/data/perfil';
-import { tareasPendientes } from '@/services/agenda';
-import { sumarDias } from '@/services/fechas';
+import { tareasPendientes, type Energia } from '@/services/agenda';
+import { epocaProxima, planificarEpoca } from '@/services/epoca';
+import { claveDia, sumarDias } from '@/services/fechas';
 import { consultarPermiso } from '@/services/permisos';
 
-import { avisoDeHoy, planificarAvisos } from './planificar';
+import { avisoDeHoy, DIAS_A_PROGRAMAR, planificarAvisos } from './planificar';
 // En el móvil carga programar.ts (expo-notifications) y en la web programar.web.ts.
 import {
   avisosDisponibles,
@@ -48,8 +51,20 @@ export function reprogramarAvisos(): Promise<void> {
     if ((await consultarPermiso('notificaciones')) !== 'concedido') return;
     const { perfil, bienvenidaCompletada } = await cargarPerfil();
     if (!perfil || !bienvenidaCompletada) return;
-    const [eventos, ajustes] = await Promise.all([leerEventos(), leerAjustesAvisos()]);
-    await programarAvisos(planificarAvisos({ ahora: new Date(), eventos, perfil, ajustes }));
+    const ahora = new Date();
+    const hoy = claveDia(ahora);
+    const [eventos, ajustes, { epocas, registro }, energia] = await Promise.all([
+      leerEventos(),
+      leerAjustesAvisos(),
+      leerEpocas(),
+      leerAjuste<Energia>(`energia:${hoy}`, 'normal'),
+    ]);
+    // Época dorada activa (o que empieza estos días) con su plan, para sus avisos.
+    const epoca = epocaProxima(epocas, hoy, DIAS_A_PROGRAMAR);
+    const datosEpoca = epoca
+      ? { epoca, plan: planificarEpoca({ epoca, eventos, registro, hoy, energias: { [hoy]: energia } }) }
+      : null;
+    await programarAvisos(planificarAvisos({ ahora, eventos, perfil, ajustes, epoca: datosEpoca }));
   });
   cola = tarea.catch(() => {});
   return tarea;
@@ -76,6 +91,7 @@ export function iniciarAvisos(): () => void {
     suscribirseEventos(reprogramarEnUnMomento),
     suscribirsePerfil(reprogramarEnUnMomento),
     suscribirseAjustesAvisos(reprogramarEnUnMomento),
+    suscribirseEpocas(reprogramarEnUnMomento),
   ];
   // Cada vez que se vuelve a abrir la app: así siempre hay avisos para los próximos días.
   const app = AppState.addEventListener('change', (estado) => {

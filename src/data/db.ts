@@ -49,6 +49,44 @@ const MIGRACIONES: Migracion[] = [
   async (bd) => {
     await bd.execAsync('ALTER TABLE eventos ADD COLUMN aviso_min INTEGER;');
   },
+  // 4. Fase 4b: Época dorada (ver data/epocas/tipos.ts). El ritmo, los avisos y los
+  //    lugares van como JSON: son ajustes de la época, no se buscan por dentro.
+  async (bd) => {
+    await bd.execAsync(`
+      CREATE TABLE epocas (
+        id TEXT PRIMARY KEY NOT NULL,
+        nombre TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        inicio TEXT NOT NULL,
+        fin TEXT NOT NULL,
+        ritmo TEXT NOT NULL,
+        avisos TEXT NOT NULL,
+        ejemplo INTEGER NOT NULL DEFAULT 0,
+        resumen_visto INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE hitos (
+        id TEXT PRIMARY KEY NOT NULL,
+        epoca_id TEXT NOT NULL REFERENCES epocas (id) ON DELETE CASCADE,
+        nombre TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        hora TEXT NOT NULL,
+        lugar TEXT,
+        dificultad TEXT NOT NULL,
+        horas_preparacion REAL NOT NULL
+      );
+      CREATE TABLE bloques_epoca (
+        id TEXT PRIMARY KEY NOT NULL,
+        epoca_id TEXT NOT NULL REFERENCES epocas (id) ON DELETE CASCADE,
+        hito_id TEXT NOT NULL,
+        dia TEXT NOT NULL,
+        inicio INTEGER NOT NULL,
+        fin INTEGER NOT NULL,
+        estado TEXT NOT NULL
+      );
+      CREATE INDEX hitos_epoca ON hitos (epoca_id);
+      CREATE INDEX bloques_epoca_dia ON bloques_epoca (epoca_id, dia);
+    `);
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;

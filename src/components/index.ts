@@ -10,6 +10,7 @@ export { Pantalla } from './Pantalla';
 export { Proximamente } from './Proximamente';
 export { Selector, type Opcion } from './Selector';
 export { SelectorDias } from './SelectorDias';
+export { SelectorCantidad } from './SelectorCantidad';
 export { SelectorFecha } from './SelectorFecha';
 export { SelectorHora } from './SelectorHora';
 export { Tarjeta } from './Tarjeta';
