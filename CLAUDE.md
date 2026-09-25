@@ -223,17 +223,21 @@ src/
     perfil/            Secciones propias de Perfil (SeccionAvisos, SeccionEpocas).
     epoca/             Piezas de la Época dorada (franja, Plan de hoy, formulario,
                        editores de hitos y de imprescindibles, useEpocaActiva).
+    captura/           Captura rápida con IA (campo de Hoy y tarjeta de confirmación).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
                        perfil.ts (perfil del usuario), energia.ts (energía del día),
                        avisos.ts (qué avisos están activados), eventos/ (eventos),
-                       epocas/ (épocas doradas y bloques marcados).
+                       epocas/ (épocas doradas y bloques marcados),
+                       supabase.ts (conexión con el servidor propio).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
                        avisos/ (notificaciones locales; con pruebas),
-                       epoca/ (plan, progreso y cuenta atrás de la época; con pruebas).
+                       epoca/ (plan, progreso y cuenta atrás de la época; con pruebas),
+                       captura/ (captura rápida con IA y validación; con pruebas).
+supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 ```
 
 El alias `@/` apunta a `src/`.
@@ -579,6 +583,70 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 - Rutas nuevas: si `tsc` se queja de `/epoca` en otra carpeta, es que `.expo/types` está
   anticuado; se regenera al arrancar `expo start`.
 
+## Servidor propio: Supabase (desde la fase 5)
+
+Un solo proyecto de Supabase para todo lo que necesita claves secretas (fases 5, 6, 8...).
+Los datos del usuario siguen solo en su dispositivo: el servidor no guarda frases ni
+eventos, solo cuenta usos.
+
+- **Cuentas**: las crea y administra el usuario (supabase.com y console.anthropic.com).
+  Nunca le pidas contraseñas ni claves secretas: las escribe él en el panel de Supabase
+  o con `npx supabase secrets set` en su terminal.
+- **Claves**: la dirección del proyecto y la clave **pública** (publishable,
+  `sb_publishable_...`) pueden ir en la app: `EXPO_PUBLIC_SUPABASE_URL` y
+  `EXPO_PUBLIC_SUPABASE_KEY` en `.env` (no se sube; plantilla en `.env.example`) y, para la
+  web publicada, variables del repositorio `SUPABASE_URL` y `SUPABASE_KEY` (Settings >
+  Secrets and variables > Actions > Variables) que `pages.yml` pasa a `expo export`. Tras
+  crear o cambiar `.env`, reinicia el servidor de Expo (túnel incluido). Las secretas
+  (`ANTHROPIC_API_KEY`, `TOMTOM_API_KEY`, la `sb_secret_...`) solo en los secretos de Supabase.
+- **En la app**: `src/data/supabase.ts`: `obtenerSupabase()` (null si no hay `.env`: la
+  app funciona igual, sin lo del servidor) y `asegurarSesion(supabase)` (usuario anónimo,
+  sin registro; sesión en AsyncStorage). Después `supabase.functions.invoke('nombre',
+  { body, timeout })`: el token del usuario va solo en la cabecera.
+- **Funciones** en `supabase/functions/<nombre>/index.ts` (Deno; `tsc` y `eslint` no miran
+  la carpeta `supabase`). Piezas comunes en `supabase/functions/_shared/`: `cors.ts`
+  (solo `https://mangel-creator.github.io` y `http://localhost:*`), `usuario.ts`
+  (`usuarioDeLaPeticion`: comprueba el token con `auth.getUser`) y `limite.ts` (`sumarUso`:
+  límite por usuario y día y otro global). Cada función lleva `verify_jwt = false` en
+  `supabase/config.toml` (comprueba el usuario por dentro; así pasa el preflight CORS).
+- **Base de datos**: `supabase/migrations/` (tabla `usos_diarios` y función `sumar_uso`,
+  que solo puede llamar el servidor). Se aplica pegando el SQL en el SQL Editor del panel.
+- **Desplegar** (desde `C:\proyectos\organizy`, con la sesión de la CLI iniciada por el
+  usuario con `npx supabase login`): `npx supabase functions deploy <nombre>
+  --project-ref <ref> --use-api`.
+- Autenticación anónima activada en el panel (Authentication > Sign In / Providers >
+  Anonymous). Supabase limita a 30 altas anónimas por hora y dirección IP.
+
+## Fase 5: captura rápida con IA (decisiones)
+
+- En Hoy, bajo la cabecera, campo "Captura rápida" (`screens/captura/CapturaRapida.tsx`).
+  Se escribe o se dicta con el micrófono del teclado. `accesorio` deja poner otro botón
+  junto al de enviar (micrófono de la fase 9) y `enviarFraseACaptura(frase)` manda una
+  frase desde fuera por el mismo camino.
+- `services/captura/index.ts`: `interpretarFrase(frase, perfil)` envía la frase, el día y la
+  hora, la zona horaria y los sitios (Casa con id `casa` y los habituales, solo id y
+  nombre, sin direcciones) a la Edge Function `captura`. Nunca guarda nada.
+- La función (`supabase/functions/captura`) usa **Claude Haiku 4.5** (`claude-haiku-4-5`) con
+  salida estructurada (JSON con esquema). Le da un calendario de 15 días para que acierte
+  "el jueves". Devuelve título, fecha, inicio, fin (1 h por defecto), tipo, `sitioId`,
+  flexible, duración y confianza (alta, media, baja). Límite: 50 usos por usuario y día y
+  1000 en total (secretos opcionales `CAPTURA_LIMITE_USUARIO` y `CAPTURA_LIMITE_GLOBAL`).
+  En sus registros solo apunta los tokens gastados, nunca la frase.
+- La app vuelve a validar el JSON (`services/captura/validar.ts`, con pruebas): fecha real
+  y cercana, horas válidas, fin después del inicio y sin cruzar medianoche, tipo y sitio
+  válidos (lugar por referencia, como en la fase 3). Sin hora = tarea flexible.
+- Confianza alta o media: tarjeta editable "¿Lo guardo así?" (`TarjetaConfirmacion.tsx`)
+  con Guardar, Cancelar y "Más opciones" (abre la ficha completa ya rellena). Avisa si
+  pisa un bloque de foco.
+- Sin `.env`, sin conexión, con error, al llegar al límite o con confianza baja: abre la
+  ficha normal con la frase como título y un mensaje corto arriba. La ficha acepta
+  `/evento?fecha=...&propuesta=<id>` con un borrador en memoria
+  (`services/captura/borrador.ts`: `dejarBorrador` y `leerBorrador`), para no poner la
+  frase en la dirección de la página.
+- Coste aproximado: 0,2 céntimos de dólar por frase (unos 1.300 tokens de entrada y 120 de
+  salida, a 1 $ y 5 $ por millón): unas 500 frases por dólar. Gasto en console.anthropic.com > Usage / Cost; conviene poner
+  también un límite de gasto mensual en la consola.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
@@ -586,7 +654,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 - [x] 3. Calendario: pantallas Hoy y Semana.
 - [x] 4. Avisos (notificaciones).
 - [x] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
-- [ ] 5. Captura rápida con IA.
+- [x] 5. Captura rápida con IA (el código está hecho; falta que el usuario cree las cuentas y se despliegue la función: ver "Servidor propio").
 - [ ] 6. Mapa, tráfico, radares y rutas.
 - [ ] 7. Alarmas.
 - [ ] 8. Planes con WhatsApp y votación.
