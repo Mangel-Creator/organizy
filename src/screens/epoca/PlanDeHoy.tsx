@@ -16,7 +16,7 @@ import {
   type PlanEpoca,
 } from '@/services/epoca';
 import { claveDia, horaDesdeMinutos, minutosDelDia } from '@/services/fechas';
-import { alturaTactil, colores, espacio, radio } from '@/theme';
+import { alturaTactil, colores, espacio } from '@/theme';
 
 import { BarraHoras } from './BarraHoras';
 
@@ -159,12 +159,10 @@ const estilos = StyleSheet.create({
     gap: espacio.xs,
     minHeight: alturaTactil + 12,
     paddingRight: espacio.s,
+    // Fila plana con la barra dorada, como las filas de eventos de Hoy.
     backgroundColor: colores.tarjeta,
-    borderWidth: 1,
-    borderColor: colores.borde,
     borderLeftWidth: 4,
     borderLeftColor: colores.dorado,
-    borderRadius: radio.normal,
   },
   // Sin opacidad: sin fondo blanco y con texto secundario (ver CLAUDE.md > Diseño).
   apagado: { backgroundColor: 'transparent' },

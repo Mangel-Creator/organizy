@@ -207,6 +207,8 @@ src/
     bienvenida.tsx     Formulario de bienvenida (solo si no se ha completado).
     perfil.tsx         Perfil (se abre desde el botón con la inicial en Hoy).
     evento.tsx         Ficha de evento: /evento?fecha=AAAA-MM-DD (nuevo) o ?id= (editar).
+    epoca.tsx          Sección de la Época dorada: /epoca (la activa) o /epoca?id=.
+    epoca-editar.tsx   Formulario de la época en 3 pasos: nueva, o ?id= (y &paso=3).
     (tabs)/_layout.tsx Barra inferior con las 5 pestañas.
     (tabs)/index.tsx   Hoy
     (tabs)/semana.tsx  Semana
@@ -218,16 +220,20 @@ src/
                        comprobaciones y tarjetas de permisos).
     calendario/        Piezas de Hoy, Semana y la ficha de evento (FilaEvento,
                        TarjetaHueco, textos y opciones, useAhora, ConfirmacionMovidas).
-    perfil/            Secciones propias de Perfil (SeccionAvisos).
+    perfil/            Secciones propias de Perfil (SeccionAvisos, SeccionEpocas).
+    epoca/             Piezas de la Época dorada (franja, Plan de hoy, formulario,
+                       editores de hitos y de imprescindibles, useEpocaActiva).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
                        perfil.ts (perfil del usuario), energia.ts (energía del día),
-                       avisos.ts (qué avisos están activados), eventos/ (eventos).
+                       avisos.ts (qué avisos están activados), eventos/ (eventos),
+                       epocas/ (épocas doradas y bloques marcados).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
-                       avisos/ (notificaciones locales; con pruebas).
+                       avisos/ (notificaciones locales; con pruebas),
+                       epoca/ (plan, progreso y cuenta atrás de la época; con pruebas).
 ```
 
 El alias `@/` apunta a `src/`.
@@ -256,6 +262,7 @@ no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de
 | "Amigos" | `amigos` | `#16734F` (verde) |
 | "Yo" (personal) | `yo` | `#1A1C24` (negro) |
 | Barrita de carga normal y borde de huecos | `cargaNormal` | `#8A8374` (gris) |
+| Solo la Época dorada (franja, bloques de estudio, días con hito) | `dorado` | `#B7892B` (texto oscuro encima) |
 
 Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
@@ -322,6 +329,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 - `Casilla` — casilla para marcar como hecho (44 px); da un pequeño salto al marcarla.
 - `Interruptor` — fila con texto, ayuda y un interruptor sí/no.
 - `SelectorFecha` — día con − y + y atajos Hoy, Mañana y En una semana.
+- `SelectorCantidad` — número con − y + (horas al día, horas de preparación...).
 
 ## Idioma y formatos
 
@@ -336,7 +344,8 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 - `src/data/db.ts`: `obtenerBD()` abre `organizy.db` y aplica migraciones. Para crear
   tablas, añade una función al final de `MIGRACIONES` (la versión se guarda en
   `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
-  `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`. Solo se usa en Android e iOS.
+  `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`; 4: tablas `epocas`, `hitos` y
+  `bloques_epoca` (fase 4b). Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -370,6 +379,17 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   se leen con null.
 - Para lógica sin pantallas: `leerEventos()` / `suscribirseEventos` y
   `cargarPerfil()` / `suscribirsePerfil`.
+- `src/data/epocas/`: tipos `Epoca`, `Hito`, `RitmoEpoca`, `Imprescindible`, `RegistroBloque`
+  en `tipos.ts`. En pantallas `useEpocas()` → { cargado, epocas, registro }; fuera,
+  `leerEpocas()` / `suscribirseEpocas`. Para cambiar: `guardarEpoca`, `borrarEpoca`,
+  `terminarEpoca`, `marcarResumenVisto`, `marcarBloque(bloque, 'hecho'|'saltado'|null)`,
+  `crearEpocaDeEjemplo`, `borrarEpocasDeEjemplo`. Guardado como los eventos:
+  `repositorio.ts` (SQLite) y `repositorio.web.ts` (`organizy:epocas` y
+  `organizy:bloquesEpoca`).
+- `src/services/epoca/` (puro, con pruebas): `epocaActiva(epocas, dia)` (úsala para saber
+  si hay época: Hoy, Semana y avisos), `estadoEpoca`, `epocaProxima`, `epocasSolapadas`,
+  `ventanaEpoca`, `lugarDelDia`, `imprescindiblesDelDia`, `cuentaAtras`, `textoQuedan`,
+  `planificarEpoca`, `eventoDeBloque`, `progresoHitos`, `progresoSemana`, `resumenEpoca`.
 
 ## Fase 2: bienvenida y perfil (decisiones)
 
@@ -513,13 +533,59 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   4. Sonido: `sound: 'default'`. Un sonido propio no funciona en Expo Go y no suena
      con el móvil en silencio.
 
+## Fase 4b: Época dorada (decisiones)
+
+- Modo para exámenes o trabajo intenso, con fechas de inicio y fin. Mientras dura, Hoy,
+  Semana y los avisos usan el ritmo de la época (levantarse, acostarse, horas al día)
+  en vez del del perfil. Fuera de la época nada cambia. Solo una activa a la vez: si
+  dos se solapan se avisa al guardar y, si se guarda igualmente, manda la que empieza antes.
+- Dónde: botón "Época dorada" en Hoy (sin época activa); franja dorada justo debajo de
+  la cabecera de Hoy mientras hay una ("Época dorada · nombre · quedan N días"); sección
+  `/epoca`; en Perfil, el apartado "Épocas doradas" (activa, programadas y pasadas).
+- Formulario de 3 pasos (`/epoca-editar`), editable después: 1 nombre, tipo y fechas;
+  2 ritmo (horas, sitio, días que va, sitio distinto por día, cuánto tarda en llegar,
+  horas al día, cuándo rinde más, descanso, día libre y lo que no quiere dejar de hacer);
+  3 hitos (nombre, fecha, hora, lugar, dificultad y horas de preparación).
+- "Qué días vas" son los días que va al sitio de estudio; los demás estudia en casa. El
+  día libre no tiene plan. Los sitios por día se eligen entre el de la época, Casa y los
+  sitios habituales. Lugares como en los eventos: Casa y sitios por referencia.
+- **Plan automático** (`planificarEpoca`): reparte las horas de cada hito en bloques del
+  largo elegido (25, 50 o 90 min, con su descanso detrás) en los días anteriores al hito,
+  dentro del horario de la época, primero en el momento en que rinde más, sin pisar
+  eventos ni lo que no quiere dejar de hacer (que se ven como eventos "virtuales" con id
+  `epoca-...`: al tocarlos se abre la sección). Cada bloque va al hito con más
+  `puntuacion` = dificultad × horas que le quedan / días hasta su fecha. "Tranqui" ese
+  día: la mitad de horas. Bloque mínimo 15 min.
+- El plan no se guarda: se calcula al vuelo. Solo se guarda lo marcado (`RegistroBloque`,
+  id "<época>:<día>:<minuto>"). El plan de hoy se calcula desde que empieza el día para
+  que los bloques no cambien de hora. Un bloque saltado (botón "Saltar") o uno de un día
+  pasado sin marcar se reparte solo en los días que quedan. Si ya no caben, se avisa
+  (`faltanMin`) en Hoy y en la sección.
+- Hoy durante la época: cuenta atrás al siguiente hito, "Plan de hoy" (bloques con
+  casilla, "Saltar"/"Deshacer" y descansos) y progreso (semana y cada hito). Los huecos
+  de "Tu día" usan el horario de la época y descuentan los bloques.
+- Semana: en los días de la época, carga = ocupado / horas despierto de la época; los
+  bloques salen en la línea de horas como bloques de foco con barra dorada y los días
+  con hito llevan un punto dorado.
+- Avisos (`services/avisos/epoca.ts`, en `GENERADORES`): hora de salir (primer bloque
+  menos "tardo en llegar", solo si no estudia en casa), inicio de cada bloque, fin del
+  descanso (si justo después empieza otro bloque) y "Hora de ir a dormir". Se apagan uno
+  a uno en la sección (`Epoca.avisos`). En la web no hay avisos: la sección lo explica.
+  La hora de salir usa un tiempo elegido a mano hasta que la fase 6 dé trayectos reales.
+- Al terminar (o con "Terminar la época hoy") la app vuelve sola al ritmo normal y Hoy
+  enseña una vez el resumen: horas hechas, bloques completados e hitos superados.
+- Época de ejemplo (3 exámenes, algunos bloques hechos): en desarrollo se crea sola la
+  primera vez (`organizy:epocaEjemploCreada`); en Perfil hay botones para crearla y borrarla.
+- Rutas nuevas: si `tsc` se queja de `/epoca` en otra carpeta, es que `.expo/types` está
+  anticuado; se regenera al arrancar `expo start`.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
 - [x] 2. Formulario de bienvenida y perfil.
 - [x] 3. Calendario: pantallas Hoy y Semana.
 - [x] 4. Avisos (notificaciones).
-- [ ] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
+- [x] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
 - [ ] 5. Captura rápida con IA.
 - [ ] 6. Mapa, tráfico, radares y rutas.
 - [ ] 7. Alarmas.
