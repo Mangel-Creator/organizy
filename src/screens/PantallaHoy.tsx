@@ -34,6 +34,7 @@ import {
   type Intervalo,
   type Siguiente,
 } from '@/services/agenda';
+import { imprescindiblesDelDia, ventanaEpoca } from '@/services/epoca';
 import {
   claveDia,
   fechaDesdeClave,
@@ -51,6 +52,10 @@ import { FilaEvento } from './calendario/FilaEvento';
 import { TarjetaHueco } from './calendario/TarjetaHueco';
 import { OPCIONES_ENERGIA, abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
 import { useAhora } from './calendario/useAhora';
+import { BotonEpoca, FranjaEpoca } from './epoca/FranjaEpoca';
+import { PlanDeHoy } from './epoca/PlanDeHoy';
+import { ResumenFinEpoca } from './epoca/ResumenFinEpoca';
+import { useEpocaActiva } from './epoca/useEpoca';
 
 const NOMBRE_MOMENTO: Record<MomentoDelDia, string> = {
   manana: 'por la mañana',
@@ -78,6 +83,8 @@ export function PantallaHoy() {
   const { perfil } = usePerfil();
   const { cargado, eventos } = useEventos();
   const [energia, setEnergia] = useEnergia(hoy);
+  // Época dorada activa (fase 4b): cambia el horario del día y añade su plan.
+  const { epoca, plan, epocas, registro } = useEpocaActiva(hoy, eventos, energia);
   const { medidas } = useDensidad();
   const separacion = { gap: medidas.separacion };
 
@@ -94,9 +101,14 @@ export function PantallaHoy() {
   const rindeMas = perfil?.rindeMas ?? 'manana';
 
   // Huecos a partir de ahora (redondeado al cuarto de hora) dentro del horario del perfil.
-  const delDia = eventosDelDia(eventos, hoy);
-  const ocupados = delDia.map(intervaloDe);
-  const ventana = ventanaDelDia(perfil);
+  // Durante una época, lo que no quiere dejar de hacer cuenta como un evento más
+  // y los bloques de estudio (con su descanso) ocupan su tiempo.
+  const delDia = [...eventosDelDia(eventos, hoy), ...(epoca ? imprescindiblesDelDia(epoca, hoy) : [])].sort(
+    (a, b) => intervaloDe(a).inicio - intervaloDe(b).inicio,
+  );
+  const bloquesHoy = (plan?.bloques ?? []).filter((b) => b.dia === hoy && b.estado !== 'saltado');
+  const ocupados = [...delDia.map(intervaloDe), ...bloquesHoy.map((b) => ({ inicio: b.inicio, fin: b.descansoFin }))];
+  const ventana = epoca ? ventanaEpoca(epoca) : ventanaDelDia(perfil);
   const desde = Math.max(ventana.inicio, Math.ceil(minutosDelDia(ahora) / 15) * 15);
   const quedan = { inicio: desde, fin: ventana.fin };
   const huecos = calcularHuecos(ocupados, quedan);
@@ -148,7 +160,10 @@ export function PantallaHoy() {
           ) : null}
           {cargado && siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
         </View>
+        {epoca ? <FranjaEpoca epoca={epoca} hoy={hoy} /> : null}
         <AvisoPantallaInicio />
+        {cargado && !epoca ? <BotonEpoca /> : null}
+        <ResumenFinEpoca epocas={epocas} registro={registro} hoy={hoy} />
 
         <Selector
           etiqueta="¿Cómo vas de energía?"
@@ -160,6 +175,10 @@ export function PantallaHoy() {
         {cargado ? (
           <>
             <ConfirmacionMovidas />
+
+            {epoca && plan ? (
+              <PlanDeHoy epoca={epoca} plan={plan} registro={registro} perfil={perfil} ahora={ahora} energia={energia} />
+            ) : null}
 
             <Titulo nivel={2} style={estilos.seccion}>
               Tu día

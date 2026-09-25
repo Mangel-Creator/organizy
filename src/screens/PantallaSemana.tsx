@@ -6,6 +6,8 @@ import Animated, { FadeIn, LayoutAnimationConfig } from 'react-native-reanimated
 import { BotonFlotante, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
 import { useDensidad } from '@/data/densidad';
 import { useEventos, type Evento } from '@/data/eventos';
+import { useEnergia } from '@/data/energia';
+import { useEpocas, type Epoca } from '@/data/epocas';
 import { usePerfil } from '@/data/perfil';
 import {
   cargaDelDia,
@@ -17,6 +19,15 @@ import {
   tareasPendientes,
   ventanaDelDia,
 } from '@/services/agenda';
+import {
+  epocaActiva,
+  eventoDeBloque,
+  imprescindiblesDelDia,
+  planificarEpoca,
+  PREFIJO_EPOCA,
+  ventanaEpoca,
+  type PlanEpoca,
+} from '@/services/epoca';
 import {
   DIAS_SEMANA_LETRA,
   claveDia,
@@ -47,10 +58,40 @@ export function PantallaSemana() {
   const [elegido, setElegido] = useState<ClaveDia>(hoy);
   const { perfil } = usePerfil();
   const { eventos } = useEventos();
+  const { epocas, registro } = useEpocas();
+  const [energiaHoy] = useEnergia(hoy);
 
   const lunes = claveDia(inicioDeSemana(fechaDesdeClave(elegido)));
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
   const jornada = minutosDeJornada(perfil);
+
+  // Época dorada (fase 4b): los días de una época usan su horario para la carga y
+  // la línea de horas, y enseñan sus bloques de estudio (de hoy en adelante, el
+  // plan; los días pasados, lo que se hizo) y lo que no quiere dejar de hacer.
+  const planes = new Map<string, PlanEpoca>();
+  const planDe = (epoca: Epoca) => {
+    const guardado = planes.get(epoca.id);
+    if (guardado) return guardado;
+    const plan = planificarEpoca({ epoca, eventos, registro, hoy, energias: { [hoy]: energiaHoy } });
+    planes.set(epoca.id, plan);
+    return plan;
+  };
+  const delDiaConEpoca = (dia: ClaveDia) => {
+    const epoca = epocaActiva(epocas, dia);
+    const propios = eventosDelDia(eventos, dia);
+    if (!epoca) return { epoca: null, eventos: propios, ventana: ventanaDelDia(perfil), jornada };
+    const bloques =
+      dia >= hoy
+        ? planDe(epoca).bloques.filter((b) => b.dia === dia && b.estado !== 'saltado')
+        : registro.filter((r) => r.epocaId === epoca.id && r.dia === dia && r.estado === 'hecho');
+    const todos = [
+      ...propios,
+      ...imprescindiblesDelDia(epoca, dia),
+      ...bloques.map((b) => eventoDeBloque(epoca, b)),
+    ].sort((a, b) => intervaloDe(a).inicio - intervaloDe(b).inicio);
+    const ventana = ventanaEpoca(epoca);
+    return { epoca, eventos: todos, ventana, jornada: ventana.fin - ventana.inicio };
+  };
   const fechaElegida = fechaDesdeClave(elegido);
 
   const cambiarSemana = (semanas: number) => setElegido((actual) => sumarDias(actual, 7 * semanas));
@@ -65,7 +106,9 @@ export function PantallaSemana() {
     }),
   );
 
-  const delDia = eventosDelDia(eventos, elegido);
+  const diaElegido = delDiaConEpoca(elegido);
+  const delDia = diaElegido.eventos;
+  const hitosElegido = diaElegido.epoca?.hitos.filter((h) => h.fecha === elegido) ?? [];
   const tareas = eventos.filter((e) => e.flexible && e.fecha === elegido);
 
   return (
@@ -101,16 +144,18 @@ export function PantallaSemana() {
 
         <Tarjeta style={estilos.tira} {...deslizar.panHandlers}>
           {dias.map((dia, i) => {
-            const ocupados = eventosDelDia(eventos, dia).map(intervaloDe);
+            const conEpoca = delDiaConEpoca(dia);
+            const ocupados = conEpoca.eventos.map(intervaloDe);
+            const hayHito = conEpoca.epoca?.hitos.some((h) => h.fecha === dia) ?? false;
             const minutosTareas = tareasPendientes(eventos, dia, hoy).reduce((t, e) => t + duracionTarea(e), 0);
-            const carga = cargaDelDia(ocupados, minutosTareas, jornada);
+            const carga = cargaDelDia(ocupados, minutosTareas, conEpoca.jornada);
             const esElegido = dia === elegido;
             const fecha = fechaDesdeClave(dia);
             return (
               <Pressable
                 key={dia}
                 accessibilityRole="button"
-                accessibilityLabel={`${formatearDiaCorto(fecha)}, ${Math.round(carga.proporcion * 100)} % ocupado`}
+                accessibilityLabel={`${formatearDiaCorto(fecha)}, ${Math.round(carga.proporcion * 100)} % ocupado${hayHito ? ', con examen o entrega' : ''}`}
                 accessibilityState={{ selected: esElegido }}
                 onPress={() => setElegido(dia)}
                 style={({ pressed }) => [estilos.dia, pressed && estilos.pulsado]}>
@@ -124,6 +169,7 @@ export function PantallaSemana() {
                     {fecha.getDate()}
                   </Texto>
                 </View>
+                <View style={[estilos.marcaHito, hayHito && estilos.marcaHitoVisible]} />
                 <View style={estilos.barraFondo}>
                   <View
                     style={[
@@ -146,13 +192,18 @@ export function PantallaSemana() {
               {elegido === hoy ? `Hoy, ${formatearDiaCorto(fechaElegida)}` : formatearDiaCorto(fechaElegida)}
             </Titulo>
 
+            {hitosElegido.map((h) => (
+              <Texto key={h.id} fuerte style={estilos.hito}>
+                ★ {h.nombre} a las {h.hora}
+              </Texto>
+            ))}
             {delDia.length === 0 && tareas.length === 0 ? (
               <Texto secundario>Este día lo tienes libre.</Texto>
             ) : null}
             {delDia.length > 0 ? (
               <LineaDeHoras
                 eventos={delDia}
-                ventana={ventanaDelDia(perfil)}
+                ventana={diaElegido.ventana}
                 minutoAhora={elegido === hoy ? minutosDelDia(ahora) : null}
               />
             ) : null}
@@ -232,6 +283,7 @@ function LineaDeHoras({ eventos, ventana, minutoAhora }: PropsLinea) {
               style={({ pressed }) => [
                 estilos.bloque,
                 evento.foco ? estilos.bloqueFoco : { borderLeftColor: colorTipo[evento.tipo] },
+                evento.id.startsWith(`${PREFIJO_EPOCA}bloque:`) && estilos.bloqueEpoca,
                 {
                   top: y(inicio) + 1,
                   height: Math.max(y(fin) - y(inicio) - 2, 26),
@@ -363,6 +415,11 @@ const estilos = StyleSheet.create({
     overflow: 'hidden',
   },
   bloqueFoco: { backgroundColor: colores.texto, borderLeftColor: colores.texto },
+  // Bloques de estudio de la Época dorada: como un bloque de foco, con la barra dorada.
+  bloqueEpoca: { borderLeftColor: colores.dorado },
+  marcaHito: { width: 6, height: 6, borderRadius: 3 },
+  marcaHitoVisible: { backgroundColor: colores.dorado },
+  hito: { marginTop: -espacio.s },
   textoClaro: { color: colores.fondo },
   secundario: { color: colores.textoSecundario, fontSize: tamanos.pequeno },
   ahora: { position: 'absolute', left: -4, right: 0, height: 2, backgroundColor: colores.principal },

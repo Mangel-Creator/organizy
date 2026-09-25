@@ -44,6 +44,12 @@ export const NOMBRE_TIPO: Record<TipoEpoca, string> = {
   otro: 'Otro',
 };
 
+export const DESCANSO_TEXTO: Record<Descanso, string> = {
+  '25-5': 'bloques de 25 min + 5 de descanso',
+  '50-10': 'bloques de 50 min + 10 de descanso',
+  '90-15': 'bloques de 90 min + 15 de descanso',
+};
+
 export const NOMBRE_DIFICULTAD: Record<Dificultad, string> = {
   facil: 'fácil',
   media: 'media',

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import type { Opcion } from '@/components';
 import type { Evento, Repeticion, TipoEvento } from '@/data/eventos';
 import type { Energia } from '@/services/agenda';
+import { PREFIJO_EPOCA } from '@/services/epoca';
 import type { ClaveDia } from '@/services/fechas';
 
 // Textos y atajos compartidos por Hoy, Semana y la ficha de evento.
@@ -47,6 +48,12 @@ export function rangoHoras(evento: Evento): string {
 }
 
 export function abrirEvento(id: string) {
+  // Lo que viene de la Época dorada (bloques y cosas que no quiere dejar de
+  // hacer) no son eventos guardados: se abre la sección de la época.
+  if (id.startsWith(PREFIJO_EPOCA)) {
+    router.push('/epoca');
+    return;
+  }
   router.push({ pathname: '/evento', params: { id } });
 }
 

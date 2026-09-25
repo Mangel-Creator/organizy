@@ -8,9 +8,9 @@ import {
   type Energia,
   type Intervalo,
 } from '@/services/agenda';
-import { sumarDias, type ClaveDia } from '@/services/fechas';
+import { horaDesdeMinutos, sumarDias, type ClaveDia } from '@/services/fechas';
 
-import { diasEntre, esDiaLibre, imprescindiblesDelDia, ventanaEpoca } from './estado';
+import { diasEntre, esDiaLibre, imprescindiblesDelDia, PREFIJO_EPOCA, ventanaEpoca } from './estado';
 
 // Plan automático de la época: reparte las horas de preparación de cada hito
 // en bloques de estudio (de 25, 50 o 90 min con su descanso) en los días
@@ -62,6 +62,29 @@ export type DatosPlan = {
   hoy: ClaveDia;
   energias?: Partial<Record<ClaveDia, Energia>>;
 };
+
+// Un bloque como evento con hora fija, para dibujarlo en la línea de horas de
+// Semana (como bloque de foco). Su id empieza por "epoca-": al tocarlo se abre
+// la sección de la época.
+export function eventoDeBloque(epoca: Epoca, bloque: Pick<BloquePlan, 'id' | 'dia' | 'inicio' | 'fin' | 'hitoId'>): Evento {
+  return {
+    id: `${PREFIJO_EPOCA}bloque:${bloque.id}`,
+    titulo: epoca.hitos.find((h) => h.id === bloque.hitoId)?.nombre ?? 'Estudio',
+    fecha: bloque.dia,
+    horaInicio: horaDesdeMinutos(bloque.inicio),
+    horaFin: horaDesdeMinutos(bloque.fin),
+    tipo: 'yo',
+    lugar: null,
+    notas: '',
+    repeticion: 'nunca',
+    flexible: false,
+    duracionMin: null,
+    hecha: false,
+    foco: true,
+    avisoMin: 0,
+    ejemplo: false,
+  };
+}
 
 export function idBloque(epocaId: string, dia: ClaveDia, inicio: number): string {
   return `${epocaId}:${dia}:${inicio}`;

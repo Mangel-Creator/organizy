@@ -96,6 +96,8 @@ export default function LayoutRaiz() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="perfil" />
           <Stack.Screen name="evento" />
+          <Stack.Screen name="epoca" />
+          <Stack.Screen name="epoca-editar" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />
