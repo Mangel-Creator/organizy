@@ -97,6 +97,12 @@ sesión que fuera**:
   EAS Update, así que sin app propia no hay forma de usar la app sin el ordenador. No
   propongas de nuevo la cuenta de Apple salvo en las fases que la necesiten de verdad
   (alarmas, widget, voz) o si el usuario lo pide.
+- 25/09/2026 — Fase 7 (Alarmas) en versión sin Apple: la pestaña se hace completa
+  (despertador, hora de dormir, salida e inteligente), pero en Expo Go las alarmas son
+  avisos locales con sonido (no suenan con el móvil en silencio) y en la web se explica
+  y se ofrece crear la alarma en el Reloj del iPhone con un Atajo. Todo detrás de una
+  interfaz que permita cambiar a alarmas de verdad (AlarmKit en iOS 26+, AlarmManager
+  en Android) sin rehacer nada, cuando el usuario decida tener cuenta de Apple.
 
 ## Tecnología
 
