@@ -11,6 +11,7 @@ export type PropsMapa = {
   elegida: number; // índice de la ruta elegida en "rutas"
   alElegir: (indice: number) => void; // al tocar una ruta alternativa
   radares: Radar[];
+  centroInicial?: Punto | null; // si aún no se sabe dónde estás (por ejemplo, tu casa)
   style?: StyleProp<ViewStyle>;
 };
 

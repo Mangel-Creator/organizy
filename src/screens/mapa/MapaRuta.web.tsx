@@ -24,7 +24,7 @@ const ATRIBUCION_TOMTOM = '© <a href="https://www.tomtom.com">TomTom</a>';
 
 type Capas = { rutas: L.LayerGroup; radares: L.LayerGroup; marcas: L.LayerGroup };
 
-export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares, style }: PropsMapa) {
+export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares, centroInicial, style }: PropsMapa) {
   const contenedor = useRef<View>(null);
   const [leaflet, setLeaflet] = useState<typeof L | null>(null);
   const mapa = useRef<L.Map | null>(null);
@@ -37,10 +37,10 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
       const Lf = (modulo as unknown as { default?: typeof L }).default ?? (modulo as unknown as typeof L);
       const nodo = contenedor.current as unknown as HTMLElement | null;
       if (cancelado || !nodo) return;
-      const centro = ubicacion ?? destino ?? CENTRO_POR_DEFECTO;
+      const centro = ubicacion ?? destino ?? centroInicial ?? CENTRO_POR_DEFECTO;
       const m = Lf.map(nodo, { zoomControl: true, attributionControl: true }).setView(
         centro,
-        ubicacion || destino ? 13 : 6,
+        ubicacion || destino || centroInicial ? 13 : 6,
       );
       if (CLAVE_MAPA) {
         Lf.tileLayer(`https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${CLAVE_MAPA}&language=es-ES`, {

@@ -17,7 +17,7 @@ function aLatLng([latitude, longitude]: Punto): LatLng {
   return { latitude, longitude };
 }
 
-export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares, style }: PropsMapa) {
+export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares, centroInicial, style }: PropsMapa) {
   const mapa = useRef<MapView>(null);
   const ruta = rutas[elegida];
 
@@ -38,7 +38,7 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [huella]);
 
-  const centro = ubicacion ?? destino ?? CENTRO_POR_DEFECTO;
+  const centro = ubicacion ?? destino ?? centroInicial ?? CENTRO_POR_DEFECTO;
 
   return (
     <View style={[estilos.contenedor, style]}>
@@ -47,8 +47,8 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
         style={StyleSheet.absoluteFill}
         initialRegion={{
           ...aLatLng(centro),
-          latitudeDelta: ubicacion || destino ? 0.08 : 6,
-          longitudeDelta: ubicacion || destino ? 0.08 : 6,
+          latitudeDelta: ubicacion || destino || centroInicial ? 0.08 : 6,
+          longitudeDelta: ubicacion || destino || centroInicial ? 0.08 : 6,
         }}
         showsUserLocation
         showsTraffic

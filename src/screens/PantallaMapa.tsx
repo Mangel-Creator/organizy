@@ -39,7 +39,7 @@ import { FilaDestino, Leyenda, TarjetaRuta } from './mapa/PiezasMapa';
 
 type EstadoRutas = { estado: 'cargando' } | ResultadoRutas | null;
 
-// Radares que se enseñan alrededor de ti cuando aún no hay ruta.
+// Radares que se enseñan alrededor de ti (o de tu casa) cuando aún no hay ruta.
 const RADIO_RADARES_CERCA_M = 25000;
 
 export function PantallaMapa() {
@@ -168,8 +168,8 @@ export function PantallaMapa() {
   const rutaElegida = lista[elegida] ?? lista[0];
   const radaresEnMapa = rutaElegida
     ? (radaresPorRuta[lista.indexOf(rutaElegida)] ?? [])
-    : ubicacion
-      ? radaresCerca(ubicacion, RADARES, RADIO_RADARES_CERCA_M)
+    : origen
+      ? radaresCerca(origen, RADARES, RADIO_RADARES_CERCA_M)
       : [];
 
   // Hora de salida si el destino es un evento: la calculada con el tráfico previsto
@@ -245,6 +245,7 @@ export function PantallaMapa() {
         elegida={rutaElegida ? lista.indexOf(rutaElegida) : 0}
         alElegir={setElegida}
         radares={radaresEnMapa}
+        centroInicial={casa}
       />
       <Leyenda />
 
