@@ -90,7 +90,8 @@ sesión que fuera**:
   aviso). Cada persona elige la densidad en Perfil > "Cómo se ve" (por defecto
   Equilibrado). Alguna animación suave, sin excesos. Ver "Diseño" y `BRIEF.md`.
 - 25/09/2026 — Todavía no quiere la cuenta de desarrollador de Apple (99 €/año) ni una
-  app propia en el iPhone. Mientras tanto: en el día a día usa la web añadida a la
+  app propia en el iPhone (**corregido más abajo, el mismo día: sí quiere app propia
+  además de la web, y la subirá a Apple en el futuro**). Mientras tanto: en el día a día usa la web añadida a la
   pantalla de inicio (funciona con cualquier wifi y se actualiza sola, pero sin avisos
   ni alarmas) y prueba la app en Expo Go con modo túnel (necesita el ordenador
   encendido con el servidor en marcha). Expo Go no puede cargar actualizaciones de
@@ -103,6 +104,14 @@ sesión que fuera**:
   y se ofrece crear la alarma en el Reloj del iPhone con un Atajo. Todo detrás de una
   interfaz que permita cambiar a alarmas de verdad (AlarmKit en iOS 26+, AlarmManager
   en Android) sin rehacer nada, cuando el usuario decida tener cuenta de Apple.
+- 25/09/2026 (corrige la entrada "Todavía no quiere… ni una app propia") — **Quiere app
+  propia y web.** Organizy se construye como app de verdad (todo lo que la web no puede
+  hacer se hace igualmente para la app) además de la web, y **en el futuro la subirá a
+  Apple** (App Store/TestFlight con la cuenta de desarrollador). Lo que no cambia: la
+  cuenta de Apple se paga más adelante, cuando él lo decida; hasta entonces la app se
+  prueba en Expo Go con túnel y en el día a día usa la web. Tenerla instalada en el
+  iPhone sin el ordenador exige esa cuenta (no hay vía gratis desde Windows). Prepara
+  el código para ese paso (app.json, permisos, EAS) sin obligarle a pagar antes.
 
 ## Tecnología
 
