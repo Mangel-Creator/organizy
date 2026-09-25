@@ -443,6 +443,22 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   botones). Hacen falta porque las horas van de 15 en 15 min y no se puede poner la
   hora de levantarse "dentro de 2 minutos".
 - Android: canal "avisos" de importancia alta.
+- **Para añadir alarmas (fase 7)** sobre este sistema (en Expo Go las alarmas son
+  avisos locales con sonido, ver "Decisiones del usuario"):
+  1. Cada tipo nuevo (despertador, hora de dormir, salida, inteligente) es un
+     generador en `GENERADORES` (`planificar.ts`), más su tipo en `tipos.ts` y su
+     interruptor en `data/avisos.ts`. Si lleva botones (posponer, apagar), crea su
+     categoría en `prepararAvisos()` (`programar.ts`) y atiende la acción en
+     `atenderRespuesta()` (`index.ts`).
+  2. **Reserva sitio a las alarmas antes del recorte.** `planificarAvisos` se queda
+     con los `MAX_AVISOS` (60) más cercanos en el tiempo: con muchos eventos, una
+     alarma de dentro de unos días se quedaría fuera y no sonaría. Mete primero las
+     alarmas y rellena con el resto hasta 60 (y añade una prueba de ello).
+  3. `programarAvisos` borra y vuelve a programar todo, salvo los identificadores que
+     empiezan por `prueba:`. Si las alarmas se programan por otra vía (AlarmKit o
+     AlarmManager en la app propia), que no pasen por aquí o las borrará.
+  4. Sonido: `sound: 'default'`. Un sonido propio no funciona en Expo Go y no suena
+     con el móvil en silencio.
 
 ## Hoja de ruta
 
