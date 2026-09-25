@@ -31,6 +31,7 @@ import { CamposSobreTi } from './formulario-perfil/CamposSobreTi';
 import { MensajeError } from './formulario-perfil/MensajeError';
 import { TarjetaPermiso } from './formulario-perfil/permisos';
 import { SeccionAvisos } from './perfil/SeccionAvisos';
+import { SeccionEpocas } from './perfil/SeccionEpocas';
 
 type EstadosPermisos = Record<Permiso, EstadoPermiso | undefined>;
 
@@ -179,6 +180,11 @@ export function PantallaPerfil() {
         permiso={permisos.notificaciones}
         alActivarPermiso={() => activar('notificaciones')}
       />
+
+      <Titulo nivel={2} style={estilos.seccion}>
+        Épocas doradas
+      </Titulo>
+      <SeccionEpocas />
 
       <Titulo nivel={2} style={estilos.seccion}>
         Pruebas
