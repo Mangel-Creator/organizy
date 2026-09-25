@@ -123,8 +123,8 @@ sesión que fuera**:
   detrás del servidor, nunca en la app. **Los colores del tráfico sobre la carretera son
   la única excepción** a "cada color significa una sola cosa", y solo dentro del mapa
   (son el código que todo el mundo reconoce); fuera del mapa la regla sigue igual.
-- 25/09/2026 (más tarde, sustituye a lo de "se paga más adelante") — **Ha elegido pagar
-  ya la cuenta de desarrollador de Apple** para tener la app propia en el iPhone sin
+- 25/09/2026 (más tarde; **anulado en la entrada siguiente**) — Había elegido pagar
+  ya la cuenta de desarrollador de Apple para tener la app propia en el iPhone sin
   depender del ordenador. Plan: (1) él se da de alta en el Apple Developer Program
   (lo hace y lo paga él; Apple puede tardar hasta 48 h en activarla); (2) cuando esté
   activa, la sesión "Organizy · 02 Bienvenida" (o la que él diga) prepara app.json
@@ -132,6 +132,13 @@ sesión que fuera**:
   (3) después, las mejoras le llegan con EAS Update sin reinstalar. Las credenciales
   de Apple las escribe siempre él en su terminal; nunca en el código ni en el chat.
   Hasta que esté activa, sigue con la web y Expo Go con túnel.
+- 25/09/2026 (última palabra, anula la anterior) — **No quiere pagar todavía la cuenta
+  de Apple (99 €/año).** Quiere probar la app él mismo y, en el futuro, sacarla
+  (App Store). Hasta entonces: la app se prueba en Expo Go con el túnel (solo con el
+  ordenador encendido) y en el día a día usa la web. Organizy se sigue construyendo
+  como app de verdad y preparada para ese paso. No le propongas pagar la cuenta salvo
+  que lo pida o una fase la necesite de verdad; si pregunta cómo usar la app sin el
+  ordenador, recuérdale que solo se puede con esa cuenta (o con la web).
 
 ## Cómo prueba el usuario en el iPhone
 
