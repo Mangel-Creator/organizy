@@ -113,6 +113,16 @@ sesión que fuera**:
   prueba en Expo Go con túnel y en el día a día usa la web. Tenerla instalada en el
   iPhone sin el ordenador exige esa cuenta (no hay vía gratis desde Windows). Prepara
   el código para ese paso (app.json, permisos, EAS) sin obligarle a pagar antes.
+- 25/09/2026 — Fase 6 (Mapa): la pestaña Mapa es **como una app dentro de Organizy**,
+  totalmente funcional para el tráfico, **con Waze como modelo**: radares en el mapa, la
+  carretera pintada según el tráfico (libre, poco denso, muy denso, atasco) y rutas con
+  el tráfico real. Lo que Waze saca de su comunidad de conductores (policía, accidentes
+  avisados por otros usuarios) no se puede copiar sin usuarios que compartan datos:
+  se sustituye por fuentes abiertas (radares fijos de la DGT u OpenStreetMap,
+  incidencias de la DGT) y se le explica. Las claves de los proveedores de tráfico van
+  detrás del servidor, nunca en la app. **Los colores del tráfico sobre la carretera son
+  la única excepción** a "cada color significa una sola cosa", y solo dentro del mapa
+  (son el código que todo el mundo reconoce); fuera del mapa la regla sigue igual.
 
 ## Cómo prueba el usuario en el iPhone
 
