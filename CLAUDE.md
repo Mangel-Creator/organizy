@@ -89,6 +89,14 @@ sesión que fuera**:
   cosa (azul tinta = pulsar, naranja = Clientes, verde = Amigos, negro = Yo, granate =
   aviso). Cada persona elige la densidad en Perfil > "Cómo se ve" (por defecto
   Equilibrado). Alguna animación suave, sin excesos. Ver "Diseño" y `BRIEF.md`.
+- 25/09/2026 — Todavía no quiere la cuenta de desarrollador de Apple (99 €/año) ni una
+  app propia en el iPhone. Mientras tanto: en el día a día usa la web añadida a la
+  pantalla de inicio (funciona con cualquier wifi y se actualiza sola, pero sin avisos
+  ni alarmas) y prueba la app en Expo Go con modo túnel (necesita el ordenador
+  encendido con el servidor en marcha). Expo Go no puede cargar actualizaciones de
+  EAS Update, así que sin app propia no hay forma de usar la app sin el ordenador. No
+  propongas de nuevo la cuenta de Apple salvo en las fases que la necesiten de verdad
+  (alarmas, widget, voz) o si el usuario lo pide.
 
 ## Tecnología
 
