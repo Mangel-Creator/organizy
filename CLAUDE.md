@@ -149,13 +149,30 @@ sesión que fuera**:
 - 25/09/2026 — Fase 6: el tráfico sale de **TomTom** (gratis y sin tarjeta; si se pasa del
   uso gratuito deja de funcionar ese día, nunca cobra), no de Google Maps Platform (pedía
   tarjeta). El servidor es el mismo proyecto de Supabase de la fase 5. Ver "Fase 6".
+- 25/09/2026 — **Cada vez que se termine una parte del proyecto, la web y Expo Go tienen
+  que quedar al día y funcionando** (subir a `main` y dejar el túnel en marcha con la
+  app compilando para iPhone). Ver "Cómo prueba el usuario en el iPhone".
 
 ## Cómo prueba el usuario en el iPhone
 
+- **Al terminar cada parte del proyecto** (una fase, un bloque de trabajo, un arreglo),
+  deja al día **las dos cosas**, sin que el usuario lo pida (decisión del 25/09/2026):
+  1. **La web**: sube tu trabajo a `main` (con tsc, lint y pruebas pasando) y comprueba
+     con `gh run list` que se ha publicado.
+  2. **Expo Go**: ejecuta
+     `powershell -ExecutionPolicy Bypass -File scripts\comprobar-expo-go.ps1`. Instala
+     las librerías que falten, mira que el túnel responda desde internet y pide la app
+     como la pediría el iPhone. Tiene que acabar en "OK". Si dice que el túnel no está
+     en marcha, arráncalo (`preview_start` "organizy-tunel") y vuelve a ejecutarlo. Si
+     has añadido librerías y el túnel ya estaba en marcha, reinícialo antes.
+  **Por qué**: el 25/09 el usuario no podía abrir la app en Expo Go por dos cosas que
+  nadie vio: el túnel se había apagado (la app de Claude apaga los servidores de
+  `preview_start` cuando la sesión que los arrancó termina) y faltaba instalar una
+  librería nueva de otra sesión (`@supabase/supabase-js`), así que la app no compilaba.
+  Si añades una librería, **instálala también en `C:\proyectos\organizy`** aunque
+  trabajes en un worktree.
 - **A diario, la web** en la pantalla de inicio: funciona con cualquier wifi o datos,
-  sin el ordenador, y se actualiza sola en cuanto una sesión sube a `main`. Por eso
-  **cada sesión, al terminar, sube su trabajo a `main`** (con tsc, lint y pruebas
-  pasando) y comprueba con `gh run list` que se ha publicado.
+  sin el ordenador, y se actualiza sola en cuanto una sesión sube a `main`.
 - **La app, en Expo Go con túnel**, siempre con la **misma dirección**:
   `exp://uv-pnzw-mangel_creator-8083.exp.direct`. Sale de `.expo/settings.json`
   (`urlRandomness`, no está en git: no lo borres) más el puerto 8083 y la cuenta de
