@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import { claveDia } from '@/services/fechas';
 
-import { ACCION_A_MANANA, ACCION_ABRIR, type AvisoPlanificado, type DatosAviso } from './tipos';
+import { ACCION_A_MANANA, ACCION_ABRIR, ACCION_RETRASO, type AvisoPlanificado, type DatosAviso } from './tipos';
 
 // Notificaciones locales en el móvil (Android e iOS) con expo-notifications.
 // En la web se usa programar.web.ts, que no hace nada: el navegador no puede
@@ -41,6 +41,11 @@ export function prepararAvisos(): Promise<void> {
       await Notifications.setNotificationCategoryAsync('cierre-dia', [
         { identifier: ACCION_A_MANANA, buttonTitle: 'Sí, a mañana', options: { opensAppToForeground: true } },
         { identifier: ACCION_ABRIR, buttonTitle: 'Abrir', options: { opensAppToForeground: true } },
+      ]);
+      // "Sal ya" (fase 6): el botón abre la app y esta abre WhatsApp con el mensaje
+      // escrito. Nunca se envía solo: la persona elige a quién y lo manda ella.
+      await Notifications.setNotificationCategoryAsync('salida', [
+        { identifier: ACCION_RETRASO, buttonTitle: 'Avisar de retraso', options: { opensAppToForeground: true } },
       ]);
     })().catch(() => {});
   }
@@ -112,7 +117,7 @@ export async function enviarAvisoDePrueba(aviso?: AvisoPlanificado): Promise<voi
   });
 }
 
-export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir'; datos: DatosAviso };
+export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir' | 'retraso'; datos: DatosAviso };
 
 function traducir(respuesta: Notifications.NotificationResponse): RespuestaAviso | null {
   const datos = respuesta.notification.request.content.data as unknown as DatosAviso | undefined;
@@ -122,7 +127,9 @@ function traducir(respuesta: Notifications.NotificationResponse): RespuestaAviso
       ? 'a-manana'
       : respuesta.actionIdentifier === ACCION_ABRIR
         ? 'abrir'
-        : 'tocar';
+        : respuesta.actionIdentifier === ACCION_RETRASO
+          ? 'retraso'
+          : 'tocar';
   return { accion, datos };
 }
 

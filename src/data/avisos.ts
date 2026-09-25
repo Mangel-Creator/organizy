@@ -20,6 +20,7 @@ export type AjustesAvisos = {
   resumenManana: boolean; // a la hora de levantarse
   cierreDia: boolean; // una hora antes de acostarse
   cierreSinPendientes: CierreSinPendientes; // qué hacer si no queda nada pendiente
+  salida: boolean; // "Sal ya" hacia las citas con lugar (fase 6)
 };
 
 export const AJUSTES_AVISOS_POR_DEFECTO: AjustesAvisos = {
@@ -27,6 +28,7 @@ export const AJUSTES_AVISOS_POR_DEFECTO: AjustesAvisos = {
   resumenManana: true,
   cierreDia: true,
   cierreSinPendientes: 'buenas-noches',
+  salida: true,
 };
 
 const CLAVE = 'avisos';

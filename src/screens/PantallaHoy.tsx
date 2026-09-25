@@ -51,6 +51,7 @@ import { CapturaRapida } from './captura/CapturaRapida';
 import { ConfirmacionMovidas } from './calendario/ConfirmacionMovidas';
 import { FilaEvento } from './calendario/FilaEvento';
 import { TarjetaHueco } from './calendario/TarjetaHueco';
+import { SalidaSiguiente } from './calendario/SalidaSiguiente';
 import { OPCIONES_ENERGIA, abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
 import { useAhora } from './calendario/useAhora';
 import { BotonEpoca, FranjaEpoca } from './epoca/FranjaEpoca';
@@ -159,7 +160,7 @@ export function PantallaHoy() {
               {frase}
             </Texto>
           ) : null}
-          {cargado && siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} /> : null}
+          {cargado && siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} ahora={ahora} /> : null}
         </View>
         {epoca ? <FranjaEpoca epoca={epoca} hoy={hoy} /> : null}
         <CapturaRapida hoy={hoy} />
@@ -257,9 +258,9 @@ export function PantallaHoy() {
 
 // Lo siguiente (o lo que está en curso), dentro de la cabecera oscura. La barra de la
 // izquierda lleva el color de su tipo, en su versión clara para que se vea sobre la tinta.
-type PropsSiguiente = { siguiente: Siguiente; hoy: string; perfil: Perfil | null };
+type PropsSiguiente = { siguiente: Siguiente; hoy: string; perfil: Perfil | null; ahora: Date };
 
-function TarjetaSiguiente({ siguiente, hoy, perfil }: PropsSiguiente) {
+function TarjetaSiguiente({ siguiente, hoy, perfil, ahora }: PropsSiguiente) {
   const { evento, dia, enCurso } = siguiente;
   const cuando = enCurso
     ? 'Ahora mismo'
@@ -272,27 +273,27 @@ function TarjetaSiguiente({ siguiente, hoy, perfil }: PropsSiguiente) {
   const lugar = resolverLugar(evento.lugar, perfil);
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${cuando}: ${evento.titulo}, ${rangoHoras(evento)}`}
-      onPress={() => abrirEvento(evento.id)}
-      style={({ pressed }) => [
-        estilos.siguiente,
-        { borderLeftColor: colorTipoSobreTinta[evento.tipo] },
-        pressed && estilos.pulsado,
-      ]}>
-      <Texto pequeno style={estilos.horaTinta}>
-        {cuando} · {rangoHoras(evento)}
-      </Texto>
-      <Titulo nivel={3} style={estilos.textoTinta}>
-        {evento.titulo}
-      </Titulo>
-      {lugar ? (
-        <Texto pequeno style={estilos.fechaTinta}>
-          {[lugar.nombre, lugar.direccion].filter(Boolean).join(' · ')}
+    <View style={[estilos.siguiente, { borderLeftColor: colorTipoSobreTinta[evento.tipo] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${cuando}: ${evento.titulo}, ${rangoHoras(evento)}`}
+        onPress={() => abrirEvento(evento.id)}
+        style={({ pressed }) => [estilos.siguienteTextos, pressed && estilos.pulsado]}>
+        <Texto pequeno style={estilos.horaTinta}>
+          {cuando} · {rangoHoras(evento)}
         </Texto>
-      ) : null}
-    </Pressable>
+        <Titulo nivel={3} style={estilos.textoTinta}>
+          {evento.titulo}
+        </Titulo>
+        {lugar ? (
+          <Texto pequeno style={estilos.fechaTinta}>
+            {[lugar.nombre, lugar.direccion].filter(Boolean).join(' · ')}
+          </Texto>
+        ) : null}
+      </Pressable>
+      {/* "Sal a las 10:05 · 18 min en coche" y "Cómo llegar" (fase 6). */}
+      <SalidaSiguiente evento={evento} dia={dia} enCurso={enCurso} ahora={ahora} />
+    </View>
   );
 }
 
@@ -359,6 +360,7 @@ const estilos = StyleSheet.create({
     paddingVertical: espacio.s + 4,
     gap: 2,
   },
+  siguienteTextos: { gap: 2 },
   pulsado: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   tarea: {
     flexDirection: 'row',

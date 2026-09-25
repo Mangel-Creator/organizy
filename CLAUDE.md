@@ -146,6 +146,9 @@ sesión que fuera**:
   en toda la app**: nada de "Buenos días"; tuteo, frases cortas y algún giro coloquial
   suave ("¿Qué toca hoy?", "Día libre", "Ojo, esto pisa tu bloque de foco"), sin emojis
   ni exclamaciones de colega. Ver "Diseño" y `BRIEF.md`.
+- 25/09/2026 — Fase 6: el tráfico sale de **TomTom** (gratis y sin tarjeta; si se pasa del
+  uso gratuito deja de funcionar ese día, nunca cobra), no de Google Maps Platform (pedía
+  tarjeta). El servidor es el mismo proyecto de Supabase de la fase 5. Ver "Fase 6".
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -224,19 +227,23 @@ src/
     epoca/             Piezas de la Época dorada (franja, Plan de hoy, formulario,
                        editores de hitos y de imprescindibles, useEpocaActiva).
     captura/           Captura rápida con IA (campo de Hoy y tarjeta de confirmación).
+    mapa/              Piezas del Mapa (MapaRuta móvil y web, destinos, tarjetas, leyenda).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
                        perfil.ts (perfil del usuario), energia.ts (energía del día),
                        avisos.ts (qué avisos están activados), eventos/ (eventos),
                        epocas/ (épocas doradas y bloques marcados),
-                       supabase.ts (conexión con el servidor propio).
+                       supabase.ts (conexión con el servidor propio),
+                       salidas.ts y horasPunta.ts (tráfico calculado), radares/ (DGT).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
                        avisos/ (notificaciones locales; con pruebas),
                        epoca/ (plan, progreso y cuenta atrás de la época; con pruebas),
-                       captura/ (captura rápida con IA y validación; con pruebas).
+                       captura/ (captura rápida con IA y validación; con pruebas),
+                       rutas/ (rutas con tráfico, radares, hora de salida y horas
+                       punta; con pruebas), ubicacion.ts (dónde estás, sin preguntar).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 ```
 
@@ -647,6 +654,84 @@ eventos, solo cuenta usos.
   salida, a 1 $ y 5 $ por millón): unas 500 frases por dólar. Gasto en console.anthropic.com > Usage / Cost; conviene poner
   también un límite de gasto mensual en la consola.
 
+## Fase 6: mapa, tráfico, radares y rutas (decisiones)
+
+- **Tráfico con TomTom, no con Google** (lo eligió el usuario): gratis y sin tarjeta,
+  2.500 peticiones al día para todos los usuarios juntos y 50.000 trozos de mapa al día;
+  si se pasa, deja de responder hasta el día siguiente, nunca cobra. No calcula
+  transporte público: con `transporte-publico` no se piden rutas y se ofrece Google Maps.
+  Waze no da datos a otras apps: solo se abre con un enlace.
+- **Claves**: `TOMTOM_API_KEY` (rutas) solo en los secretos de Supabase. Para la web hay
+  otra clave de TomTom **pública**, restringida al dominio `mangel-creator.github.io` y
+  solo a mapas (Map Display y Traffic tiles), en la variable del repositorio
+  `TOMTOM_MAPA_KEY` → `EXPO_PUBLIC_TOMTOM_MAPA_KEY` (pages.yml); sirve para el fondo del mapa
+  y la capa de tráfico de todas las carreteras. Sin ella, fondo de OpenStreetMap y solo
+  los tramos de la ruta. Sin tarjeta en TomTom, un abuso no puede generar gasto.
+- **Mapa**: `screens/mapa/MapaRuta.tsx` (móvil, `react-native-maps`, incluido en Expo Go:
+  mapa de Apple en iPhone, sin clave, con `showsTraffic` para pintar el tráfico como Waze)
+  y `MapaRuta.web.tsx` (web, Leaflet, cargado al montar porque necesita el navegador).
+  Mismas props (`screens/mapa/tipos.ts`). Para la app propia en **Android** hará falta una
+  clave de Google Maps SDK en el plugin de `react-native-maps` (en iPhone no).
+- **Colores del tráfico** (`coloresMapa` en theme): rojo atasco, amarillo denso, ruta en
+  azul, alternativas en gris y radares como círculo negro con borde blanco. Solo dentro
+  del mapa (la excepción del 25/09); fuera, el "+6 min" va en granate (`aviso`).
+- **Servidor** (`supabase/functions/rutas`): acción `rutas` (1 a 3 rutas con
+  `maxAlternatives`, `arriveAt` para llegar a una hora o `departAt`; devuelve duración,
+  sin tráfico, retraso, distancia, puntos aligerados y tramos `denso`/`atasco` según
+  `magnitudeOfDelay` de las secciones de tráfico) y acción `muestras` (horas punta: una
+  sola llamada por lotes, `batch/sync`, 56 peticiones). Límites: `rutas` 150 por usuario y
+  2.000 en total al día; `rutas-horas-punta` 2 por usuario y 8 en total (secretos
+  opcionales `RUTAS_LIMITE_*` y `HORAS_PUNTA_LIMITE_*`). Hay que desplegarla como
+  `captura` (`npx supabase functions deploy rutas ...`).
+- **En la app** (`src/services/rutas/`, con pruebas): `calcularRutas` (guarda 5 min en
+  memoria, redondeando a ~11 m y 5 min), `radaresEnRuta` (a menos de 60 m de la línea; los
+  datos no dicen el sentido), textos y enlaces (`enlaceWaze`, `enlaceGoogleMaps`,
+  `enlaceWhatsapp`), `horaDeSalida` (llegada − trayecto − 5 min), `proximasCitas` y
+  `hayQueRecalcular`, `horasDeAtasco` y `fraseHorasPunta`. `ubicacionActual()`
+  (`services/ubicacion.ts`) nunca pide permiso: solo lo usa si ya lo hay.
+- **Radares**: solo fijos oficiales de la DGT (NAP, DATEX II), dentro de la app en
+  `src/data/radares/radares-dgt.json` (737: cabinas y tramos de velocidad media; sin País
+  Vasco ni Cataluña, que tienen su propio servicio; sin límite de velocidad). Se
+  actualizan con `npm run radares` (`scripts/actualizar-radares.mjs`) + commit y push.
+- **Hora de salida** (`services/rutas/actualizar.ts`, `iniciarTrafico()` en `_layout`):
+  para las citas con lugar y coordenadas de las próximas 24 h (máx. 5; no bloques de foco
+  ni tareas), con el tráfico previsto para llegar a su hora (`arriveAt`) desde donde
+  estás (o desde casa si no hay permiso). Se guarda en `organizy:salidas`
+  (`data/salidas.ts`: `useSalida(eventoId, dia)`, `leerSalidas`). Se recalcula al abrir la
+  app, al volver a ella, al cambiar eventos o perfil y cada 10 min con la app abierta;
+  cada cita pregunta al servidor solo si su cálculo tiene más de 15 min (a menos de 3 h
+  de salir) o de 2 h (si falta más), si te has movido más de 1 km o si cambió la hora.
+- **En segundo plano no se recalcula**: en iPhone las tareas en segundo plano
+  (BGAppRefresh) las lanza iOS cuando quiere (pueden pasar horas) y en Expo Go no se
+  pueden registrar; en Android WorkManager tampoco garantiza la hora. Lo fiable: el aviso
+  se programa con el tráfico previsto para esa hora y se corrige cada vez que se abre la
+  app. Con la app propia se podría añadir `expo-background-task` como extra.
+- **Hoy**: en la tarjeta "Lo siguiente", `SalidaSiguiente` ("Sal a las 10:05 · 18 min en
+  coche" y botón "Cómo llegar" → `/mapa?evento=<id>&dia=<AAAA-MM-DD>`). Si ya pasó:
+  "Vas justo: tenías que salir a las...".
+- **Aviso "Sal ya"** (tipo `salida`, interruptor `salida` en Perfil > Avisos, botón de
+  prueba): a la hora de salir, "Sal ya: Reunión" / "18 min en coche hasta Oficina para
+  llegar a las 10:30.". Al tocarlo abre el Mapa con la ruta (destino `mapa`). Botón
+  "Avisar de retraso": abre la app y esta abre WhatsApp (`wa.me/?text=`) con "Voy con unos
+  10 min de retraso, lo siento"; nunca se envía solo.
+- **Pestaña Mapa** (`screens/PantallaMapa.tsx` y `screens/mapa/`): buscador "¿A dónde
+  vas?" que propone Casa, los sitios habituales y los próximos eventos con lugar (7 días)
+  y acepta cualquier dirección (`buscarCoordenadas`); mapa con tu posición, la ruta
+  elegida y sus tramos, las alternativas (se pueden tocar) y los radares de la ruta (sin
+  ruta, los de 25 km alrededor); tarjetas de ruta (duración, "+6 min", km y radares);
+  "Sal a las..." si el destino es un evento; botones "Abrir en Waze" y "Abrir en Google
+  Maps"; leyenda Atasco, Denso y Radar; frase de horas punta.
+- **Horas punta**: una vez por semana (o al cambiar casa, trabajo o transporte), de casa
+  al trabajo y vuelta saliendo de 7:00 a 20:30 cada media hora en el próximo laborable.
+  Atasco = 25 % más que la hora más despejada y pico local; como mucho 3 horas, separadas
+  2 h. Se guarda en `organizy:horasPunta` (`data/horasPunta.ts`). Hace falta un sitio
+  llamado "Trabajo" con coordenadas.
+- **Gasto** (un usuario, día normal): ~15-30 peticiones a TomTom (3 citas recalculadas
+  varias veces, unas 5 búsquedas en el Mapa y 8 de media de horas punta); en el peor caso
+  unas 60. Con 2.500 gratis al día llega para unas 80-150 personas al día, a 0 €. En la
+  web, cada vista del mapa gasta unos 30-60 trozos de mapa de los 50.000 diarios.
+  Supabase gratis: 500.000 llamadas a funciones al mes.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
@@ -655,7 +740,7 @@ eventos, solo cuenta usos.
 - [x] 4. Avisos (notificaciones).
 - [x] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
 - [x] 5. Captura rápida con IA (el código está hecho; falta que el usuario cree las cuentas y se despliegue la función: ver "Servidor propio").
-- [ ] 6. Mapa, tráfico, radares y rutas.
+- [x] 6. Mapa, tráfico, radares y rutas (el código está hecho; falta que el usuario cree la cuenta de TomTom, ponga la clave en Supabase y se despliegue la función `rutas`: ver "Fase 6").
 - [ ] 7. Alarmas.
 - [ ] 8. Planes con WhatsApp y votación.
 - [ ] 9. Voz sin abrir la app y widget.

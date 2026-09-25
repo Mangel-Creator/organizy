@@ -16,6 +16,7 @@ import { cargarPerfil, usePerfil } from '@/data/perfil';
 import { vigilarActualizacionesWeb } from '@/services/actualizacionWeb';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
 import { completarCoordenadasPendientes } from '@/services/lugares';
+import { iniciarTrafico } from '@/services/rutas/actualizar';
 import { colores } from '@/theme';
 
 // Mantiene la pantalla de carga hasta que las letras estén listas.
@@ -59,6 +60,9 @@ export default function LayoutRaiz() {
   // En la web, recarga sola si se ha publicado una versión nueva.
   useEffect(() => vigilarActualizacionesWeb(), []);
 
+  // Hora de salida de las próximas citas y horas punta (fase 6), siempre al día.
+  useEffect(() => iniciarTrafico(), []);
+
   useEffect(() => {
     if (listo) {
       SplashScreen.hideAsync();
@@ -73,6 +77,8 @@ export default function LayoutRaiz() {
       const destino = await atenderRespuesta(respuesta);
       if (destino.pantalla === 'evento') {
         router.push({ pathname: '/evento', params: { id: destino.id } });
+      } else if (destino.pantalla === 'mapa') {
+        router.navigate({ pathname: '/mapa', params: { evento: destino.id, dia: destino.dia } });
       } else {
         router.navigate({
           pathname: '/',

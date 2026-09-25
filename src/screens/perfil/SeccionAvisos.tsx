@@ -79,7 +79,7 @@ export function SeccionAvisos({ permiso, alActivarPermiso }: Props) {
   const antelacion = perfil?.antelacionAvisoMin ?? 30;
 
   // Sin tipo: un aviso genérico. Con tipo: el resumen o el cierre de hoy tal cual.
-  const probar = async (tipo?: 'resumen-manana' | 'cierre-dia') => {
+  const probar = async (tipo?: 'resumen-manana' | 'cierre-dia' | 'salida') => {
     if (permiso !== 'concedido') {
       alActivarPermiso();
       return;
@@ -111,6 +111,12 @@ export function SeccionAvisos({ permiso, alActivarPermiso }: Props) {
         ayuda={`${textoAntelacion(antelacion)} antes, como elegiste en tu ritmo. Puedes cambiarlo en cada evento.`}
         valor={ajustes.eventos}
         alCambiar={(eventos) => cambiarAjustesAvisos({ eventos })}
+      />
+      <Interruptor
+        etiqueta="Sal ya"
+        ayuda="Cuándo salir hacia una cita con lugar, con el tráfico previsto y 5 min de margen. Trae un botón para avisar de retraso por WhatsApp."
+        valor={ajustes.salida}
+        alCambiar={(salida) => cambiarAjustesAvisos({ salida })}
       />
       <Interruptor
         etiqueta="Resumen de la mañana"
@@ -147,6 +153,7 @@ export function SeccionAvisos({ permiso, alActivarPermiso }: Props) {
         onPress={() => probar('resumen-manana')}
       />
       <Boton variante="secundario" titulo="Probar el cierre del día" onPress={() => probar('cierre-dia')} />
+      <Boton variante="secundario" titulo="Probar el aviso Sal ya" onPress={() => probar('salida')} />
       {mensajePrueba ? (
         <Texto fuerte style={estilos.bien} accessibilityLiveRegion="polite">
           {mensajePrueba}

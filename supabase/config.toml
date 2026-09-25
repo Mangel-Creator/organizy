@@ -419,3 +419,7 @@ enabled = true
 # la petición previa (OPTIONS) que hace el navegador por CORS.
 [functions.captura]
 verify_jwt = false
+
+# Rutas con tráfico (fase 6). Igual que captura: comprueba la sesión por dentro.
+[functions.rutas]
+verify_jwt = false

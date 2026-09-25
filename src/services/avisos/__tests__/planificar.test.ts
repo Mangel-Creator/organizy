@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import type { AjustesAvisos } from '@/data/avisos';
 import type { Evento } from '@/data/eventos/tipos';
 import type { Perfil } from '@/data/perfil';
+import type { Salida } from '@/data/salidas';
 import {
   FRASE_BUENAS_NOCHES,
   FRASE_DIA_JUSTO,
@@ -12,6 +13,7 @@ import {
   listaTareas,
   planificarAvisos,
   textoAntelacion,
+  textoAvisoSalida,
   textoCierre,
 } from '@/services/avisos/planificar';
 
@@ -21,6 +23,7 @@ const AJUSTES_AVISOS_POR_DEFECTO: AjustesAvisos = {
   resumenManana: true,
   cierreDia: true,
   cierreSinPendientes: 'buenas-noches',
+  salida: true,
 };
 
 const perfil: Perfil = {
@@ -226,5 +229,63 @@ describe('textos', () => {
   it('lista y singular', () => {
     expect(textoCierre(['Llamar'])).toBe('Te quedó 1 cosa: Llamar. ¿La paso a mañana?');
     expect(listaTareas(['a', 'b', 'c', 'd', 'e'])).toBe('a, b, c y 2 más');
+  });
+});
+
+describe('Sal ya (fase 6)', () => {
+  const salida: Salida = {
+    clave: 'e1:2026-09-24',
+    eventoId: 'e1',
+    dia: '2026-09-24',
+    titulo: 'Reunión con Laura',
+    lugar: 'Oficina',
+    llegada: new Date(2026, 8, 24, 10, 30).toISOString(),
+    salida: new Date(2026, 8, 24, 10, 7).toISOString(),
+    duracionSeg: 18 * 60,
+    retrasoSeg: 240,
+    modo: 'coche',
+    calculadaEl: ahora.toISOString(),
+    origen: [41.65, -0.88],
+  };
+
+  it('avisa a la hora de salir, con el botón de retraso y abriendo la ruta', () => {
+    const avisos = planificarAvisos(
+      { ahora, eventos: [], perfil, ajustes: AJUSTES_AVISOS_POR_DEFECTO, salidas: [salida] },
+      1,
+    ).filter((a) => a.tipo === 'salida');
+    expect(avisos).toHaveLength(1);
+    expect(hora(avisos[0].cuando)).toBe('10:07');
+    expect(avisos[0].titulo).toBe('Sal ya: Reunión con Laura');
+    expect(avisos[0].cuerpo).toBe('18 min en coche hasta Oficina para llegar a las 10:30.');
+    expect(avisos[0].categoria).toBe('salida');
+    expect(avisos[0].destino).toEqual({ pantalla: 'mapa', id: 'e1', dia: '2026-09-24' });
+  });
+
+  it('no avisa si está desactivado o si ya ha pasado la hora', () => {
+    const desactivado = planificarAvisos(
+      { ahora, eventos: [], perfil, ajustes: { ...AJUSTES_AVISOS_POR_DEFECTO, salida: false }, salidas: [salida] },
+      1,
+    );
+    expect(desactivado.some((a) => a.tipo === 'salida')).toBe(false);
+    const tarde = planificarAvisos(
+      { ahora: new Date(2026, 8, 24, 10, 20), eventos: [], perfil, ajustes: AJUSTES_AVISOS_POR_DEFECTO, salidas: [salida] },
+      1,
+    );
+    expect(tarde.some((a) => a.tipo === 'salida')).toBe(false);
+  });
+
+  it('a pie y en moto', () => {
+    expect(textoAvisoSalida({ ...salida, modo: 'a-pie', duracionSeg: 5400 }).cuerpo).toBe(
+      '1 h 30 min a pie hasta Oficina para llegar a las 10:30.',
+    );
+    expect(textoAvisoSalida({ ...salida, modo: 'moto' }).cuerpo).toContain('en moto');
+  });
+
+  it('prueba desde Perfil: la próxima salida o una de ejemplo', () => {
+    const ctx = { ahora, eventos: [], perfil, ajustes: AJUSTES_AVISOS_POR_DEFECTO };
+    expect(avisoDeHoy('salida', { ...ctx, salidas: [salida] }).titulo).toBe('Sal ya: Reunión con Laura');
+    const ejemplo = avisoDeHoy('salida', ctx);
+    expect(ejemplo.titulo).toBe('Sal ya: Cita de ejemplo');
+    expect(ejemplo.destino).toEqual({ pantalla: 'hoy' });
   });
 });

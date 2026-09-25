@@ -1,6 +1,7 @@
 import type { AjustesAvisos } from '@/data/avisos';
 import type { Evento } from '@/data/eventos/tipos';
 import type { Hora, Perfil } from '@/data/perfil';
+import type { Salida } from '@/data/salidas';
 import {
   calcularHuecos,
   cargaDelDia,
@@ -18,6 +19,7 @@ import {
 import {
   claveDia,
   fechaDesdeClave,
+  formatearDuracion,
   horaDesdeMinutos,
   minutosDesdeHora,
   saludoSegunHora,
@@ -53,6 +55,8 @@ export type ContextoAvisos = {
   ajustes: AjustesAvisos;
   // Época dorada de estos días con su plan (fase 4b). Sin época, no cambia nada.
   epoca?: EpocaParaAvisos | null;
+  // Horas de salida calculadas con el tráfico (fase 6, data/salidas.ts).
+  salidas?: Salida[];
 };
 
 type Generador = {
@@ -191,6 +195,36 @@ function avisoCierreDia({ eventos, perfil, ajustes }: ContextoAvisos, dia: Clave
   return [{ ...base, titulo: `Buenas noches${nombre ? `, ${nombre}` : ''}`, cuerpo: FRASE_BUENAS_NOCHES }];
 }
 
+// --- "Sal ya" (fase 6) ---
+
+// "Sal ya: Reunión con Laura" / "18 min en coche hasta Oficina para llegar a las 10:30."
+// A la hora de salir calculada con el tráfico previsto (y 5 min de margen). Se vuelve
+// a calcular cada vez que se abre la app (services/rutas/actualizar.ts).
+export function textoAvisoSalida(salida: Salida): { titulo: string; cuerpo: string } {
+  const minutos = Math.max(1, Math.ceil(salida.duracionSeg / 60));
+  const llegada = new Date(salida.llegada);
+  const hora = horaDesdeMinutos(llegada.getHours() * 60 + llegada.getMinutes());
+  const como = salida.modo === 'a-pie' ? 'a pie' : `en ${salida.modo}`;
+  return {
+    titulo: `Sal ya: ${salida.titulo}`,
+    cuerpo: `${formatearDuracion(minutos)} ${como} hasta ${salida.lugar} para llegar a las ${hora}.`,
+  };
+}
+
+function avisosDeSalida({ salidas = [] }: ContextoAvisos, dia: ClaveDia): AvisoPlanificado[] {
+  return salidas
+    .filter((s) => s.dia === dia)
+    .map((s) => ({
+      id: `salida:${s.clave}`,
+      tipo: 'salida' as const,
+      dia,
+      cuando: new Date(s.salida),
+      ...textoAvisoSalida(s),
+      destino: { pantalla: 'mapa' as const, id: s.eventoId, dia: s.dia },
+      categoria: 'salida' as const,
+    }));
+}
+
 // --- Todos juntos ---
 
 const GENERADORES: Generador[] = [
@@ -199,12 +233,43 @@ const GENERADORES: Generador[] = [
   { activo: (a) => a.cierreDia, generar: avisoCierreDia },
   // Época dorada: cada aviso se apaga desde la sección de la época (Epoca.avisos).
   { activo: () => true, generar: (ctx, dia) => avisosDeEpoca(ctx.epoca, ctx.perfil, dia) },
+  { activo: (a) => a.salida, generar: avisosDeSalida },
 ];
 
 // Para probar desde Perfil: el resumen o el cierre de hoy tal cual llegarían,
 // aunque su hora no sea ahora (y el cierre, aunque no quede nada pendiente).
-export function avisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia', ctx: ContextoAvisos): AvisoPlanificado {
+// El "Sal ya" se prueba con la próxima salida calculada o, si no hay ninguna, con
+// una de ejemplo (que al tocarla abre Hoy).
+export function avisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia' | 'salida', ctx: ContextoAvisos): AvisoPlanificado {
   const hoy = claveDia(ctx.ahora);
+  if (tipo === 'salida') {
+    const proxima = [...(ctx.salidas ?? [])].sort((a, b) => a.salida.localeCompare(b.salida))[0];
+    if (proxima) return avisosDeSalida({ ...ctx, salidas: [proxima] }, proxima.dia)[0];
+    const llegada = new Date(ctx.ahora.getTime() + 25 * 60000);
+    const ejemplo = avisosDeSalida(
+      {
+        ...ctx,
+        salidas: [
+          {
+            clave: 'ejemplo',
+            eventoId: 'ejemplo',
+            dia: hoy,
+            titulo: 'Cita de ejemplo',
+            lugar: 'Oficina',
+            llegada: llegada.toISOString(),
+            salida: ctx.ahora.toISOString(),
+            duracionSeg: 18 * 60,
+            retrasoSeg: 0,
+            modo: 'coche',
+            calculadaEl: ctx.ahora.toISOString(),
+            origen: [0, 0],
+          },
+        ],
+      },
+      hoy,
+    )[0];
+    return { ...ejemplo, destino: { pantalla: 'hoy' } };
+  }
   if (tipo === 'resumen-manana') return avisoResumenManana(ctx, hoy)[0];
   return avisoCierreDia({ ...ctx, ajustes: { ...ctx.ajustes, cierreSinPendientes: 'buenas-noches' } }, hoy)[0];
 }

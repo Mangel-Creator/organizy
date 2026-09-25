@@ -1,14 +1,16 @@
-import { AppState } from 'react-native';
+import { AppState, Linking } from 'react-native';
 
 import { leerAjuste } from '@/data/ajustes';
 import { leerAjustesAvisos, suscribirseAjustesAvisos } from '@/data/avisos';
 import { leerEpocas, suscribirseEpocas } from '@/data/epocas';
 import { leerEventos, moverTareas, suscribirseEventos } from '@/data/eventos';
 import { cargarPerfil, suscribirsePerfil } from '@/data/perfil';
+import { leerSalidas, suscribirseSalidas } from '@/data/salidas';
 import { tareasPendientes, type Energia } from '@/services/agenda';
 import { epocaProxima, planificarEpoca } from '@/services/epoca';
 import { claveDia, sumarDias } from '@/services/fechas';
 import { consultarPermiso } from '@/services/permisos';
+import { enlaceWhatsapp } from '@/services/rutas/textos';
 
 import { avisoDeHoy, DIAS_A_PROGRAMAR, planificarAvisos } from './planificar';
 // En el móvil carga programar.ts (expo-notifications) y en la web programar.web.ts.
@@ -32,11 +34,12 @@ export { contarAvisosProgramados, enviarAvisoDePrueba } from './programar';
 
 // Envía en 5 segundos el resumen de la mañana o el cierre del día de hoy, tal
 // cual (con sus botones), para probarlos sin esperar a su hora.
-export async function probarAvisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia'): Promise<void> {
+export async function probarAvisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia' | 'salida'): Promise<void> {
   const { perfil } = await cargarPerfil();
   if (!perfil) return;
-  const [eventos, ajustes] = await Promise.all([leerEventos(), leerAjustesAvisos()]);
-  await enviarAvisoDePrueba(avisoDeHoy(tipo, { ahora: new Date(), eventos, perfil, ajustes }));
+  const [eventos, ajustes, salidas] = await Promise.all([leerEventos(), leerAjustesAvisos(), leerSalidas()]);
+  const ctx = { ahora: new Date(), eventos, perfil, ajustes, salidas: Object.values(salidas) };
+  await enviarAvisoDePrueba(avisoDeHoy(tipo, ctx));
 }
 export type { RespuestaAviso } from './programar';
 export { horaCierre, textoAntelacion } from './planificar';
@@ -53,18 +56,21 @@ export function reprogramarAvisos(): Promise<void> {
     if (!perfil || !bienvenidaCompletada) return;
     const ahora = new Date();
     const hoy = claveDia(ahora);
-    const [eventos, ajustes, { epocas, registro }, energia] = await Promise.all([
+    const [eventos, ajustes, { epocas, registro }, energia, salidas] = await Promise.all([
       leerEventos(),
       leerAjustesAvisos(),
       leerEpocas(),
       leerAjuste<Energia>(`energia:${hoy}`, 'normal'),
+      leerSalidas(),
     ]);
     // Época dorada activa (o que empieza estos días) con su plan, para sus avisos.
     const epoca = epocaProxima(epocas, hoy, DIAS_A_PROGRAMAR);
     const datosEpoca = epoca
       ? { epoca, plan: planificarEpoca({ epoca, eventos, registro, hoy, energias: { [hoy]: energia } }) }
       : null;
-    await programarAvisos(planificarAvisos({ ahora, eventos, perfil, ajustes, epoca: datosEpoca }));
+    await programarAvisos(
+      planificarAvisos({ ahora, eventos, perfil, ajustes, epoca: datosEpoca, salidas: Object.values(salidas) }),
+    );
   });
   cola = tarea.catch(() => {});
   return tarea;
@@ -92,6 +98,7 @@ export function iniciarAvisos(): () => void {
     suscribirsePerfil(reprogramarEnUnMomento),
     suscribirseAjustesAvisos(reprogramarEnUnMomento),
     suscribirseEpocas(reprogramarEnUnMomento),
+    suscribirseSalidas(reprogramarEnUnMomento), // nueva hora de salida con el tráfico (fase 6)
   ];
   // Cada vez que se vuelve a abrir la app: así siempre hay avisos para los próximos días.
   const app = AppState.addEventListener('change', (estado) => {
@@ -103,7 +110,10 @@ export function iniciarAvisos(): () => void {
   };
 }
 
-export type DestinoApp = { pantalla: 'hoy'; movidas?: number } | { pantalla: 'evento'; id: string };
+export type DestinoApp =
+  | { pantalla: 'hoy'; movidas?: number }
+  | { pantalla: 'evento'; id: string }
+  | { pantalla: 'mapa'; id: string; dia: string };
 
 // Hace lo que pide la respuesta y dice a qué pantalla ir.
 // "Sí, a mañana" pasa a mañana las tareas que sigan pendientes ese día.
@@ -115,6 +125,11 @@ export async function atenderRespuesta({ accion, datos }: RespuestaAviso): Promi
       sumarDias(datos.dia, 1),
     );
     return { pantalla: 'hoy', movidas: pendientes.length };
+  }
+  // "Avisar de retraso" (Sal ya, fase 6): abre WhatsApp con el mensaje escrito; la
+  // persona elige a quién mandarlo y lo envía ella. Detrás queda la ruta en el Mapa.
+  if (accion === 'retraso') {
+    await Linking.openURL(enlaceWhatsapp()).catch(() => {});
   }
   return datos.destino;
 }

@@ -44,6 +44,17 @@ export const colorTipo = {
   yo: colores.yo,
 } as const;
 
+// Colores del tráfico: la única excepción a "cada color significa una sola cosa", y
+// solo dentro del mapa (es el código que todo el mundo reconoce en la carretera).
+export const coloresMapa = {
+  atasco: '#D0312D', // rojo: tramo con atasco
+  denso: '#F2B01E', // amarillo: tráfico denso
+  ruta: '#2B4BD8', // la ruta elegida (el azul de "pulsar": se puede tocar)
+  rutaAlternativa: '#8A8374', // las otras rutas, en gris
+  radar: '#1A1C24', // círculo negro con borde blanco
+  bordeRadar: '#FFFFFF',
+} as const;
+
 // Los mismos colores, más claros, para cuando van sobre la cabecera oscura
 // (los normales no se distinguen sobre tintaSuave).
 export const colorTipoSobreTinta = {
