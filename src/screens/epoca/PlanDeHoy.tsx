@@ -16,9 +16,10 @@ import {
   type PlanEpoca,
 } from '@/services/epoca';
 import { claveDia, horaDesdeMinutos, minutosDelDia } from '@/services/fechas';
-import { alturaTactil, colores, espacio } from '@/theme';
+import { alturaTactil, colores, espacio, fuentes } from '@/theme';
 
 import { BarraHoras } from './BarraHoras';
+import { DESCANSO_TEXTO } from './textos';
 
 type Props = {
   epoca: Epoca;
@@ -29,61 +30,96 @@ type Props = {
   energia: Energia;
 };
 
-// Lo que Hoy enseña durante una época dorada: cuenta atrás al siguiente hito,
-// los bloques de hoy con sus descansos (con casilla y "Saltar"), avisos si algo
-// ya no cabe y el progreso de la semana y de cada hito.
+// Lo que Hoy enseña durante una época dorada. Cada cosa va en su propia caja
+// redondeada para que no se mezcle con el resto del día (lo pidió el usuario):
+// la cuenta atrás, el plan de hoy, el aviso si algo no cabe y "Cómo vas".
+// Dentro del plan, lo que se repite (sitio, largo de los bloques y descanso) se
+// dice una vez arriba, y cada bloque queda en una línea: casilla, hora y examen.
 export function PlanDeHoy({ epoca, plan, registro, perfil, ahora, energia }: Props) {
   const hoy = claveDia(ahora);
   const minuto = minutosDelDia(ahora);
   const bloques = plan.bloques.filter((b) => b.dia === hoy);
+  const hechos = bloques.filter((b) => b.estado === 'hecho').length;
   const siguiente = cuentaAtras(epoca, ahora);
   const lugar = resolverLugar(lugarDelDia(epoca, hoy), perfil);
-  const nombreLugar = lugar ? (lugar.nombre ?? lugar.direccion) : null;
+  // "Biblioteca, Calle Mayor 5, Madrid" -> "Biblioteca": la dirección entera no cabe en una línea.
+  const nombreLugar = lugar ? (lugar.nombre ?? lugar.direccion.split(',')[0]) : null;
   const semana = progresoSemana(epoca, registro, plan, hoy);
   const hitos = progresoHitos(epoca, registro, plan).filter((p) => p.hito.fecha >= hoy);
+  const noCaben = hitos.filter((p) => p.faltanMin > 0);
   const nombreHito = (id: string) => epoca.hitos.find((h) => h.id === id)?.nombre ?? 'Estudio';
+  const libre = esDiaLibre(epoca, hoy);
+  const subtitulo = [nombreLugar ? `En ${nombreLugar}` : null, DESCANSO_TEXTO[epoca.ritmo.descanso]]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={estilos.contenedor}>
       {siguiente ? (
-        <View style={estilos.cuenta}>
-          <Ionicons name="hourglass-outline" size={20} color={colores.texto} />
-          <Titulo nivel={3}>{siguiente.texto}</Titulo>
-        </View>
-      ) : null}
-
-      <Titulo nivel={2} style={estilos.seccion}>
-        Plan de hoy
-      </Titulo>
-      {energia === 'tranqui' && bloques.length > 0 ? (
-        <Texto pequeno secundario>Hoy vas tranqui: el plan baja a la mitad y el resto pasa a otros días.</Texto>
-      ) : null}
-      {esDiaLibre(epoca, hoy) ? (
-        <Texto secundario>Hoy es tu día libre. Descansar también es parte del plan.</Texto>
-      ) : bloques.length === 0 ? (
-        <Texto secundario>Hoy no hay bloques de estudio.</Texto>
-      ) : (
-        bloques.map((bloque) => (
-          <FilaBloque
-            key={bloque.id}
-            bloque={bloque}
-            titulo={nombreHito(bloque.hitoId)}
-            lugar={nombreLugar}
-            pasado={bloque.fin <= minuto}
-          />
-        ))
-      )}
-
-      {hitos
-        .filter((p) => p.faltanMin > 0)
-        .map((p) => (
-          <Texto key={p.hito.id} pequeno fuerte style={estilos.aviso}>
-            No caben {textoHoras(p.faltanMin)} de {p.hito.nombre} antes de su fecha. Sube las horas al día o
-            quita algo del calendario.
+        <Tarjeta style={estilos.cuenta}>
+          <Ionicons name="hourglass-outline" size={18} color={colores.texto} />
+          <Texto fuerte style={estilos.flex}>
+            {siguiente.texto}
           </Texto>
-        ))}
+        </Tarjeta>
+      ) : null}
 
-      <Tarjeta style={estilos.progreso}>
+      <Tarjeta style={estilos.caja}>
+        <View style={estilos.cabecera}>
+          <Titulo nivel={3} style={estilos.flex}>
+            Plan de hoy
+          </Titulo>
+          {bloques.length > 0 && !libre ? (
+            <Texto pequeno secundario>
+              {hechos} de {bloques.length} hechos
+            </Texto>
+          ) : null}
+        </View>
+        {libre ? (
+          <Texto secundario>Hoy es tu día libre. Descansar también cuenta.</Texto>
+        ) : bloques.length === 0 ? (
+          <Texto secundario>Hoy no hay bloques de estudio.</Texto>
+        ) : (
+          <>
+            <Texto pequeno secundario numberOfLines={2}>
+              {subtitulo}
+            </Texto>
+            {energia === 'tranqui' ? (
+              <Texto pequeno secundario>Vas tranqui: hoy la mitad, el resto pasa a otros días.</Texto>
+            ) : null}
+            <View style={estilos.lista}>
+              {bloques.map((bloque, i) => (
+                <FilaBloque
+                  key={bloque.id}
+                  bloque={bloque}
+                  titulo={nombreHito(bloque.hitoId)}
+                  pasado={bloque.fin <= minuto}
+                  primera={i === 0}
+                />
+              ))}
+            </View>
+          </>
+        )}
+      </Tarjeta>
+
+      {noCaben.length > 0 ? (
+        <Tarjeta style={estilos.cuenta}>
+          <Ionicons name="alert-circle-outline" size={18} color={colores.aviso} />
+          <View style={estilos.flex}>
+            {noCaben.map((p) => (
+              <Texto key={p.hito.id} pequeno>
+                No te caben {textoHoras(p.faltanMin)} de {p.hito.nombre} antes de la fecha.
+              </Texto>
+            ))}
+            <Texto pequeno secundario>
+              Sube las horas al día o quita algo del calendario.
+            </Texto>
+          </View>
+        </Tarjeta>
+      ) : null}
+
+      <Tarjeta style={estilos.caja}>
+        <Titulo nivel={3}>Cómo vas</Titulo>
         <BarraHoras etiqueta="Esta semana" hechoMin={semana.hechoMin} totalMin={semana.planeadoMin} />
         {hitos.map((p) => (
           <BarraHoras key={p.hito.id} etiqueta={p.hito.nombre} hechoMin={p.hechoMin} totalMin={p.totalMin} />
@@ -93,42 +129,34 @@ export function PlanDeHoy({ epoca, plan, registro, perfil, ahora, energia }: Pro
   );
 }
 
-type PropsFila = { bloque: BloquePlan; titulo: string; lugar: string | null; pasado: boolean };
+type PropsFila = { bloque: BloquePlan; titulo: string; pasado: boolean; primera: boolean };
 
-function FilaBloque({ bloque, titulo, lugar, pasado }: PropsFila) {
-  const descanso = bloque.descansoFin - bloque.fin;
+// Un bloque en una línea: casilla, "08:30 – 09:20" y el examen. "Saltar" a la derecha.
+function FilaBloque({ bloque, titulo, pasado, primera }: PropsFila) {
   const saltado = bloque.estado === 'saltado';
-  const detalle = saltado
-    ? 'Saltado · sus horas pasan a otros días'
-    : [`${horaDesdeMinutos(bloque.inicio)} – ${horaDesdeMinutos(bloque.fin)}`, lugar].filter(Boolean).join(' · ');
+  const apagado = saltado || (pasado && bloque.estado === 'pendiente');
   const marcar = (estado: 'hecho' | 'saltado' | null) => marcarBloque(bloque, estado);
 
   return (
-    <View style={estilos.bloqueYDescanso}>
-      <View style={[estilos.bloque, (saltado || (pasado && bloque.estado === 'pendiente')) && estilos.apagado]}>
-        <Casilla
-          marcada={bloque.estado === 'hecho'}
-          alCambiar={(hecho) => marcar(hecho ? 'hecho' : null)}
-          etiqueta={`Marcar como hecho: ${titulo}, ${horaDesdeMinutos(bloque.inicio)}`}
-        />
-        <View style={estilos.textos}>
-          <Texto fuerte style={[saltado && estilos.tachado, saltado && estilos.secundario]}>
-            {titulo}
-          </Texto>
-          <Texto pequeno secundario>
-            {detalle}
-          </Texto>
-        </View>
-        {bloque.estado === 'pendiente' ? (
-          <BotonTexto texto="Saltar" etiqueta={`Saltar el bloque de ${titulo}`} alPulsar={() => marcar('saltado')} />
-        ) : saltado ? (
-          <BotonTexto texto="Deshacer" etiqueta={`Deshacer: no saltar ${titulo}`} alPulsar={() => marcar(null)} />
-        ) : null}
-      </View>
-      {descanso > 0 && !saltado ? (
-        <Texto pequeno secundario style={estilos.descanso}>
-          Descanso · {descanso} min ({horaDesdeMinutos(bloque.fin)} – {horaDesdeMinutos(bloque.descansoFin)})
+    <View style={[estilos.bloque, !primera && estilos.separador]}>
+      <Casilla
+        marcada={bloque.estado === 'hecho'}
+        alCambiar={(hecho) => marcar(hecho ? 'hecho' : null)}
+        etiqueta={`Marcar como hecho: ${titulo}, ${horaDesdeMinutos(bloque.inicio)}`}
+      />
+      <View style={estilos.flex}>
+        <Texto pequeno secundario style={estilos.hora}>
+          {horaDesdeMinutos(bloque.inicio)} – {horaDesdeMinutos(bloque.fin)}
+          {saltado ? ' · saltado' : ''}
         </Texto>
+        <Texto fuerte numberOfLines={1} style={[apagado && estilos.secundario, saltado && estilos.tachado]}>
+          {titulo}
+        </Texto>
+      </View>
+      {bloque.estado === 'pendiente' ? (
+        <BotonTexto texto="Saltar" etiqueta={`Saltar el bloque de ${titulo}`} alPulsar={() => marcar('saltado')} />
+      ) : saltado ? (
+        <BotonTexto texto="Deshacer" etiqueta={`Deshacer: no saltar ${titulo}`} alPulsar={() => marcar(null)} />
       ) : null}
     </View>
   );
@@ -150,28 +178,17 @@ function BotonTexto({ texto, etiqueta, alPulsar }: { texto: string; etiqueta: st
 
 const estilos = StyleSheet.create({
   contenedor: { gap: espacio.s },
+  flex: { flex: 1 },
   cuenta: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
-  seccion: { marginTop: espacio.s },
-  bloqueYDescanso: { gap: espacio.xs },
-  bloque: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espacio.xs,
-    minHeight: alturaTactil + 12,
-    paddingRight: espacio.s,
-    // Fila plana con la barra dorada, como las filas de eventos de Hoy.
-    backgroundColor: colores.tarjeta,
-    borderLeftWidth: 4,
-    borderLeftColor: colores.dorado,
-  },
-  // Sin opacidad: sin fondo blanco y con texto secundario (ver CLAUDE.md > Diseño).
-  apagado: { backgroundColor: 'transparent' },
-  textos: { flex: 1, paddingVertical: espacio.xs },
+  caja: { gap: espacio.s },
+  cabecera: { flexDirection: 'row', alignItems: 'baseline', gap: espacio.s },
+  lista: { marginTop: espacio.xs },
+  bloque: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, minHeight: alturaTactil + 8 },
+  separador: { borderTopWidth: 1, borderTopColor: colores.borde },
+  hora: { fontFamily: fuentes.hora },
   tachado: { textDecorationLine: 'line-through' },
+  // Sin opacidad: texto secundario (ver CLAUDE.md > Diseño).
   secundario: { color: colores.textoSecundario },
-  descanso: { paddingLeft: alturaTactil + espacio.xs },
-  aviso: { color: colores.aviso },
-  progreso: { gap: espacio.m, marginTop: espacio.s },
   botonTexto: { minHeight: alturaTactil, paddingHorizontal: espacio.s, justifyContent: 'center' },
   enlace: { color: colores.principal },
   pulsado: { transform: [{ scale: 0.96 }] },

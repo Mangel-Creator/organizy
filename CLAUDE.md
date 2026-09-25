@@ -315,6 +315,12 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   blanco y usa `textoSecundario`, como las filas de eventos pasados.
 - La tarjeta "Lo siguiente" de Hoy va dentro de la cabecera, con la barra del color de
   su tipo (`colorTipoSobreTinta`).
+- **Época dorada en Hoy: cada cosa en su caja redondeada** (petición del usuario del
+  25/09/2026, porque se veía todo amontonado): cuenta atrás, "Plan de hoy", aviso de "no
+  caben" y "Cómo vas" van cada uno en una `Tarjeta` aparte. Dentro del plan, lo que se
+  repite (sitio, largo de bloque y descanso) se dice una vez arriba y cada bloque es una
+  línea (casilla, hora en Plex Mono, examen y "Saltar"), separada por una raya fina. Sin
+  líneas sueltas de descanso ni la dirección entera en cada bloque.
 
 ### Densidad (`src/data/densidad.ts`)
 

@@ -37,6 +37,16 @@ y app en Expo Go). Tiene que leerse de un vistazo.
   interruptores, barras de progreso y de carga, la inicial de Perfil.
 - Solo modo claro, sin degradados; la única sombra es la del "+", que flota.
 
+### Época dorada en Hoy (25/09/2026)
+
+El usuario veía la Época dorada amontonada: cada bloque repetía el examen y la dirección
+entera de la biblioteca, cada descanso tenía su línea y el aviso en rojo, las barras y
+"Tu día" iban seguidos. Pidió rebajarlo y meter **cada cosa en un rectángulo
+redondeado** para separarla del resto del día. Por eso, aquí las filas planas ceden
+a cajas: cuenta atrás, "Plan de hoy" (sitio y tipo de bloque una sola vez arriba; cada
+bloque en una línea con una raya fina entre ellos), aviso de "no caben" (icono granate,
+texto normal, sin negrita roja) y "Cómo vas" (barras de progreso).
+
 ## Paleta (la de siempre, más los tonos de la cabecera)
 
 | Token | Hex | Uso | Contraste |
