@@ -14,22 +14,26 @@ export type TipoAviso =
   | 'epoca-bloque'
   | 'epoca-descanso'
   | 'epoca-dormir'
-  | 'salida';
+  | 'salida'
+  | 'plan-recordatorio'; // "Recordar a todos 3 h antes" (fase 8)
 
 // Adónde lleva la app al tocar el aviso.
 export type Destino =
   | { pantalla: 'hoy' }
   | { pantalla: 'evento'; id: string }
-  | { pantalla: 'mapa'; id: string; dia: ClaveDia }; // la ruta hasta ese evento (fase 6)
+  | { pantalla: 'mapa'; id: string; dia: ClaveDia } // la ruta hasta ese evento (fase 6)
+  | { pantalla: 'plan'; id: string }; // un plan con votación (fase 8)
 
 // Botones dentro de la notificación. Cada categoría se registra una vez al
 // arrancar (services/avisos/programar.ts).
-export type CategoriaAviso = 'cierre-dia' | 'salida';
+export type CategoriaAviso = 'cierre-dia' | 'salida' | 'plan';
 
 export const ACCION_A_MANANA = 'a-manana';
 export const ACCION_ABRIR = 'abrir';
 // "Sal ya" (fase 6): abre WhatsApp con "Voy con unos 10 min de retraso, lo siento".
 export const ACCION_RETRASO = 'avisar-retraso';
+// Recordatorio de un plan (fase 8): abre WhatsApp con el recordatorio escrito.
+export const ACCION_WHATSAPP = 'whatsapp';
 
 export type AvisoPlanificado = {
   // Único y estable, por ejemplo "evento:<id>:2026-09-24" o "resumen-manana:2026-09-24".
@@ -41,11 +45,14 @@ export type AvisoPlanificado = {
   cuerpo: string;
   destino: Destino;
   categoria?: CategoriaAviso;
+  mensaje?: string; // texto para WhatsApp (recordatorio de un plan)
 };
 
 // Lo que se guarda dentro de la notificación para saber qué hacer al tocarla.
+// "plan-voto" es el push que manda el servidor cuando alguien vota (fase 8).
 export type DatosAviso = {
-  tipo: TipoAviso | 'prueba';
+  tipo: TipoAviso | 'prueba' | 'plan-voto';
   dia: ClaveDia;
   destino: Destino;
+  mensaje?: string;
 };

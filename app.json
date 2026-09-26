@@ -55,6 +55,12 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Organizy usa tu agenda solo para poner el nombre de quien elijas en un plan. No guarda ni envía tus contactos."
+        }
       ]
     ],
     "experiments": {

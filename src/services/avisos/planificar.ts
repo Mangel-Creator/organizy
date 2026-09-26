@@ -1,6 +1,7 @@
 import type { AjustesAvisos } from '@/data/avisos';
 import type { Evento } from '@/data/eventos/tipos';
 import type { Hora, Perfil } from '@/data/perfil';
+import type { Plan } from '@/data/planes';
 import type { Salida } from '@/data/salidas';
 import {
   calcularHuecos,
@@ -28,6 +29,7 @@ import {
 } from '@/services/fechas';
 
 import { avisosDeEpoca, type EpocaParaAvisos } from './epoca';
+import { avisosDePlanes } from './planes';
 import type { AvisoPlanificado } from './tipos';
 
 // Qué avisos hay que programar en los próximos días. Funciones puras (sin
@@ -57,6 +59,8 @@ export type ContextoAvisos = {
   epoca?: EpocaParaAvisos | null;
   // Horas de salida calculadas con el tráfico (fase 6, data/salidas.ts).
   salidas?: Salida[];
+  // Planes con votación (fase 8), para "Recordar a todos 3 h antes".
+  planes?: Plan[];
 };
 
 type Generador = {
@@ -234,6 +238,8 @@ const GENERADORES: Generador[] = [
   // Época dorada: cada aviso se apaga desde la sección de la época (Epoca.avisos).
   { activo: () => true, generar: (ctx, dia) => avisosDeEpoca(ctx.epoca, ctx.perfil, dia) },
   { activo: (a) => a.salida, generar: avisosDeSalida },
+  // Planes: cada plan tiene su interruptor "Recordar a todos 3 h antes" (Plan.recordar).
+  { activo: () => true, generar: (ctx, dia) => avisosDePlanes(ctx.planes, ctx.eventos, dia) },
 ];
 
 // Para probar desde Perfil: el resumen o el cierre de hoy tal cual llegarían,

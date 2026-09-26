@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, LayoutAnimationConfig } from 'react-native-reanimated';
@@ -44,8 +45,11 @@ import {
 } from '@/services/fechas';
 import { alturaTactil, colorTipo, colores, espacio, fuentes, radio, tamanos } from '@/theme';
 
+import { DURACION_POR_DEFECTO, horaParaHueco, huecosParaPlan } from '@/services/planes/sugerencias';
+
 import { abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
 import { useAhora } from './calendario/useAhora';
+import { HuecoPlan } from './planes/HuecoPlan';
 
 const ALTURA_BARRA = 44;
 // Al cambiar de día, lo de ese día aparece con un fundido corto para que se note el
@@ -110,6 +114,7 @@ export function PantallaSemana() {
   const delDia = diaElegido.eventos;
   const hitosElegido = diaElegido.epoca?.hitos.filter((h) => h.fecha === elegido) ?? [];
   const tareas = eventos.filter((e) => e.flexible && e.fecha === elegido);
+  const huecosPlan = huecosParaPlan(delDia.map(intervaloDe), diaElegido.ventana, elegido, ahora);
 
   return (
     <View style={estilos.contenedor}>
@@ -207,6 +212,23 @@ export function PantallaSemana() {
                 minutoAhora={elegido === hoy ? minutosDelDia(ahora) : null}
               />
             ) : null}
+
+            {/* Huecos de 2 h o más: "Proponer plan" abre el formulario con esa hora (fase 8). */}
+            {huecosPlan.map((hueco) => (
+              <HuecoPlan
+                key={hueco.inicio}
+                hueco={hueco}
+                alProponer={() =>
+                  router.push({
+                    pathname: '/plan-nuevo',
+                    params: {
+                      dia: elegido,
+                      hora: horaParaHueco(hueco, elegido, perfil, DURACION_POR_DEFECTO.amigos),
+                    },
+                  })
+                }
+              />
+            ))}
 
             {tareas.length > 0 ? (
               <>

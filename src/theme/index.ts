@@ -35,6 +35,12 @@ export const colores = {
   // Dorado: solo para la Época dorada (franja, bloques de estudio, días con hito).
   // Encima va texto oscuro (colores.texto): el blanco no se lee bien.
   dorado: '#B7892B',
+
+  // Verde de WhatsApp: solo el botón "Enviar por WhatsApp" (excepción elegida por el
+  // usuario el 26/09/2026, como los colores del tráfico en el Mapa). Es el de la
+  // marca, más claro y vivo que el verde de Amigos. Encima va texto oscuro
+  // (colores.texto, 8,8:1): el blanco no se lee bien sobre este verde.
+  whatsapp: '#25D366',
 } as const;
 
 // Color de cada tipo de evento (Cliente, Amigos, Yo)

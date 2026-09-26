@@ -423,3 +423,8 @@ verify_jwt = false
 # Rutas con tráfico (fase 6). Igual que captura: comprueba la sesión por dentro.
 [functions.rutas]
 verify_jwt = false
+
+# Votación de planes (fase 8). La usan los invitados desde la web, sin cuenta: lo
+# que deja entrar es el código largo del enlace, que la función comprueba.
+[functions.votar]
+verify_jwt = false

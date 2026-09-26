@@ -16,6 +16,7 @@ import { cargarPerfil, usePerfil } from '@/data/perfil';
 import { vigilarActualizacionesWeb } from '@/services/actualizacionWeb';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
 import { completarCoordenadasPendientes } from '@/services/lugares';
+import { iniciarPlanes } from '@/services/planes';
 import { iniciarTrafico } from '@/services/rutas/actualizar';
 // Registra la tarea de navegación con el móvil bloqueado (solo en la app propia).
 import '@/services/rutas/navegacionFondo';
@@ -65,6 +66,9 @@ export default function LayoutRaiz() {
   // Hora de salida de las próximas citas y horas punta (fase 6), siempre al día.
   useEffect(() => iniciarTrafico(), []);
 
+  // Votos de los planes (fase 8): al abrir la app, al volver a ella y al llegar un aviso.
+  useEffect(() => iniciarPlanes(), []);
+
   useEffect(() => {
     if (listo) {
       SplashScreen.hideAsync();
@@ -79,6 +83,8 @@ export default function LayoutRaiz() {
       const destino = await atenderRespuesta(respuesta);
       if (destino.pantalla === 'evento') {
         router.push({ pathname: '/evento', params: { id: destino.id } });
+      } else if (destino.pantalla === 'plan') {
+        router.push({ pathname: '/plan', params: { id: destino.id } });
       } else if (destino.pantalla === 'mapa') {
         router.navigate({ pathname: '/mapa', params: { evento: destino.id, dia: destino.dia } });
       } else {
@@ -106,10 +112,15 @@ export default function LayoutRaiz() {
           <Stack.Screen name="evento" />
           <Stack.Screen name="epoca" />
           <Stack.Screen name="epoca-editar" />
+          <Stack.Screen name="plan" />
+          <Stack.Screen name="plan-nuevo" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />
         </Stack.Protected>
+        {/* Página de votación de un plan (fase 8): la abren los invitados desde el enlace
+            de WhatsApp, sin cuenta ni bienvenida. Fuera de las rutas protegidas. */}
+        <Stack.Screen name="votar" />
       </Stack>
     </ThemeProvider>
   );

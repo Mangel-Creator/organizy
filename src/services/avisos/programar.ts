@@ -3,7 +3,14 @@ import { Platform } from 'react-native';
 
 import { claveDia } from '@/services/fechas';
 
-import { ACCION_A_MANANA, ACCION_ABRIR, ACCION_RETRASO, type AvisoPlanificado, type DatosAviso } from './tipos';
+import {
+  ACCION_A_MANANA,
+  ACCION_ABRIR,
+  ACCION_RETRASO,
+  ACCION_WHATSAPP,
+  type AvisoPlanificado,
+  type DatosAviso,
+} from './tipos';
 
 // Notificaciones locales en el móvil (Android e iOS) con expo-notifications.
 // En la web se usa programar.web.ts, que no hace nada: el navegador no puede
@@ -47,6 +54,11 @@ export function prepararAvisos(): Promise<void> {
       await Notifications.setNotificationCategoryAsync('salida', [
         { identifier: ACCION_RETRASO, buttonTitle: 'Avisar de retraso', options: { opensAppToForeground: true } },
       ]);
+      // Recordatorio de un plan (fase 8): el botón abre la app y esta abre WhatsApp con
+      // el recordatorio escrito para el grupo.
+      await Notifications.setNotificationCategoryAsync('plan', [
+        { identifier: ACCION_WHATSAPP, buttonTitle: 'Recordar por WhatsApp', options: { opensAppToForeground: true } },
+      ]);
     })().catch(() => {});
   }
   return preparado;
@@ -78,7 +90,7 @@ export async function programarAvisos(avisos: AvisoPlanificado[]): Promise<numbe
       content: contenido(
         aviso.titulo,
         aviso.cuerpo,
-        { tipo: aviso.tipo, dia: aviso.dia, destino: aviso.destino },
+        { tipo: aviso.tipo, dia: aviso.dia, destino: aviso.destino, mensaje: aviso.mensaje },
         aviso.categoria,
       ),
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: aviso.cuando, channelId: CANAL },
@@ -101,7 +113,7 @@ export async function enviarAvisoDePrueba(aviso?: AvisoPlanificado): Promise<voi
       ? contenido(
           aviso.titulo,
           aviso.cuerpo,
-          { tipo: aviso.tipo, dia: aviso.dia, destino: aviso.destino },
+          { tipo: aviso.tipo, dia: aviso.dia, destino: aviso.destino, mensaje: aviso.mensaje },
           aviso.categoria,
         )
       : contenido('Aviso de prueba', 'Si ves esto, los avisos de Organizy funcionan.', {
@@ -117,7 +129,7 @@ export async function enviarAvisoDePrueba(aviso?: AvisoPlanificado): Promise<voi
   });
 }
 
-export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir' | 'retraso'; datos: DatosAviso };
+export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir' | 'retraso' | 'whatsapp'; datos: DatosAviso };
 
 function traducir(respuesta: Notifications.NotificationResponse): RespuestaAviso | null {
   const datos = respuesta.notification.request.content.data as unknown as DatosAviso | undefined;
@@ -129,7 +141,9 @@ function traducir(respuesta: Notifications.NotificationResponse): RespuestaAviso
         ? 'abrir'
         : respuesta.actionIdentifier === ACCION_RETRASO
           ? 'retraso'
-          : 'tocar';
+          : respuesta.actionIdentifier === ACCION_WHATSAPP
+            ? 'whatsapp'
+            : 'tocar';
   return { accion, datos };
 }
 
