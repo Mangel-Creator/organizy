@@ -10,11 +10,14 @@ import { DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 
 import { cargarEventos } from '@/data/eventos';
 import { cargarPerfil, usePerfil } from '@/data/perfil';
 import { vigilarActualizacionesWeb } from '@/services/actualizacionWeb';
+import { atenderAlarmasNativas, iniciarAlarmas } from '@/services/alarmas';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
+import { formatearHora } from '@/services/fechas';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { iniciarTrafico } from '@/services/rutas/actualizar';
 // Registra la tarea de navegación con el móvil bloqueado (solo en la app propia).
@@ -65,6 +68,9 @@ export default function LayoutRaiz() {
   // Hora de salida de las próximas citas y horas punta (fase 6), siempre al día.
   useEffect(() => iniciarTrafico(), []);
 
+  // Alarmas (fase 7): adelanto de la inteligente y alarmas de verdad en la app propia.
+  useEffect(() => iniciarAlarmas(), []);
+
   useEffect(() => {
     if (listo) {
       SplashScreen.hideAsync();
@@ -77,10 +83,13 @@ export default function LayoutRaiz() {
     if (!listo || !bienvenidaCompletada) return;
     return escucharRespuestas(async (respuesta) => {
       const destino = await atenderRespuesta(respuesta);
+      if (destino.pantalla === 'ninguna') return;
       if (destino.pantalla === 'evento') {
         router.push({ pathname: '/evento', params: { id: destino.id } });
       } else if (destino.pantalla === 'mapa') {
         router.navigate({ pathname: '/mapa', params: { evento: destino.id, dia: destino.dia } });
+      } else if (destino.pantalla === 'alarmas') {
+        router.navigate({ pathname: '/alarmas', params: destino.pospuesta ? { pospuesta: destino.pospuesta } : {} });
       } else {
         router.navigate({
           pathname: '/',
@@ -88,6 +97,25 @@ export default function LayoutRaiz() {
         });
       }
     });
+  }, [listo, bienvenidaCompletada]);
+
+  // Alarmas de verdad (app propia): si se abrió la app desde "Posponer" o "Cómo
+  // llegar", se atiende al abrir y cada vez que vuelve a primer plano.
+  useEffect(() => {
+    if (!listo || !bienvenidaCompletada) return;
+    const atender = async () => {
+      const resultado = await atenderAlarmasNativas();
+      if (resultado?.que === 'como-llegar') {
+        router.navigate({ pathname: '/mapa', params: { evento: resultado.eventoId, dia: resultado.dia } });
+      } else if (resultado?.que === 'pospuesta') {
+        router.navigate({ pathname: '/alarmas', params: { pospuesta: formatearHora(resultado.hasta) } });
+      }
+    };
+    atender();
+    const app = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') atender();
+    });
+    return () => app.remove();
   }, [listo, bienvenidaCompletada]);
 
   if (!listo) {
@@ -106,6 +134,7 @@ export default function LayoutRaiz() {
           <Stack.Screen name="evento" />
           <Stack.Screen name="epoca" />
           <Stack.Screen name="epoca-editar" />
+          <Stack.Screen name="alarma" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />

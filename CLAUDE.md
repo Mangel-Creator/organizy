@@ -224,6 +224,8 @@ sesión que fuera**:
 - Guardado local: AsyncStorage (ajustes) y expo-sqlite (datos como eventos; en la
   web, AsyncStorage: ver "Fase 3").
 - Se prueba con Expo Go mientras no haga falta código nativo propio.
+- Alarmas de verdad: `react-native-alarm-scheduler` (solo en la app propia; en Expo Go no
+  se carga, ver "Fase 7").
 - Instala librerías siempre con `npx expo install <paquete>`.
 - Pruebas automáticas con Jest (`jest-expo`): `npm test`. Están junto al código en
   carpetas `__tests__`. Importa `describe`, `it` y `expect` de `@jest/globals`
@@ -240,6 +242,7 @@ src/
     evento.tsx         Ficha de evento: /evento?fecha=AAAA-MM-DD (nuevo) o ?id= (editar).
     epoca.tsx          Sección de la Época dorada: /epoca (la activa) o /epoca?id=.
     epoca-editar.tsx   Formulario de la época en 3 pasos: nueva, o ?id= (y &paso=3).
+    alarma.tsx         Nueva alarma (/alarma) o editar (/alarma?id=).
     (tabs)/_layout.tsx Barra inferior con las 5 pestañas.
     (tabs)/index.tsx   Hoy
     (tabs)/semana.tsx  Semana
@@ -256,6 +259,8 @@ src/
                        editores de hitos y de imprescindibles, useEpocaActiva).
     captura/           Captura rápida con IA (campo de Hoy y tarjeta de confirmación).
     mapa/              Piezas del Mapa (MapaRuta móvil y web, destinos, tarjetas, leyenda).
+    alarmas/           Piezas de Alarmas (fila, tarjeta de la inteligente, salidas,
+                       hora de dormir, aviso del nivel).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
@@ -263,7 +268,8 @@ src/
                        avisos.ts (qué avisos están activados), eventos/ (eventos),
                        epocas/ (épocas doradas y bloques marcados),
                        supabase.ts (conexión con el servidor propio),
-                       salidas.ts y horasPunta.ts (tráfico calculado), radares/ (DGT).
+                       salidas.ts y horasPunta.ts (tráfico calculado), radares/ (DGT),
+                       alarmas.ts (alarmas, ajustes y adelantos de la inteligente).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
@@ -272,7 +278,9 @@ src/
                        captura/ (captura rápida con IA y validación; con pruebas),
                        rutas/ (rutas con tráfico, radares, hora de salida y horas
                        punta, navegación por voz; con pruebas), ubicacion.ts (dónde
-                       estás, sin preguntar), voz.ts (hablar en voz alta).
+                       estás, sin preguntar), voz.ts (hablar en voz alta),
+                       alarmas/ (cuándo suena cada alarma, inteligente, alarmas de verdad
+                       y Atajo de la web; con pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 ```
 
@@ -416,6 +424,9 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
   `organizy:bienvenidaCompletada`).
   - En pantallas: `const { perfil } = usePerfil()` (se actualiza solo al guardar).
+  (Alarmas: `data/alarmas.ts`, ver "Fase 7": `useAlarmas()`, `guardarAlarma`,
+  `borrarAlarma`, `activarAlarma`, `cambiarAjustesAlarmas`, `alternarAlarmaSalida`,
+  `useAdelantos()`.)
   - Fuera de pantallas: `await leerPerfil()`.
   - `guardarPerfil`, `completarBienvenida`, `repetirBienvenida`.
 - `src/data/eventos/`: tipo `Evento` en `tipos.ts` (título, fecha "AAAA-MM-DD",
@@ -582,8 +593,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   botones). Hacen falta porque las horas van de 15 en 15 min y no se puede poner la
   hora de levantarse "dentro de 2 minutos".
 - Android: canal "avisos" de importancia alta.
-- **Para añadir alarmas (fase 7)** sobre este sistema (en Expo Go las alarmas son
-  avisos locales con sonido, ver "Decisiones del usuario"):
+- **Alarmas (fase 7), hecho así** (ver "Fase 7"). Notas originales:
   1. Cada tipo nuevo (despertador, hora de dormir, salida, inteligente) es un
      generador en `GENERADORES` (`planificar.ts`), más su tipo en `tipos.ts` y su
      interruptor en `data/avisos.ts`. Si lleva botones (posponer, apagar), crea su
@@ -831,7 +841,83 @@ eventos, solo cuenta usos.
   fuera de Expo Go; si no hay permiso, sigue en primer plano.
 - **Para la fase 7 (alarma de salida)**: usar las mismas salidas (`leerSalidas`,
   `suscribirseSalidas`) y no duplicar con el "Sal ya" (por ejemplo, apagar el aviso de esa
-  cita si ya tiene alarma).
+  cita si ya tiene alarma). Hecho así en la fase 7.
+
+## Fase 7: alarmas (decisiones)
+
+- **Tres niveles detrás de una misma pestaña** (`services/alarmas/nivel.ts`,
+  `useNivelAlarmas()`); la pestaña guarda igual en todos (`data/alarmas.ts`,
+  `organizy:alarmas`) y una línea arriba (`AvisoNivel`) dice cómo van a sonar:
+  - **"nativo"** (app propia, build de EAS): alarmas de verdad con
+    **`react-native-alarm-scheduler`** (AlarmKit en iPhone con iOS 26+; en Android,
+    `AlarmManager.setAlarmClock` + servicio en primer plano + pantalla completa). Suenan
+    bloqueado y en silencio. Solo si hay módulo **y** permiso; si no, pasan a "avisos".
+    El permiso se pide al guardar la primera alarma (`permisoAlarmas(true)`); si se
+    deniega, la pestaña ofrece "Dar permiso" (abre los ajustes).
+  - **"avisos"** (Expo Go, iPhone con iOS < 26 o sin permiso): despertador, inteligente
+    y salidas son avisos con sonido de la fase 4 (tipos `alarma` y `alarma-salida`, con
+    botones "Posponer 5 min", "Parar" y, en las de salida, "Cómo llegar"). **Con el
+    móvil en silencio no suenan** y el sonido es corto: la pestaña lo dice.
+  - **"web"**: nada suena. En la web de un iPhone, cada alarma ofrece "Crear en el Reloj
+    del iPhone" con el Atajo "Organizy alarma" (`services/alarmas/atajo.ts`: enlace
+    oficial `shortcuts://run-shortcut?name=...&input=text&text=07:30|Nombre`; los pasos
+    para crearlo están plegados en la pestaña y en la guía). Los días de repetición no se
+    pueden pasar al Atajo. **El Atajo no está probado** desde aquí.
+- **La librería no se importa directamente**: `requireOptionalNativeModule('AlarmScheduler')`
+  (de `expo`) devuelve null en Expo Go, así el túnel sigue funcionando. Su plugin está en
+  `app.json` con la frase del permiso de AlarmKit.
+- **Tipos** (`Alarma`): despertador e inteligente (hora, días —vacío = una vez, con
+  `unaVezEl`; se apaga sola al pasar—, nombre, sonido "alarma" o "vibrar", encendida,
+  y en la inteligente `adelantoMaxMin` 10/20/30/45). **Hora de dormir**: aviso suave (no
+  alarma, en todos los niveles menos la web) 15/30/45/60 min antes de acostarse
+  (`minutoDormir`); los días de Época dorada no sale (la época tiene el suyo).
+  **Salida**: interruptor por evento en la sección "Alarmas de salida · se ajustan al
+  tráfico" (`ajustes.salidas`, ids de evento; vale para toda la serie). Suena a la hora
+  de salir de la fase 6 (`leerSalidas`), así que se mueve sola si cambia el evento o el
+  tráfico; con alarma, el "Sal ya" de esa cita no se programa. Los ids de eventos
+  borrados o sin lugar se limpian solos.
+- **Alarma inteligente, fiable**: siempre programada a su hora normal; solo se adelanta
+  si hay dato de tráfico, como mucho `adelantoMaxMin` (`adelantoMinutos`: retraso
+  redondeado a 5 min; menos de 5 min no mueve nada). Destino: la primera cita con lugar
+  después de la alarma o, en días de trabajo, el sitio "Trabajo" a la hora
+  `empiezoTrabajo` (`destinoInteligente`). Tráfico **previsto** (TomTom `arriveAt`) desde
+  casa, así que vale calcularlo la noche antes: `actualizarAdelantos()` (solo la próxima
+  vez, si es en menos de 30 h; repregunta cada 2 h, o cada 15 min a menos de 3 h). Se
+  guarda en `organizy:adelantos`. Se hace al abrir la app, al volver, al cambiar datos y
+  cada 10 min con ella abierta (`iniciarAlarmas()` en `_layout`). **No se usa tarea en
+  segundo plano ni push silencioso**: iOS los lanza cuando quiere (o nunca), Expo Go no
+  los permite y el push obligaría a guardar horas y destinos en el servidor. Con la app
+  propia se podría añadir `expo-background-task` como extra, sin quitar lo anterior.
+- **Alarmas de verdad** (`definiciones.ts`, puro, con pruebas; `nativo.ts`): se calcula la
+  lista que debe haber y se compara con lo programado (`organizy:alarmasNativas`): solo
+  cambia lo distinto y **primero programa la nueva y después quita la vieja**. AlarmKit
+  solo sabe "una vez, la próxima vez que llegue esa hora" o "cada semana": la inteligente
+  va en una semanal por día y solo cambia la de su próxima vez (si no se abre la app en
+  una semana, suena antes, nunca tarde); una de "una vez" a más de 24 h va como semanal
+  de ese día y se quita cuando pasa. AlarmKit solo deja un botón además de "Parar":
+  "Posponer 5 min" o "Cómo llegar"; los dos **abren la app** (hay que desbloquear), que
+  pospone (otra alarma dentro de 5-6 min) o abre el Mapa (`atenderAlarmasNativas()` al
+  abrir y al volver a la app). Posponer sin abrir la app necesitaría una extensión de
+  Live Activity (pendiente). IDs en UUID (AlarmKit lo exige).
+- **Pestaña** (`PantallaAlarmas`): título, `AvisoNivel`, tarjeta oscura de la
+  inteligente (`TarjetaInteligente`, como en BRIEF.md: hora nueva en 56 px, la de siempre
+  tachada, motivo "Hoy suena 15 min antes: hay atasco camino del trabajo"; sin barra de
+  acento), lista (`FilaAlarma`: hora grande, días y nombre, interruptor; apagada sin fondo
+  blanco), salidas y hora de dormir; "+" abre `/alarma`. Formulario corto: tipo con
+  casillas de icono, hora de 5 en 5 min y días; en "Más ajustes", nombre, sonido y
+  adelanto máximo. Tras "Posponer" se abre `/alarmas?pospuesta=HH:MM`.
+- **Probar las alarmas de verdad** (lo hace el usuario; nunca le pidas contraseñas):
+  - **iPhone**: solo con la cuenta de desarrollador de Apple (99 €/año). Cuando la tenga:
+    `bundleIdentifier` en `app.json`, `npx eas-cli@latest device:create` (registra su
+    iPhone) y `npx eas-cli@latest build --profile preview --platform ios`; instala desde
+    el enlace de EAS. Necesita iOS 26 o más. Prueba: alarma para dentro de 2 min, móvil
+    bloqueado y en silencio.
+  - **Android, sin cuenta de pago**: se puede ya con un APK de EAS (cuenta de Expo
+    gratis): `android.package` en `app.json`, `"android": { "buildType": "apk" }` en el
+    perfil `preview` de `eas.json` y `npx eas-cli@latest build --profile preview --platform
+    android`; se instala desde el enlace. Hay que dar "Alarmas y recordatorios" y
+    "Pantalla completa" en Ajustes. El mapa en Android necesitará la clave de Google Maps
+    (ver "Fase 6"). El usuario no tiene Android (26/09/2026).
 
 ## Hoja de ruta
 
@@ -842,7 +928,7 @@ eventos, solo cuenta usos.
 - [x] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
 - [x] 5. Captura rápida con IA (el código está hecho; falta que el usuario cree las cuentas y se despliegue la función: ver "Servidor propio").
 - [x] 6. Mapa, tráfico, radares y rutas (el código está hecho; falta que el usuario cree la cuenta de TomTom, ponga la clave en Supabase y se despliegue la función `rutas`: ver "Fase 6").
-- [ ] 7. Alarmas.
+- [x] 7. Alarmas (en Expo Go son avisos con sonido; las alarmas de verdad están programadas pero sin probar hasta que haya build de EAS: ver "Fase 7").
 - [ ] 8. Planes con WhatsApp y votación.
 - [ ] 9. Voz sin abrir la app y widget.
 - [ ] 10. Recordatorios a clientes por WhatsApp Business (opcional).

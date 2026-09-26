@@ -3,7 +3,17 @@ import { Platform } from 'react-native';
 
 import { claveDia } from '@/services/fechas';
 
-import { ACCION_A_MANANA, ACCION_ABRIR, ACCION_RETRASO, type AvisoPlanificado, type DatosAviso } from './tipos';
+import {
+  ACCION_A_MANANA,
+  ACCION_ABRIR,
+  ACCION_COMO_LLEGAR,
+  ACCION_PARAR,
+  ACCION_POSPONER,
+  ACCION_RETRASO,
+  MINUTOS_POSPONER,
+  type AvisoPlanificado,
+  type DatosAviso,
+} from './tipos';
 
 // Notificaciones locales en el móvil (Android e iOS) con expo-notifications.
 // En la web se usa programar.web.ts, que no hace nada: el navegador no puede
@@ -13,6 +23,8 @@ export const avisosDisponibles = true;
 
 const CANAL = 'avisos'; // Android: todas las notificaciones van en un canal
 const PREFIJO_PRUEBA = 'prueba:';
+// Alarma pospuesta 5 min (fase 7): tampoco se borra al reprogramar.
+const PREFIJO_POSPUESTA = 'pospuesta:';
 
 let preparado: Promise<void> | null = null;
 
@@ -47,6 +59,21 @@ export function prepararAvisos(): Promise<void> {
       await Notifications.setNotificationCategoryAsync('salida', [
         { identifier: ACCION_RETRASO, buttonTitle: 'Avisar de retraso', options: { opensAppToForeground: true } },
       ]);
+      // Alarmas en Expo Go (fase 7). "Posponer" abre la app para programar el aviso
+      // otra vez (iOS no deja ejecutar código desde el botón con la app cerrada);
+      // "Parar" solo quita el aviso.
+      const posponer = {
+        identifier: ACCION_POSPONER,
+        buttonTitle: `Posponer ${MINUTOS_POSPONER} min`,
+        options: { opensAppToForeground: true },
+      };
+      const parar = { identifier: ACCION_PARAR, buttonTitle: 'Parar', options: { opensAppToForeground: false } };
+      await Notifications.setNotificationCategoryAsync('alarma', [posponer, parar]);
+      await Notifications.setNotificationCategoryAsync('alarma-salida', [
+        posponer,
+        parar,
+        { identifier: ACCION_COMO_LLEGAR, buttonTitle: 'Cómo llegar', options: { opensAppToForeground: true } },
+      ]);
     })().catch(() => {});
   }
   return preparado;
@@ -68,7 +95,7 @@ export async function programarAvisos(avisos: AvisoPlanificado[]): Promise<numbe
   const programados = await Notifications.getAllScheduledNotificationsAsync();
   for (const n of programados) {
     // El aviso de prueba se deja: llega en unos segundos.
-    if (!n.identifier.startsWith(PREFIJO_PRUEBA)) {
+    if (!n.identifier.startsWith(PREFIJO_PRUEBA) && !n.identifier.startsWith(PREFIJO_POSPUESTA)) {
       await Notifications.cancelScheduledNotificationAsync(n.identifier);
     }
   }
@@ -117,20 +144,55 @@ export async function enviarAvisoDePrueba(aviso?: AvisoPlanificado): Promise<voi
   });
 }
 
-export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir' | 'retraso'; datos: DatosAviso };
+// Posponer una alarma (fase 7): el mismo aviso, con sus botones, dentro de 5 minutos.
+// Devuelve la hora a la que sonará.
+export async function posponerAviso(
+  titulo: string,
+  cuerpo: string,
+  datos: DatosAviso,
+  categoria: string | null,
+): Promise<Date> {
+  await prepararAvisos();
+  const cuando = new Date(Date.now() + MINUTOS_POSPONER * 60000);
+  await Notifications.scheduleNotificationAsync({
+    identifier: `${PREFIJO_POSPUESTA}${Date.now()}`,
+    content: contenido(titulo, cuerpo, datos, categoria ?? undefined),
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: cuando, channelId: CANAL },
+  });
+  return cuando;
+}
+
+export type AccionAviso = 'tocar' | 'a-manana' | 'abrir' | 'retraso' | 'posponer' | 'parar' | 'como-llegar';
+
+export type RespuestaAviso = {
+  accion: AccionAviso;
+  datos: DatosAviso;
+  // El aviso tal cual, para poder posponerlo.
+  titulo: string;
+  cuerpo: string;
+  categoria: string | null;
+};
+
+const ACCIONES: Record<string, AccionAviso> = {
+  [ACCION_A_MANANA]: 'a-manana',
+  [ACCION_ABRIR]: 'abrir',
+  [ACCION_RETRASO]: 'retraso',
+  [ACCION_POSPONER]: 'posponer',
+  [ACCION_PARAR]: 'parar',
+  [ACCION_COMO_LLEGAR]: 'como-llegar',
+};
 
 function traducir(respuesta: Notifications.NotificationResponse): RespuestaAviso | null {
-  const datos = respuesta.notification.request.content.data as unknown as DatosAviso | undefined;
+  const { content } = respuesta.notification.request;
+  const datos = content.data as unknown as DatosAviso | undefined;
   if (!datos?.destino) return null;
-  const accion =
-    respuesta.actionIdentifier === ACCION_A_MANANA
-      ? 'a-manana'
-      : respuesta.actionIdentifier === ACCION_ABRIR
-        ? 'abrir'
-        : respuesta.actionIdentifier === ACCION_RETRASO
-          ? 'retraso'
-          : 'tocar';
-  return { accion, datos };
+  return {
+    accion: ACCIONES[respuesta.actionIdentifier] ?? 'tocar',
+    datos,
+    titulo: content.title ?? '',
+    cuerpo: content.body ?? '',
+    categoria: content.categoryIdentifier ?? null,
+  };
 }
 
 // Avisa cada vez que el usuario toca un aviso o uno de sus botones, también el

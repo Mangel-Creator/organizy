@@ -1,3 +1,4 @@
+import type { Adelantos, AjustesAlarmas, Alarma } from '@/data/alarmas';
 import type { AjustesAvisos } from '@/data/avisos';
 import type { Evento } from '@/data/eventos/tipos';
 import type { Hora, Perfil } from '@/data/perfil';
@@ -17,6 +18,16 @@ import {
   ventanaDelDia,
 } from '@/services/agenda';
 import {
+  adelantoDe,
+  alarmasDeSalida,
+  claveAdelanto,
+  minutoDormir,
+  motivoAdelanto,
+  suenaElDia,
+} from '@/services/alarmas/calculo';
+import { tituloAlarma } from '@/services/alarmas/definiciones';
+import { estadoEpoca } from '@/services/epoca';
+import {
   claveDia,
   fechaDesdeClave,
   formatearDuracion,
@@ -28,7 +39,7 @@ import {
 } from '@/services/fechas';
 
 import { avisosDeEpoca, type EpocaParaAvisos } from './epoca';
-import type { AvisoPlanificado } from './tipos';
+import { TIPOS_ALARMA, type AvisoPlanificado } from './tipos';
 
 // Qué avisos hay que programar en los próximos días. Funciones puras (sin
 // expo-notifications), con pruebas en __tests__.
@@ -57,6 +68,15 @@ export type ContextoAvisos = {
   epoca?: EpocaParaAvisos | null;
   // Horas de salida calculadas con el tráfico (fase 6, data/salidas.ts).
   salidas?: Salida[];
+  // Alarmas (fase 7). comoAvisos: en Expo Go (o sin alarmas de verdad) el despertador,
+  // la inteligente y las de salida van como avisos con sonido; en la app propia las
+  // programa nativo.ts y aquí solo queda el aviso de la hora de dormir.
+  alarmas?: {
+    lista: Alarma[];
+    ajustes: AjustesAlarmas;
+    adelantos: Adelantos;
+    comoAvisos: boolean;
+  };
 };
 
 type Generador = {
@@ -211,9 +231,11 @@ export function textoAvisoSalida(salida: Salida): { titulo: string; cuerpo: stri
   };
 }
 
-function avisosDeSalida({ salidas = [] }: ContextoAvisos, dia: ClaveDia): AvisoPlanificado[] {
+function avisosDeSalida({ salidas = [], alarmas }: ContextoAvisos, dia: ClaveDia): AvisoPlanificado[] {
+  // Si la cita tiene alarma de salida (fase 7), suena la alarma y no hace falta el aviso.
+  const conAlarma = new Set(alarmas?.ajustes.salidas ?? []);
   return salidas
-    .filter((s) => s.dia === dia)
+    .filter((s) => s.dia === dia && !conAlarma.has(s.eventoId))
     .map((s) => ({
       id: `salida:${s.clave}`,
       tipo: 'salida' as const,
@@ -225,6 +247,66 @@ function avisosDeSalida({ salidas = [] }: ContextoAvisos, dia: ClaveDia): AvisoP
     }));
 }
 
+// --- Alarmas (fase 7) ---
+
+// Despertador e inteligente como avisos con sonido (Expo Go). La inteligente, a la hora
+// adelantada si el tráfico lo pide; si no hay datos, a su hora de siempre.
+function avisosDeAlarmas({ alarmas }: ContextoAvisos, dia: ClaveDia): AvisoPlanificado[] {
+  if (!alarmas?.comoAvisos) return [];
+  return alarmas.lista
+    .filter((alarma) => suenaElDia(alarma, dia))
+    .map((alarma) => {
+      const adelanto = adelantoDe(alarma, dia, alarmas.adelantos);
+      const destino = alarmas.adelantos[claveAdelanto(alarma.id, dia)]?.destino ?? 'el trabajo';
+      return {
+        id: `alarma:${alarma.id}:${dia}`,
+        tipo: 'alarma' as const,
+        dia,
+        cuando: momento(dia, minutosDesdeHora(alarma.hora) - adelanto),
+        titulo: tituloAlarma(alarma),
+        cuerpo: adelanto > 0 ? `${motivoAdelanto(adelanto, destino)}.` : `Son las ${alarma.hora}.`,
+        destino: { pantalla: 'alarmas' as const },
+        categoria: 'alarma' as const,
+      };
+    });
+}
+
+// Alarma de salida como aviso (Expo Go): a la hora de salir, con "Cómo llegar".
+function avisosDeAlarmaSalida(ctx: ContextoAvisos, dia: ClaveDia): AvisoPlanificado[] {
+  const { alarmas, salidas = [], ahora } = ctx;
+  if (!alarmas?.comoAvisos) return [];
+  return alarmasDeSalida(salidas, alarmas.ajustes.salidas, ahora)
+    .filter((s) => s.dia === dia)
+    .map((s) => ({
+      id: `alarma-salida:${s.clave}`,
+      tipo: 'alarma-salida' as const,
+      dia,
+      cuando: new Date(s.salida),
+      ...textoAvisoSalida(s),
+      destino: { pantalla: 'mapa' as const, id: s.eventoId, dia: s.dia },
+      categoria: 'alarma-salida' as const,
+    }));
+}
+
+// Aviso suave antes de acostarse. En los días de Época dorada no: la época ya tiene
+// su "Hora de ir a dormir" con su propio horario.
+function avisoDormir({ alarmas, perfil, epoca }: ContextoAvisos, dia: ClaveDia): AvisoPlanificado[] {
+  if (!alarmas?.ajustes.dormir) return [];
+  if (epoca && estadoEpoca(epoca.epoca, dia) === 'activa') return [];
+  const antes = alarmas.ajustes.dormirAntesMin;
+  return [
+    {
+      id: `dormir:${dia}`,
+      tipo: 'dormir',
+      dia,
+      cuando: momento(dia, minutoDormir(perfil, antes)),
+      titulo: `En ${formatearDuracion(antes)}, a dormir`,
+      cuerpo: `Te acuestas a las ${perfil.horario.acostarse}. Ve dejando el móvil.`,
+      destino: { pantalla: 'hoy' },
+    },
+  ];
+}
+
 // --- Todos juntos ---
 
 const GENERADORES: Generador[] = [
@@ -234,6 +316,10 @@ const GENERADORES: Generador[] = [
   // Época dorada: cada aviso se apaga desde la sección de la época (Epoca.avisos).
   { activo: () => true, generar: (ctx, dia) => avisosDeEpoca(ctx.epoca, ctx.perfil, dia) },
   { activo: (a) => a.salida, generar: avisosDeSalida },
+  // Alarmas: se encienden y apagan desde la pestaña Alarmas, no desde Perfil.
+  { activo: () => true, generar: avisosDeAlarmas },
+  { activo: () => true, generar: avisosDeAlarmaSalida },
+  { activo: () => true, generar: avisoDormir },
 ];
 
 // Para probar desde Perfil: el resumen o el cierre de hoy tal cual llegarían,
@@ -284,8 +370,13 @@ export function planificarAvisos(ctx: ContextoAvisos, dias = DIAS_A_PROGRAMAR): 
     const dia = sumarDias(hoy, n);
     for (const generador of activos) avisos.push(...generador.generar(ctx, dia));
   }
-  return avisos
+  const futuros = avisos
     .filter((a) => a.cuando.getTime() > ctx.ahora.getTime())
-    .sort((a, b) => a.cuando.getTime() - b.cuando.getTime())
-    .slice(0, MAX_AVISOS);
+    .sort((a, b) => a.cuando.getTime() - b.cuando.getTime());
+  // Las alarmas se reservan su sitio antes de recortar: con muchos eventos, una alarma
+  // de dentro de unos días se quedaría fuera y no sonaría. El resto rellena hasta MAX_AVISOS.
+  const esAlarma = (a: AvisoPlanificado) => TIPOS_ALARMA.includes(a.tipo);
+  const alarmas = futuros.filter(esAlarma).slice(0, MAX_AVISOS);
+  const resto = futuros.filter((a) => !esAlarma(a)).slice(0, MAX_AVISOS - alarmas.length);
+  return [...alarmas, ...resto].sort((a, b) => a.cuando.getTime() - b.cuando.getTime());
 }

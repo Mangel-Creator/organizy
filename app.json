@@ -55,6 +55,12 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "react-native-alarm-scheduler",
+        {
+          "alarmKitUsageDescription": "Organizy usa alarmas para despertarte y avisarte de cuándo salir, aunque el móvil esté en silencio."
+        }
       ]
     ],
     "experiments": {
