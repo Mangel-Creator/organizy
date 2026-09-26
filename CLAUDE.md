@@ -73,7 +73,10 @@ sesión que fuera**:
   una sesión se abre igualmente en un worktree y no deja escribir fuera de él, no
   reinstales: enlaza su `node_modules` al de la carpeta principal (junction), haz el
   commit ahí, llévalo a `main`, y al terminar quita el enlace y borra el worktree y
-  su rama.
+  su rama. **Ojo** (visto el 26/09): `npx expo install` dentro del worktree cambia el
+  enlace por una carpeta `node_modules` nueva y la librería no llega a la carpeta
+  principal; después de subir a `main`, haz `git pull` y `npm install` en
+  `C:\proyectos\organizy` (lo comprueba `scripts\comprobar-expo-go.ps1`).
 - 24/09/2026 — Carpeta del usuario ordenada en subcarpetas:
   `C:\Users\usuario\OneDrive\PERSONAL\Organizy` (índice en su `LEEME.md`). Todo lo
   que no sea código y sea para el usuario va a su subcarpeta, nunca suelto en la raíz:
