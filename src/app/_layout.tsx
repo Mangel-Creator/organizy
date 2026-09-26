@@ -17,6 +17,8 @@ import { vigilarActualizacionesWeb } from '@/services/actualizacionWeb';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { iniciarTrafico } from '@/services/rutas/actualizar';
+// Registra la tarea de navegación con el móvil bloqueado (solo en la app propia).
+import '@/services/rutas/navegacionFondo';
 import { colores } from '@/theme';
 
 // Mantiene la pantalla de carga hasta que las letras estén listas.

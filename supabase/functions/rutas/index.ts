@@ -75,6 +75,18 @@ type RutaTomTom = {
   };
   legs?: { points?: PuntoTomTom[] }[];
   sections?: SeccionTomTom[];
+  guidance?: { instructions?: InstruccionTomTom[] };
+};
+
+type InstruccionTomTom = {
+  routeOffsetInMeters: number;
+  pointIndex: number;
+  maneuver?: string;
+  street?: string;
+  roadNumbers?: string[];
+  exitNumber?: string;
+  roundaboutExitNumber?: number | string;
+  message?: string;
 };
 
 type Tramo = { desde: number; hasta: number; nivel: 'denso' | 'atasco'; velocidadKmh: number | null };
@@ -87,9 +99,13 @@ function nivelDe(s: SeccionTomTom): 'denso' | 'atasco' {
 }
 
 // Se quitan puntos muy juntos (menos de ~15 m) para que la respuesta pese poco,
-// pero se conservan los que marcan el principio y el fin de cada tramo.
-function aligerar(puntos: PuntoTomTom[], tramos: Tramo[]): { puntos: Punto[]; tramos: Tramo[] } {
-  const obligatorios = new Set<number>([0, puntos.length - 1]);
+// pero se conservan los que marcan el principio y el fin de cada tramo y las maniobras.
+function aligerar(
+  puntos: PuntoTomTom[],
+  tramos: Tramo[],
+  maniobras: number[] = [],
+): { puntos: Punto[]; tramos: Tramo[]; indice: (i: number) => number } {
+  const obligatorios = new Set<number>([0, puntos.length - 1, ...maniobras]);
   for (const t of tramos) {
     obligatorios.add(t.desde);
     obligatorios.add(t.hasta);
@@ -109,6 +125,7 @@ function aligerar(puntos: PuntoTomTom[], tramos: Tramo[]): { puntos: Punto[]; tr
   return {
     puntos: salida,
     tramos: tramos.map((t) => ({ ...t, desde: nuevoIndice.get(t.desde) ?? 0, hasta: nuevoIndice.get(t.hasta) ?? 0 })),
+    indice: (i) => nuevoIndice.get(i) ?? 0,
   };
 }
 
@@ -122,7 +139,12 @@ function resumirRuta(r: RutaTomTom) {
       nivel: nivelDe(s),
       velocidadKmh: typeof s.effectiveSpeedInKmh === 'number' ? s.effectiveSpeedInKmh : null,
     }));
-  const ligera = aligerar(puntos, tramos);
+  const maniobras = r.guidance?.instructions ?? [];
+  const ligera = aligerar(
+    puntos,
+    tramos,
+    maniobras.map((m) => m.pointIndex),
+  );
   const duracionSeg = r.summary.travelTimeInSeconds;
   const sinTraficoSeg = r.summary.noTrafficTravelTimeInSeconds ?? duracionSeg;
   return {
@@ -134,6 +156,19 @@ function resumirRuta(r: RutaTomTom) {
     llegada: r.summary.arrivalTime,
     puntos: ligera.puntos,
     tramos: ligera.tramos,
+    // Indicaciones giro a giro (solo si se pidieron). El texto lo monta la app.
+    ...(r.guidance
+      ? {
+          instrucciones: maniobras.map((m) => ({
+            indice: ligera.indice(m.pointIndex),
+            distanciaM: m.routeOffsetInMeters,
+            maniobra: m.maneuver ?? '',
+            calle: m.street ?? m.roadNumbers?.[0] ?? null,
+            salida: Number(m.roundaboutExitNumber ?? m.exitNumber) || null,
+            mensaje: m.message ?? '',
+          })),
+        }
+      : {}),
   };
 }
 
@@ -156,6 +191,8 @@ async function calcularRutas(cuerpo: Record<string, unknown>, clave: string): Pr
   p.set('maxAlternatives', String(alternativas));
   p.set('routeRepresentation', 'polyline');
   p.set('sectionType', 'traffic');
+  // Para navegar: indicaciones en texto y en español.
+  if (cuerpo.instrucciones === true) p.set('instructionsType', 'text');
   if (esFecha(llegada)) p.set('arriveAt', fechaTomTom(llegada));
   else if (esFecha(salida) && Date.parse(salida) > Date.now()) p.set('departAt', fechaTomTom(salida));
   p.set('key', clave);

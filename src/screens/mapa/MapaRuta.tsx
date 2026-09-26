@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline, type LatLng } from 'react-native-maps';
 
 import type { Punto } from '@/services/rutas';
-import { colores, coloresMapa } from '@/theme';
+import { colores, coloresMapa, fuentes } from '@/theme';
 
-import { CENTRO_POR_DEFECTO, puntosDeTramo, puntosVisibles, type PropsMapa } from './tipos';
+import { CENTRO_POR_DEFECTO, marcasDeRadares, puntosDeTramo, puntosVisibles, type PropsMapa } from './tipos';
 
 // Mapa del móvil con react-native-maps (viene en Expo Go, sin claves): en el iPhone
 // es el mapa de Apple y en Android el de Google. "showsTraffic" pinta el tráfico de
@@ -17,15 +17,32 @@ function aLatLng([latitude, longitude]: Punto): LatLng {
   return { latitude, longitude };
 }
 
-export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares, centroInicial, style }: PropsMapa) {
+export function MapaRuta({
+  ubicacion,
+  destino,
+  rutas,
+  elegida,
+  alElegir,
+  radares,
+  centroInicial,
+  seguir,
+  style,
+}: PropsMapa) {
   const mapa = useRef<MapView>(null);
   const ruta = rutas[elegida];
+
+  // Navegando: la cámara va contigo, de cerca y un poco inclinada.
+  const aqui = seguir ? ubicacion : null;
+  useEffect(() => {
+    if (!aqui) return;
+    mapa.current?.animateCamera({ center: aLatLng(aqui), zoom: 17, pitch: 40 }, { duration: 800 });
+  }, [aqui]);
 
   // Encuadra la ruta (o tu posición y el destino) cada vez que cambian.
   const visibles = puntosVisibles({ ubicacion, destino, rutas });
   const huella = `${visibles.length}:${visibles[0]?.join()}:${visibles[visibles.length - 1]?.join()}`;
   useEffect(() => {
-    if (visibles.length === 0) return;
+    if (seguir || visibles.length === 0) return;
     if (visibles.length === 1) {
       mapa.current?.animateToRegion({ ...aLatLng(visibles[0]), latitudeDelta: 0.05, longitudeDelta: 0.05 });
       return;
@@ -79,15 +96,17 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
             zIndex={3}
           />
         ))}
-        {radares.map((r) => (
+        {marcasDeRadares(radares).map((m) => (
           <Marker
-            key={r.id}
-            coordinate={{ latitude: r.lat, longitude: r.lon }}
+            key={m.clave}
+            coordinate={aLatLng(m.punto)}
             anchor={{ x: 0.5, y: 0.5 }}
             tracksViewChanges={false}
-            title={r.tipo === 'tramo' ? 'Tramo de velocidad media' : 'Radar fijo'}
-            description={[r.carretera, r.provincia].filter(Boolean).join(' · ')}>
-            <View style={estilos.radar} />
+            title={m.titulo}
+            description={m.detalle}>
+            <View style={[estilos.radar, m.limite ? estilos.radarConLimite : null]}>
+              {m.limite ? <Text style={estilos.limite}>{m.limite}</Text> : null}
+            </View>
           </Marker>
         ))}
         {destino ? <Marker coordinate={aLatLng(destino)} pinColor={colores.principal} title="Destino" /> : null}
@@ -106,4 +125,7 @@ const estilos = StyleSheet.create({
     borderWidth: 3,
     borderColor: coloresMapa.bordeRadar,
   },
+  // Con límite: más grande, con el número dentro (como una señal).
+  radarConLimite: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  limite: { color: coloresMapa.bordeRadar, fontFamily: fuentes.horaFuerte, fontSize: 11 },
 });

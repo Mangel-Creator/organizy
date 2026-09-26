@@ -2,11 +2,14 @@ import type { Radar } from '@/services/rutas/radares';
 
 import datos from './radares-dgt.json';
 
-// Radares fijos oficiales de la DGT (cabinas y tramos de velocidad media), guardados
-// dentro de la app. Para actualizarlos: "npm run radares" (scripts/actualizar-radares.mjs),
-// y después commit y push: la web y la app los reciben con la siguiente versión.
-// Cubren las carreteras del Estado; el País Vasco y Cataluña tienen su propio
-// servicio de tráfico y no vienen. Los datos no incluyen el límite de velocidad.
+// Radares fijos oficiales (cabinas y tramos de velocidad media), guardados dentro de
+// la app. De momento, los de la DGT (carreteras del Estado; el País Vasco y Cataluña
+// tienen su propio servicio de tráfico y no vienen). Para actualizarlos:
+// "npm run radares" (scripts/actualizar-radares.mjs, que además los revisa con
+// OpenStreetMap y añade el límite de velocidad) y después commit y push.
+//
+// Para añadir otra zona (pendiente: Cataluña, País Vasco, municipales), guarda su
+// archivo aquí con el mismo formato y júntalo en RADARES.
 
 export const RADARES: Radar[] = datos.radares as Radar[];
 

@@ -1,6 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Boton, CampoTexto, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
 import { useEventos } from '@/data/eventos';
@@ -24,11 +25,13 @@ import {
   type ResultadoRutas,
 } from '@/services/rutas';
 import { claveCita } from '@/services/rutas/citas';
+import { empezarNavegacion } from '@/services/rutas/motorNavegacion';
 import { ubicacionActual } from '@/services/ubicacion';
 import { colores, espacio, fuentes, radio } from '@/theme';
 
 import { useAhora } from './calendario/useAhora';
 import { destinoDeEvento, sugerencias, type Destino } from './mapa/destinos';
+import { MapaGrande } from './mapa/MapaGrande';
 import { MapaRuta } from './mapa/MapaRuta';
 import { FilaDestino, Leyenda, TarjetaRuta } from './mapa/PiezasMapa';
 
@@ -56,6 +59,8 @@ export function PantallaMapa() {
   const [ubicacion, setUbicacion] = useState<Punto | null>(null);
   const [sinPermiso, setSinPermiso] = useState(false);
   const [elegida, setElegida] = useState(0);
+  const [grande, setGrande] = useState(false);
+  const [avisoNavegar, setAvisoNavegar] = useState<string | null>(null);
 
   const modo = modoDeViaje(perfil?.transporte);
   const casa: Punto | null = perfil?.vivienda.coordenadas
@@ -148,7 +153,8 @@ export function PantallaMapa() {
   useEffect(() => {
     if (!huella || !punto || !origen || !modo) return;
     let activo = true;
-    calcularRutas({ origen, destino: punto, modo, alternativas: 2 }).then((resultado) => {
+    // Con las indicaciones: así "Empezar" no gasta otra llamada.
+    calcularRutas({ origen, destino: punto, modo, alternativas: 2, instrucciones: true }).then((resultado) => {
       if (activo) setCalculadas({ huella, resultado });
     });
     return () => {
@@ -171,6 +177,15 @@ export function PantallaMapa() {
     : origen
       ? radaresCerca(origen, RADARES, RADIO_RADARES_CERCA_M)
       : [];
+  const propsMapa = {
+    ubicacion,
+    destino: punto,
+    rutas: lista,
+    elegida: rutaElegida ? lista.indexOf(rutaElegida) : 0,
+    alElegir: setElegida,
+    radares: radaresEnMapa,
+    centroInicial: casa,
+  };
 
   // Hora de salida si el destino es un evento: la calculada con el tráfico previsto
   // (services/rutas/actualizar.ts) o, si aún no está, con la ruta elegida.
@@ -183,6 +198,23 @@ export function PantallaMapa() {
   const vaTarde = salida ? salida.getTime() < ahora.getTime() : false;
 
   const propuestas = destino ? [] : sugerencias(perfil, eventos, ahora, texto);
+
+  // Empezar a navegar con la ruta elegida. En el móvil primero hace falta el permiso
+  // de ubicación; en la web lo pide el navegador (y la voz tiene que salir del toque).
+  async function empezar() {
+    if (!rutaElegida || !punto || !modo || !destino) return;
+    if (Platform.OS !== 'web' && sinPermiso) {
+      if ((await pedirPermiso('ubicacion')) !== 'concedido') {
+        setAvisoNavegar('Para guiarte necesito tu ubicación. Actívala en los Ajustes del teléfono.');
+        return;
+      }
+      setSinPermiso(false);
+    }
+    setAvisoNavegar(null);
+    setGrande(false);
+    empezarNavegacion({ ruta: rutaElegida, destino: punto, nombreDestino: destino.nombre, modo });
+  }
+  const sePuedeNavegar = !!rutaElegida?.instrucciones?.length;
 
   return (
     <Pantalla>
@@ -237,17 +269,27 @@ export function PantallaMapa() {
         </View>
       ) : null}
 
-      <MapaRuta
-        style={estilos.mapa}
-        ubicacion={ubicacion}
-        destino={punto}
-        rutas={lista}
-        elegida={rutaElegida ? lista.indexOf(rutaElegida) : 0}
-        alElegir={setElegida}
-        radares={radaresEnMapa}
-        centroInicial={casa}
-      />
+      <View>
+        <MapaRuta style={estilos.mapa} {...propsMapa} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ver el mapa en grande"
+          onPress={() => setGrande(true)}
+          style={({ pressed }) => [estilos.agrandar, pressed && estilos.pulsado]}>
+          <Ionicons name="expand" size={18} color={colores.texto} />
+          <Texto pequeno fuerte>
+            En grande
+          </Texto>
+        </Pressable>
+      </View>
       <Leyenda />
+      <MapaGrande
+        {...propsMapa}
+        visible={grande}
+        nombreDestino={destino?.nombre ?? 'Mapa'}
+        alCerrar={() => setGrande(false)}
+        alEmpezar={sePuedeNavegar ? empezar : null}
+      />
 
       {sinPermiso ? (
         <Boton variante="secundario" titulo="Usar mi ubicación" onPress={usarMiUbicacion} />
@@ -287,8 +329,14 @@ export function PantallaMapa() {
           ) : null}
 
           <View style={estilos.lista}>
+            {sePuedeNavegar ? <Boton titulo="Empezar" onPress={empezar} /> : null}
+            {avisoNavegar ? <Texto style={estilos.tarde}>{avisoNavegar}</Texto> : null}
             {modo ? (
-              <Boton titulo="Abrir en Waze" onPress={() => Linking.openURL(enlaceWaze(punto))} />
+              <Boton
+                variante={sePuedeNavegar ? 'secundario' : 'principal'}
+                titulo="Abrir en Waze"
+                onPress={() => Linking.openURL(enlaceWaze(punto))}
+              />
             ) : null}
             <Boton
               variante={modo ? 'secundario' : 'principal'}
@@ -309,7 +357,8 @@ export function PantallaMapa() {
       ) : null}
 
       <Texto pequeno secundario>
-        Tráfico y rutas: TomTom. Radares fijos: DGT (datos abiertos; sin País Vasco ni Cataluña).
+        Tráfico y rutas: TomTom. Radares fijos: DGT (datos abiertos; de momento sin País Vasco ni Cataluña).
+        Límites de velocidad: © colaboradores de OpenStreetMap.
       </Texto>
     </Pantalla>
   );
@@ -351,5 +400,20 @@ const estilos = StyleSheet.create({
   enlace: { color: colores.principal, fontFamily: fuentes.textoFuerte },
   pulsado: { opacity: 0.85, transform: [{ scale: 0.97 }] },
   mapa: { height: 340, borderRadius: radio.grande },
+  // Botón "En grande", encima del mapa, arriba a la derecha.
+  agrandar: {
+    position: 'absolute',
+    top: espacio.s,
+    right: espacio.s,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xs,
+    minHeight: 44,
+    paddingHorizontal: espacio.m,
+    backgroundColor: colores.tarjeta,
+    borderRadius: radio.chip,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+    zIndex: 1000,
+  },
   tarde: { color: colores.aviso },
 });

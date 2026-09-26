@@ -9,6 +9,7 @@ import type { PeticionRutas, ResultadoRutas, Ruta } from './tipos';
 //     otra vez al servidor (cada llamada gasta del uso gratuito de TomTom).
 
 export * from './horasPunta';
+export * from './navegacion';
 export * from './radares';
 export * from './textos';
 export * from './tipos';
@@ -35,6 +36,7 @@ export function claveCache(p: PeticionRutas): string {
     redondear(p.destino[1]),
     p.modo,
     p.alternativas,
+    p.instrucciones ? 'i' : '',
     `l${redondearHora(p.llegada)}`,
     `s${redondearHora(p.salida)}`,
   ].join('|');

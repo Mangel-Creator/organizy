@@ -4,9 +4,9 @@ import type * as L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colores, coloresMapa } from '@/theme';
+import { colores, coloresMapa, fuentes } from '@/theme';
 
-import { CENTRO_POR_DEFECTO, puntosDeTramo, puntosVisibles, type PropsMapa } from './tipos';
+import { CENTRO_POR_DEFECTO, marcasDeRadares, puntosDeTramo, puntosVisibles, type PropsMapa } from './tipos';
 
 // Mapa de la web con Leaflet. Leaflet necesita el navegador, así que se carga al
 // montar el componente (no al compilar la web estática).
@@ -24,7 +24,17 @@ const ATRIBUCION_TOMTOM = '© <a href="https://www.tomtom.com">TomTom</a>';
 
 type Capas = { rutas: L.LayerGroup; radares: L.LayerGroup; marcas: L.LayerGroup };
 
-export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares, centroInicial, style }: PropsMapa) {
+export function MapaRuta({
+  ubicacion,
+  destino,
+  rutas,
+  elegida,
+  alElegir,
+  radares,
+  centroInicial,
+  seguir,
+  style,
+}: PropsMapa) {
   const contenedor = useRef<View>(null);
   const [leaflet, setLeaflet] = useState<typeof L | null>(null);
   const mapa = useRef<L.Map | null>(null);
@@ -33,6 +43,7 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
   // Crear el mapa una vez.
   useEffect(() => {
     let cancelado = false;
+    let observador: ResizeObserver | null = null;
     import('leaflet').then((modulo) => {
       const Lf = (modulo as unknown as { default?: typeof L }).default ?? (modulo as unknown as typeof L);
       const nodo = contenedor.current as unknown as HTMLElement | null;
@@ -63,10 +74,14 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
         marcas: Lf.layerGroup().addTo(m),
       };
       mapa.current = m;
+      // Si cambia el tamaño (por ejemplo, al abrirlo en grande), Leaflet se recoloca.
+      observador = new ResizeObserver(() => m.invalidateSize());
+      observador.observe(nodo);
       setLeaflet(Lf);
     });
     return () => {
       cancelado = true;
+      observador?.disconnect();
       mapa.current?.remove();
       mapa.current = null;
       capas.current = null;
@@ -100,15 +115,16 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
         }).addTo(c.rutas);
       }
     }
-    for (const r of radares) {
-      Lf.circleMarker([r.lat, r.lon], {
-        radius: 7,
-        color: coloresMapa.bordeRadar,
-        weight: 3,
-        fillColor: coloresMapa.radar,
-        fillOpacity: 1,
-      })
-        .bindTooltip(`${r.tipo === 'tramo' ? 'Tramo de velocidad media' : 'Radar fijo'} · ${r.carretera}`)
+    // Radares: círculo negro con borde blanco y, si se sabe, el límite dentro.
+    for (const r of marcasDeRadares(radares)) {
+      const lado = r.limite ? 30 : 16;
+      const icono = Lf.divIcon({
+        className: '',
+        iconSize: [lado, lado],
+        html: `<div style="width:${lado}px;height:${lado}px;border-radius:50%;box-sizing:border-box;background:${coloresMapa.radar};border:3px solid ${coloresMapa.bordeRadar};color:${coloresMapa.bordeRadar};font:600 11px ${fuentes.horaFuerte},monospace;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${r.limite ?? ''}</div>`,
+      });
+      Lf.marker(r.punto, { icon: icono, keyboard: false })
+        .bindTooltip(`${r.titulo} · ${r.detalle}`)
         .addTo(c.radares);
     }
     if (ubicacion) {
@@ -131,12 +147,18 @@ export function MapaRuta({ ubicacion, destino, rutas, elegida, alElegir, radares
     }
   }, [leaflet, rutas, elegida, alElegir, radares, ubicacion, destino]);
 
+  // Navegando: el mapa va centrado en ti, de cerca.
+  const aqui = seguir ? ubicacion : null;
+  useEffect(() => {
+    if (leaflet && aqui) mapa.current?.setView(aqui, 17, { animate: true });
+  }, [leaflet, aqui]);
+
   // Encuadrar la ruta (o tu posición y el destino) al cambiar.
   const visibles = puntosVisibles({ ubicacion, destino, rutas });
   const huella = `${visibles.length}:${visibles[0]?.join()}:${visibles[visibles.length - 1]?.join()}`;
   useEffect(() => {
     const m = mapa.current;
-    if (!leaflet || !m || visibles.length === 0) return;
+    if (!leaflet || !m || seguir || visibles.length === 0) return;
     if (visibles.length === 1) m.setView(visibles[0], 14);
     else m.fitBounds(leaflet.latLngBounds(visibles), { padding: [30, 30] });
     // eslint-disable-next-line react-hooks/exhaustive-deps

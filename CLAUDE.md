@@ -149,6 +149,11 @@ sesión que fuera**:
 - 25/09/2026 — Fase 6: el tráfico sale de **TomTom** (gratis y sin tarjeta; si se pasa del
   uso gratuito deja de funcionar ese día, nunca cobra), no de Google Maps Platform (pedía
   tarjeta). El servidor es el mismo proyecto de Supabase de la fase 5. Ver "Fase 6".
+- 26/09/2026 — Fase 6: el mapa se puede **ver en grande** y **guía por voz** giro a giro,
+  con avisos de radares. Con el móvil bloqueado solo podrá la app propia (en la web y en
+  Expo Go se mantiene la pantalla encendida; para ir con el móvil bloqueado ya, "Abrir en
+  Waze"). Los radares se revisan al actualizarlos y **en el futuro se añadirán los del
+  resto de España** (Cataluña, País Vasco, municipales) hasta completarla.
 - 25/09/2026 — **Cada vez que se termine una parte del proyecto, la web y Expo Go tienen
   que quedar al día y funcionando** (subir a `main` y dejar el túnel en marcha con la
   app compilando para iPhone). Ver "Cómo prueba el usuario en el iPhone".
@@ -266,7 +271,8 @@ src/
                        epoca/ (plan, progreso y cuenta atrás de la época; con pruebas),
                        captura/ (captura rápida con IA y validación; con pruebas),
                        rutas/ (rutas con tráfico, radares, hora de salida y horas
-                       punta; con pruebas), ubicacion.ts (dónde estás, sin preguntar).
+                       punta, navegación por voz; con pruebas), ubicacion.ts (dónde
+                       estás, sin preguntar), voz.ts (hablar en voz alta).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 ```
 
@@ -746,9 +752,22 @@ eventos, solo cuenta usos.
   `hayQueRecalcular`, `horasDeAtasco` y `fraseHorasPunta`. `ubicacionActual()`
   (`services/ubicacion.ts`) nunca pide permiso: solo lo usa si ya lo hay.
 - **Radares**: solo fijos oficiales de la DGT (NAP, DATEX II), dentro de la app en
-  `src/data/radares/radares-dgt.json` (737: cabinas y tramos de velocidad media; sin País
-  Vasco ni Cataluña, que tienen su propio servicio; sin límite de velocidad). Se
-  actualizan con `npm run radares` (`scripts/actualizar-radares.mjs`) + commit y push.
+  `src/data/radares/radares-dgt.json` (cabinas y tramos de velocidad media; sin País
+  Vasco ni Cataluña, que tienen su propio servicio). Se actualizan con `npm run radares`
+  (`scripts/actualizar-radares.mjs`) + commit y push. El script **revisa** los datos con
+  OpenStreetMap (Overpass): quita las cabinas repetidas (las del principio y el final de
+  cada tramo vienen también como cabina), descarta las que no están a menos de 120 m de
+  una carretera (26/09: 7, en la N-330 de Huesca, A-42, GR-30 y CV-10; quedan en
+  `descartados` del JSON) y toma el **límite de velocidad** del radar de OpenStreetMap que
+  esté a menos de 60 m (591 de 689). Los tramos vienen uno por sentido: en una ruta solo
+  cuentan si pasa por su principio y después por su final (`radaresSobreRuta`). En el
+  mapa: círculo negro con el límite dentro; los tramos, uno al principio y otro al final.
+- **Más zonas** (pendiente, lo pidió el usuario el 26/09): añadir radares oficiales del
+  resto de España hasta completarla, cada fuente en su archivo en `src/data/radares/`
+  (se juntan en `index.ts`). Cataluña: Servei Català de Trànsit, "Radars fixos de
+  Catalunya" (analisi.transparenciacatalunya.cat, id `re3y-fftf`; no es una tabla, hay que
+  bajar su archivo). País Vasco: Trafikoa ("Cabinas de radar fijo" y la API de tráfico de
+  opendata.euskadi.eus). Después, los municipales que publiquen los ayuntamientos.
 - **Hora de salida** (`services/rutas/actualizar.ts`, `iniciarTrafico()` en `_layout`):
   para las citas con lugar y coordenadas de las próximas 24 h (máx. 5; no bloques de foco
   ni tareas), con el tráfico previsto para llegar a su hora (`arriveAt`) desde donde
@@ -786,7 +805,30 @@ eventos, solo cuenta usos.
   varias veces, unas 5 búsquedas en el Mapa y 8 de media de horas punta); en el peor caso
   unas 60. Con 2.500 gratis al día llega para unas 80-150 personas al día, a 0 €. En la
   web, cada vista del mapa gasta unos 30-60 trozos de mapa de los 50.000 diarios.
-  Supabase gratis: 500.000 llamadas a funciones al mes.
+  Supabase gratis: 500.000 llamadas a funciones al mes. Navegar no gasta más al empezar
+  (las indicaciones vienen con las rutas del Mapa); cada recálculo por salirte, 1 petición.
+- **Mapa en grande** (`screens/mapa/MapaGrande.tsx`, un `Modal` a pantalla completa):
+  botón "En grande" encima del mapa; abajo, la ruta y "Empezar".
+- **Navegación por voz** (26/09, a petición del usuario): botón "Empezar" en el Mapa y en
+  el mapa grande. El Mapa pide las rutas con `instrucciones: true` (TomTom
+  `instructionsType=text`; el servidor manda maniobra, calle y número de salida y la app
+  monta el texto en tuteo: `textoInstruccion`). `services/rutas/navegacion.ts` (puro, con
+  pruebas): `calcularGuia` (por dónde vas, siguiente maniobra, lo que queda, próximo
+  radar, fuera de ruta a más de 50 m) y `queDecir` (avisos a 1 km, 300 m y encima; a pie
+  100 y 20 m; radar a 500 m con su límite; "Has llegado"). `motorNavegacion.ts`: escucha
+  el GPS (`watchPositionAsync`), habla (`services/voz.ts`: expo-speech en es-ES, suena
+  aunque el iPhone esté en silencio gracias a expo-audio `playsInSilentMode`, bajando la
+  música) y recalcula tras 3 posiciones fuera de la ruta. Mientras navegas la pantalla no
+  se apaga (expo-keep-awake). La primera frase sale del propio toque (la web y el iPhone
+  no dejan hablar sin un toque).
+- **Con el móvil bloqueado**: en la web y en Expo Go **no se puede** (el sistema congela la
+  app y Expo Go no permite ubicación en segundo plano); se avisa en pantalla y se
+  mantiene la pantalla encendida. **Preparado para la app propia**: `navegacionFondo.ts`
+  (tarea de expo-task-manager con `startLocationUpdatesAsync`, `AutomotiveNavigation`,
+  aviso azul en iOS y servicio en primer plano en Android) y en `app.json`
+  `isIosBackgroundLocationEnabled`, `isAndroidForegroundServiceEnabled` y audio en segundo
+  plano (expo-audio `enableBackgroundPlayback`; sin permiso de micrófono). Solo se activa
+  fuera de Expo Go; si no hay permiso, sigue en primer plano.
 - **Para la fase 7 (alarma de salida)**: usar las mismas salidas (`leerSalidas`,
   `suscribirseSalidas`) y no duplicar con el "Sal ya" (por ejemplo, apagar el aviso de esa
   cita si ya tiene alarma).

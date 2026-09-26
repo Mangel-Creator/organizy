@@ -4,7 +4,7 @@ import type { Evento } from '@/data/eventos/tipos';
 import type { Perfil } from '@/data/perfil';
 import { hayQueRecalcular, proximasCitas } from '@/services/rutas/citas';
 import { fraseHorasPunta, horasDeAtasco, MINUTOS_MUESTRA, type Muestra } from '@/services/rutas/horasPunta';
-import { distanciaARutaM, distanciaM, radaresEnRuta, type Radar } from '@/services/rutas/radares';
+import { distanciaARutaM, distanciaM, radaresEnRuta, radaresSobreRuta, type Radar } from '@/services/rutas/radares';
 import {
   enlaceGoogleMaps,
   enlaceWaze,
@@ -156,9 +156,19 @@ describe('radares', () => {
       radar('sobre', 41.6502, -0.92), // a unos 22 m
       radar('lejos', 41.66, -0.92), // a más de 1 km
       radar('fuera', 41.65, -0.7), // pasado el final
-      radar('tramo', 41.7, -1.1, [41.6501, -0.88]), // el tramo termina en la ruta
+      radar('tramo', 41.6501, -0.93, [41.6501, -0.88]), // tramo en el sentido de la ruta
+      radar('otro-sentido', 41.6501, -0.88, [41.6501, -0.93]), // el mismo tramo, al revés
+      radar('medio-fuera', 41.7, -1.1, [41.6501, -0.88]), // empieza lejos de la ruta
     ];
-    expect(radaresEnRuta(ruta, radares).map((r) => r.id)).toEqual(['sobre', 'tramo']);
+    // En el orden en que se encuentran por la ruta.
+    expect(radaresEnRuta(ruta, radares).map((r) => r.id)).toEqual(['tramo', 'sobre']);
+  });
+
+  it('con la distancia desde la salida, en orden', () => {
+    const sobre = radaresSobreRuta(ruta, [radar('b', 41.65, -0.86), radar('a', 41.65, -0.94)]);
+    expect(sobre.map((r) => r.radar.id)).toEqual(['a', 'b']);
+    // 0,01 grados de longitud a esta latitud son unos 832 m.
+    expect(sobre[0].recorridoM).toBeCloseTo(832, -1);
   });
 
   it('sin ruta, ninguno', () => {

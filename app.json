@@ -41,10 +41,21 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Organizy usa tu ubicación para calcular el tráfico y avisarte de cuándo tienes que salir."
+          "locationWhenInUsePermission": "Organizy usa tu ubicación para calcular el tráfico y avisarte de cuándo tienes que salir.",
+          "locationAlwaysAndWhenInUsePermission": "Organizy usa tu ubicación mientras navegas para seguir dándote indicaciones por voz con el móvil bloqueado.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true,
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
