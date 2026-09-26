@@ -164,6 +164,11 @@ sesión que fuera**:
   con casillas de icono (`SelectorVisual`) y lo opcional plegado (`Plegable`, "Más
   ajustes"). Primero, el formulario de la Época dorada. Ver "Diseño".
 
+- 26/09/2026 — **La clave de Anthropic (IA de la captura rápida) la pondrá cuando la app esté
+  terminada** (5 $ de saldo). Supabase ya está montado y desplegado. Hasta entonces la captura
+  abre la ficha con la frase como título: es lo esperado. No se lo vuelvas a pedir; si
+  pregunta, los pasos están en su guía "Fase 05 - Captura con IA.md".
+
 ## Cómo prueba el usuario en el iPhone
 
 - **Al terminar cada parte del proyecto** (una fase, un bloque de trabajo, un arreglo),
@@ -926,7 +931,7 @@ eventos, solo cuenta usos.
 - [x] 3. Calendario: pantallas Hoy y Semana.
 - [x] 4. Avisos (notificaciones).
 - [x] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
-- [x] 5. Captura rápida con IA (el código está hecho; falta que el usuario cree las cuentas y se despliegue la función: ver "Servidor propio").
+- [x] 5. Captura rápida con IA. Supabase montado y funciones desplegadas (proyecto `hwemrpexabisyueyizjz`). Falta solo la clave de Anthropic: el usuario la pondrá cuando la app esté terminada (ver "Decisiones del usuario", 26/09/2026).
 - [x] 6. Mapa, tráfico, radares y rutas (el código está hecho; falta que el usuario cree la cuenta de TomTom, ponga la clave en Supabase y se despliegue la función `rutas`: ver "Fase 6").
 - [x] 7. Alarmas (en Expo Go son avisos con sonido; las alarmas de verdad están programadas pero sin probar hasta que haya build de EAS: ver "Fase 7").
 - [ ] 8. Planes con WhatsApp y votación.
