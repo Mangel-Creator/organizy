@@ -171,6 +171,14 @@ sesión que fuera**:
   terminada** (5 $ de saldo). Supabase ya está montado y desplegado. Hasta entonces la captura
   abre la ficha con la frase como título: es lo esperado. No se lo vuelvas a pedir; si
   pregunta, los pasos están en su guía "Fase 05 - Captura con IA.md".
+- 26/09/2026 — **Expo Go SIN el ordenador: funciona y el usuario lo ha comprobado.** Expo
+  Go sí carga publicaciones de EAS Update de proyectos propios si su `runtimeVersion` es
+  `exposdk:57.0.0` (la de Expo Go). Dirección fija, siempre la última versión:
+  `exp://u.expo.dev/bf4c1bdd-dea3-4040-b236-458205d44d0e?runtime-version=exposdk%3A57.0.0&channel-name=expo-go`
+  (canal y rama `expo-go`). La publica sola `.github/workflows/expo-go.yml` en cada
+  subida a `main`, poniendo esa `runtimeVersion` solo durante la publicación; necesita
+  el secreto `EXPO_TOKEN` de GitHub, que crea y guarda el propio usuario. Ver "Cómo
+  prueba el usuario en el iPhone".
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -192,7 +200,15 @@ sesión que fuera**:
   trabajes en un worktree.
 - **A diario, la web** en la pantalla de inicio: funciona con cualquier wifi o datos,
   sin el ordenador, y se actualiza sola en cuanto una sesión sube a `main`.
-- **La app, en Expo Go con túnel**, siempre con la **misma dirección**:
+- **La app en Expo Go SIN el ordenador** (desde el 26/09/2026): 
+  `exp://u.expo.dev/bf4c1bdd-dea3-4040-b236-458205d44d0e?runtime-version=exposdk%3A57.0.0&channel-name=expo-go`.
+  Se publica sola al subir a `main` (`.github/workflows/expo-go.yml`, trabajo "Publicar
+  en Expo Go"; compruébalo con `gh run list`). Reglas: **no pongas `runtimeVersion` en
+  `app.json`** (lo pone el workflow solo al publicar); **no instales `expo-updates`**
+  mientras se use Expo Go; si se sube de SDK, cambia `RUNTIME_EXPO_GO` en el workflow;
+  las variables `EXPO_PUBLIC_*` nuevas añádelas también en ese workflow. Lo que use
+  módulos nativos que Expo Go no trae no funcionará aquí (igual que con el túnel).
+- **La app, en Expo Go con túnel** (para programar y ver cambios al momento), siempre con la **misma dirección**:
   `exp://uv-pnzw-mangel_creator-8083.exp.direct`. Sale de `.expo/settings.json`
   (`urlRandomness`, no está en git: no lo borres) más el puerto 8083 y la cuenta de
   Expo `mangel_creator` con la que está iniciada la sesión de Expo CLI.
@@ -210,8 +226,9 @@ sesión que fuera**:
   la decisión del 25/09/2026). Ya está `eas.json` con los perfiles `preview`
   (instalación directa en su iPhone) y `production` (TestFlight/App Store), cada uno
   con su canal. **No instales todavía `expo-updates`** ni pongas `runtimeVersion` o
-  `updates.url` en `app.json`: Expo Go no carga esas publicaciones y dejaría de
-  funcionar el túnel (lo comprobó la sesión 02 el 24/09). Plan para cuando tenga la
+  `updates.url` en `app.json`: dejaría de funcionar el túnel (la sesión 02 concluyó el
+  24/09 que Expo Go no carga EAS Update; era un error: sí la carga con `runtimeVersion`
+  `exposdk:57.0.0`, ver arriba). Plan para cuando tenga la
   cuenta, en este orden:
   1. `npx expo install expo-updates` y `npx eas-cli@latest update:configure`.
   2. `npx eas-cli@latest build --profile preview --platform ios` (el usuario registra
