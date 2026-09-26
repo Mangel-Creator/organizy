@@ -152,6 +152,12 @@ sesión que fuera**:
 - 25/09/2026 — **Cada vez que se termine una parte del proyecto, la web y Expo Go tienen
   que quedar al día y funcionando** (subir a `main` y dejar el túnel en marcha con la
   app compilando para iPhone). Ver "Cómo prueba el usuario en el iPhone".
+- 26/09/2026 — **La app tiene que ser mucho más visual y menos cargada.** Hoy pasa a un
+  **panel de casillas grandes con icono y número** (clientes, planes, tareas, cosas tuyas
+  o estudio, "Todo el día" y "Época dorada"); al tocar una, su lista sale debajo. La
+  captura rápida va **plegada** (se abre con el "+"). Los formularios, cortos: lo esencial
+  con casillas de icono (`SelectorVisual`) y lo opcional plegado (`Plegable`, "Más
+  ajustes"). Primero, el formulario de la Época dorada. Ver "Diseño".
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -315,6 +321,19 @@ Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
   blanco y usa `textoSecundario`, como las filas de eventos pasados.
 - La tarjeta "Lo siguiente" de Hoy va dentro de la cabecera, con la barra del color de
   su tipo (`colorTipoSobreTinta`).
+- **Hoy es un panel de casillas** (`screens/hoy/PanelHoy.tsx`, 26/09/2026): cabecera
+  oscura (fecha, saludo, "Lo siguiente"; sin frase de resumen) y seis casillas grandes
+  de dos en dos, con icono en un cuadrado de color suave (`colorBaldosa`) y número:
+  clientes, planes con amigos, tareas, cosas tuyas (o bloques de estudio si hay época),
+  "Todo el día" y "Época dorada" (esta abre `/epoca`). Al tocar una, su lista sale
+  debajo y la casilla se pone en tinta; al tocarla otra vez, se cierra. La energía solo
+  sale en Tareas y Estudio. La captura rápida está plegada: el "+" la abre (y pasa a
+  "×"); dentro, "Mejor lo relleno a mano" abre la ficha vacía. Si añades algo a Hoy,
+  que sea una casilla o vaya dentro de la lista de una, no un bloque suelto más.
+- **Formularios cortos y visuales**: a la vista solo lo esencial, con casillas de icono
+  (`SelectorVisual`) mejor que chips de texto; lo opcional, en un `Plegable` ("Más
+  ajustes") con un resumen de lo que ya está puesto, que se abre solo si hay un error
+  dentro. Pon valores por defecto sensatos en vez de preguntar.
 - **Época dorada en Hoy: cada cosa en su caja redondeada** (petición del usuario del
   25/09/2026, porque se veía todo amontonado): cuenta atrás, "Plan de hoy", aviso de "no
   caben" y "Cómo vas" van cada uno en una `Tarjeta` aparte. Dentro del plan, lo que se
@@ -364,6 +383,12 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 - `Interruptor` — fila con texto, ayuda y un interruptor sí/no.
 - `SelectorFecha` — día con − y + y atajos Hoy, Mañana y En una semana.
 - `SelectorCantidad` — número con − y + (horas al día, horas de preparación...).
+- `SelectorVisual` — como `Selector`, con casillas grandes de icono y texto (`OpcionVisual`:
+  `valor`, `etiqueta`, `icono` de Ionicons y `veces` para repetirlo, como las llamas de la
+  dificultad). La elegida, en tinta.
+- `Plegable` — fila "Más ajustes" que se abre al tocarla; `resumen` enseña lo que ya
+  está puesto y `abierto` la abre desde fuera (por ejemplo, si hay un error dentro).
+- `BotonFlotante` admite `icono="close"` para cuando lo que abre ya está abierto.
 
 ## Idioma y formatos
 
@@ -488,8 +513,9 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   editado) que se solapa con un bloque de foco de ese día. Las confirmaciones (foco y
   borrar) son tarjetas dentro de la pantalla, no `Alert`, porque `Alert` no hace
   nada en la web.
-- Hoy: fecha "Jueves 24 sept", saludo, energía, frase resumen, tarjeta "Lo siguiente"
-  (el que está en curso o el próximo, hasta 7 días), lista con huecos y tareas.
+- Hoy: fecha "Jueves 24 sept", saludo, tarjeta "Lo siguiente" (el que está en curso o el
+  próximo, hasta 7 días) y el panel de casillas (ver "Diseño"); "Todo el día" enseña la
+  lista con huecos, y "Tareas", las tareas con la energía.
   Huecos libres: de 1 h o más, desde ahora (redondeado al cuarto de hora) hasta la
   hora de acostarse, empezando como pronto al levantarse.
 - Energía: A tope coloca las tareas primero en el momento en que rinde más
@@ -573,13 +599,15 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   Semana y los avisos usan el ritmo de la época (levantarse, acostarse, horas al día)
   en vez del del perfil. Fuera de la época nada cambia. Solo una activa a la vez: si
   dos se solapan se avisa al guardar y, si se guarda igualmente, manda la que empieza antes.
-- Dónde: botón "Época dorada" en Hoy (sin época activa); franja dorada justo debajo de
-  la cabecera de Hoy mientras hay una ("Época dorada · nombre · quedan N días"); sección
-  `/epoca`; en Perfil, el apartado "Épocas doradas" (activa, programadas y pasadas).
-- Formulario de 3 pasos (`/epoca-editar`), editable después: 1 nombre, tipo y fechas;
-  2 ritmo (horas, sitio, días que va, sitio distinto por día, cuánto tarda en llegar,
-  horas al día, cuándo rinde más, descanso, día libre y lo que no quiere dejar de hacer);
-  3 hitos (nombre, fecha, hora, lugar, dificultad y horas de preparación).
+- Dónde: en Hoy, la casilla "Época dorada" (con "quedan N días" si hay una activa) abre la
+  sección, y la casilla de bloques de estudio enseña el plan de hoy; sección `/epoca`; en Perfil, el apartado "Épocas doradas" (activa, programadas y pasadas).
+- Formulario de 3 pasos cortos (`/epoca-editar`), editable después. A la vista solo lo
+  esencial; el resto, en "Más ajustes" (26/09/2026): 1 tipo (casillas con icono) y hasta
+  cuándo; plegados, el nombre (si se deja vacío, `nombrePorDefecto`: "Exámenes de
+  octubre") y el día que empieza (hoy). 2 dónde, horas al día y cuándo rinde más;
+  plegados, horario, bloques y descanso (50 + 10 por defecto), día libre, días que va,
+  sitio por día, trayecto y lo que no quiere dejar de hacer. 3 hitos: de qué es, cuándo,
+  dificultad (1 a 3 llamas) y horas; plegados, la hora y el lugar.
 - "Qué días vas" son los días que va al sitio de estudio; los demás estudia en casa. El
   día libre no tiene plan. Los sitios por día se eligen entre el de la época, Casa y los
   sitios habituales. Lugares como en los eventos: Casa y sitios por referencia.
@@ -652,7 +680,9 @@ eventos, solo cuenta usos.
 
 ## Fase 5: captura rápida con IA (decisiones)
 
-- En Hoy, bajo la cabecera, campo "Captura rápida" (`screens/captura/CapturaRapida.tsx`).
+- En Hoy, bajo la cabecera, campo "¿Qué apunto?" (`screens/captura/CapturaRapida.tsx`),
+  **plegado** hasta tocar el "+" (`plegada`). Sigue montado aunque no se vea, así que
+  `enviarFraseACaptura` funciona igual y lo despliega mientras piensa.
   Se escribe o se dicta con el micrófono del teclado. `accesorio` deja poner otro botón
   junto al de enviar (micrófono de la fase 9) y `enviarFraseACaptura(frase)` manda una
   frase desde fuera por el mismo camino.

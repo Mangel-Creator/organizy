@@ -1,4 +1,4 @@
-import type { Opcion } from '@/components';
+import type { Opcion, OpcionVisual } from '@/components';
 import type { Descanso, Dificultad, TipoEpoca } from '@/data/epocas';
 import type { MomentoDelDia } from '@/data/perfil';
 
@@ -35,6 +35,26 @@ export const OPCIONES_TRAYECTO: Opcion<'10' | '20' | '30' | '45' | '60'>[] = [
   { valor: '30', etiqueta: '30 min' },
   { valor: '45', etiqueta: '45 min' },
   { valor: '60', etiqueta: '1 hora' },
+];
+
+// Versiones con icono para el formulario corto (casillas grandes, sin leer).
+export const OPCIONES_TIPO_VISUAL: OpcionVisual<TipoEpoca>[] = [
+  { valor: 'examenes', etiqueta: 'Exámenes', icono: 'school-outline' },
+  { valor: 'entregas', etiqueta: 'Entregas', icono: 'document-text-outline' },
+  { valor: 'trabajo', etiqueta: 'Trabajo intenso', icono: 'briefcase-outline' },
+  { valor: 'otro', etiqueta: 'Otra cosa', icono: 'sparkles-outline' },
+];
+
+export const OPCIONES_MOMENTO_VISUAL: OpcionVisual<MomentoDelDia>[] = [
+  { valor: 'manana', etiqueta: 'Mañana', icono: 'sunny-outline' },
+  { valor: 'tarde', etiqueta: 'Tarde', icono: 'partly-sunny-outline' },
+  { valor: 'noche', etiqueta: 'Noche', icono: 'moon-outline' },
+];
+
+export const OPCIONES_DIFICULTAD_VISUAL: OpcionVisual<Dificultad>[] = [
+  { valor: 'facil', etiqueta: 'Fácil', icono: 'flame-outline', veces: 1 },
+  { valor: 'media', etiqueta: 'Media', icono: 'flame-outline', veces: 2 },
+  { valor: 'dificil', etiqueta: 'Difícil', icono: 'flame-outline', veces: 3 },
 ];
 
 export const NOMBRE_TIPO: Record<TipoEpoca, string> = {

@@ -9,10 +9,11 @@ import type {
 import { nuevoIdEpoca } from '@/data/epocas';
 import type { LugarEvento } from '@/data/eventos';
 import type { DiaSemana, MomentoDelDia, Perfil } from '@/data/perfil';
-import { minutosDesdeHora, sumarDias, type ClaveDia } from '@/services/fechas';
+import { fechaDesdeClave, minutosDesdeHora, nombreMes, sumarDias, type ClaveDia } from '@/services/fechas';
 import { buscarCoordenadas } from '@/services/lugares';
 
 import { MENSAJE_NO_ENCONTRADO } from '../formulario-perfil/borrador';
+import { NOMBRE_TIPO } from './textos';
 
 // "Borrador": lo que se va rellenando en el formulario de la época (3 pasos),
 // antes de guardar. Igual que Epoca, pero con los lugares como elección de chip
@@ -80,7 +81,7 @@ export function borradorDesdeEpoca(epoca: Epoca | null, perfil: Perfil | null, h
       diasVas: perfil?.horario.diasTrabajo ?? [0, 1, 2, 3, 4],
       horasDia: 4,
       rindeMas: perfil?.rindeMas ?? null,
-      descanso: null,
+      descanso: '50-10',
       diaLibre: null,
       trayecto: '20',
       imprescindibles: [],
@@ -123,10 +124,15 @@ export function borradorDesdeEpoca(epoca: Epoca | null, perfil: Perfil | null, h
   };
 }
 
+// Nombre que se pone solo si se deja vacío: "Exámenes de octubre" (el mes en que termina).
+export function nombrePorDefecto(b: Pick<BorradorEpoca, 'tipo' | 'fin'>): string {
+  const tipo = b.tipo ? NOMBRE_TIPO[b.tipo] : 'Época';
+  return `${tipo} de ${nombreMes(fechaDesdeClave(b.fin)).toLocaleLowerCase('es-ES')}`;
+}
+
 export function comprobarPaso1(b: BorradorEpoca, hoy: ClaveDia): Errores {
   const errores: Errores = {};
-  if (!b.nombre.trim()) errores.nombre = 'Ponle un nombre, por ejemplo «Exámenes de enero».';
-  if (!b.tipo) errores.tipo = 'Elige una opción.';
+  if (!b.tipo) errores.tipo = 'Elige una.';
   if (b.fin < b.inicio) errores.fin = 'La fecha de fin tiene que ser igual o posterior a la de inicio.';
   else if (!b.id && b.fin < hoy) errores.fin = 'Esa época ya habría terminado. Elige una fecha de fin a partir de hoy.';
   return errores;
@@ -138,8 +144,8 @@ export function comprobarPaso2(b: BorradorEpoca): Errores {
     errores.acostarse = 'La hora de acostarte no puede ser la misma que la de levantarte.';
   }
   if (b.lugar === 'otro' && !b.direccion.trim()) errores.direccion = 'Escribe la dirección o elige otro sitio.';
-  if (!b.rindeMas) errores.rindeMas = 'Elige una opción.';
-  if (!b.descanso) errores.descanso = 'Elige una opción.';
+  if (!b.rindeMas) errores.rindeMas = 'Elige una.';
+  if (!b.descanso) errores.descanso = 'Elige una.';
   return errores;
 }
 
@@ -191,7 +197,7 @@ export async function epocaDesdeBorrador(b: BorradorEpoca): Promise<Epoca | { er
 
   return {
     id: b.id ?? nuevoIdEpoca(),
-    nombre: b.nombre.trim(),
+    nombre: b.nombre.trim() || nombrePorDefecto(b),
     tipo: b.tipo ?? 'otro',
     inicio: b.inicio,
     fin: b.fin,

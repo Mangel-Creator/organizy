@@ -63,6 +63,16 @@ export const colorTipoSobreTinta = {
   yo: '#E4E6EC',
 } as const;
 
+// Casillas del panel de Hoy: cuadrado de fondo suave con el icono en el tono oscuro
+// del mismo color (contraste de 6,3:1 o más). Mismo significado que colorTipo.
+export const colorBaldosa = {
+  cliente: { fondo: '#F7D9CC', icono: '#7A2A0A' },
+  amigos: { fondo: '#D3EEDF', icono: '#0E5A3C' },
+  yo: { fondo: '#E4E6EC', icono: '#1A1C24' },
+  estudio: { fondo: '#F3E6C7', icono: '#6B4D0E' }, // Época dorada
+  neutro: { fondo: '#F4F1EA', icono: '#1A1C24' }, // tareas, todo el día
+} as const;
+
 export const fuentes = {
   titulo: 'IBMPlexSans_600SemiBold',
   tituloFuerte: 'IBMPlexSans_700Bold',

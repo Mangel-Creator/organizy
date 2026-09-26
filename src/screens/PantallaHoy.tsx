@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from 'react-native-reanimated';
 
@@ -23,7 +23,6 @@ import {
   calcularHuecos,
   duracionTarea,
   eventosDelDia,
-  fraseResumen,
   intervaloDe,
   repartirTareas,
   resolverLugar,
@@ -34,7 +33,7 @@ import {
   type Intervalo,
   type Siguiente,
 } from '@/services/agenda';
-import { imprescindiblesDelDia, ventanaEpoca } from '@/services/epoca';
+import { imprescindiblesDelDia, textoQuedan, ventanaEpoca } from '@/services/epoca';
 import {
   claveDia,
   fechaDesdeClave,
@@ -45,19 +44,19 @@ import {
   saludoSegunHora,
   sumarDias,
 } from '@/services/fechas';
-import { colorTipo, colorTipoSobreTinta, colores, espacio, fuentes, tamanos } from '@/theme';
+import { colorBaldosa, colorTipo, colorTipoSobreTinta, colores, espacio, fuentes } from '@/theme';
 
 import { CapturaRapida } from './captura/CapturaRapida';
 import { ConfirmacionMovidas } from './calendario/ConfirmacionMovidas';
 import { FilaEvento } from './calendario/FilaEvento';
-import { TarjetaHueco } from './calendario/TarjetaHueco';
 import { SalidaSiguiente } from './calendario/SalidaSiguiente';
+import { TarjetaHueco } from './calendario/TarjetaHueco';
 import { OPCIONES_ENERGIA, abrirEvento, nuevoEvento, rangoHoras } from './calendario/textos';
 import { useAhora } from './calendario/useAhora';
-import { BotonEpoca, FranjaEpoca } from './epoca/FranjaEpoca';
 import { PlanDeHoy } from './epoca/PlanDeHoy';
 import { ResumenFinEpoca } from './epoca/ResumenFinEpoca';
 import { useEpocaActiva } from './epoca/useEpoca';
+import { PanelHoy, type DatosBaldosa, type Vista } from './hoy/PanelHoy';
 
 const NOMBRE_MOMENTO: Record<MomentoDelDia, string> = {
   manana: 'por la mañana',
@@ -71,6 +70,11 @@ function explicacionEnergia(energia: Energia, rindeMas: MomentoDelDia): string {
   return 'Hoy vas tranqui: como mucho 2.';
 }
 
+// "1 cliente" / "2 clientes"
+function contar(n: number, uno: string, varios: string): string {
+  return n === 1 ? uno : varios;
+}
+
 // Las filas se recolocan deslizándose (por ejemplo, al marcar una tarea como hecha)
 // en vez de saltar. Con "reducir movimiento" activado en el móvil, cambian sin animar.
 const RECOLOCAR = LinearTransition.duration(220);
@@ -79,6 +83,18 @@ const DESAPARECER = FadeOut.duration(120);
 
 type FilaTareaLista = { tarea: Evento; detalle: string; apagada?: boolean };
 
+const TITULO_VISTA: Record<Vista, string> = {
+  cliente: 'Clientes de hoy',
+  amigos: 'Planes con amigos',
+  yo: 'Para ti',
+  tareas: 'Tareas',
+  estudio: 'Estudio de hoy',
+  dia: 'Todo el día',
+};
+
+// Hoy (rediseño del 26/09/2026, "mucho más visual"): cabecera oscura con el saludo y
+// lo siguiente, y un panel de casillas grandes con icono y número. Al tocar una, su
+// lista sale debajo. La captura rápida está plegada: se abre con el "+".
 export function PantallaHoy() {
   const ahora = useAhora();
   const hoy = claveDia(ahora);
@@ -89,6 +105,8 @@ export function PantallaHoy() {
   const { epoca, plan, epocas, registro } = useEpocaActiva(hoy, eventos, energia);
   const { medidas } = useDensidad();
   const separacion = { gap: medidas.separacion };
+  const [vista, setVista] = useState<Vista | null>(null);
+  const [capturaAbierta, setCapturaAbierta] = useState(false);
 
   const nombre = perfil?.nombre ?? '';
   const saludo = saludoSegunHora(ahora, nombre);
@@ -118,16 +136,14 @@ export function PantallaHoy() {
   const pendientes = tareasPendientes(eventos, hoy, hoy);
   const reparto = repartirTareas(pendientes, duracionTarea, calcularHuecos(ocupados, quedan, 15), energia, rindeMas);
   const hechasHoy = eventos.filter((e) => e.flexible && e.hecha && e.fecha === hoy);
-
-  const frase = fraseResumen({ eventos: delDia, tareasPendientes: pendientes.length, huecos });
   const siguiente = siguienteEvento(eventos, ahora);
+  const minutoActual = minutosDelDia(ahora);
 
   // Lista del día: eventos y huecos libres mezclados por orden de hora.
   const lista = [
     ...delDia.map((evento) => ({ inicio: intervaloDe(evento).inicio, evento, hueco: null })),
     ...huecos.map((hueco) => ({ inicio: hueco.inicio, evento: null, hueco })),
   ].sort((a, b) => a.inicio - b.inicio);
-  const minutoActual = minutosDelDia(ahora);
 
   // Todas las tareas en una sola lista, para que al marcar una se deslice a su sitio.
   const filasTareas: FilaTareaLista[] = [
@@ -143,10 +159,115 @@ export function PantallaHoy() {
   ];
   const filasHechas: FilaTareaLista[] = hechasHoy.map((tarea) => ({ tarea, detalle: 'Hecha', apagada: true }));
 
+  // --- Casillas del panel ---
+  const normales = delDia.filter((e) => !e.foco);
+  const deTipo = (tipo: Evento['tipo']) => delDia.filter((e) => e.tipo === tipo && (tipo === 'yo' || !e.foco));
+  const nClientes = normales.filter((e) => e.tipo === 'cliente').length;
+  const nAmigos = normales.filter((e) => e.tipo === 'amigos').length;
+  const nYo = deTipo('yo').length;
+  const bloquesDeHoy = (plan?.bloques ?? []).filter((b) => b.dia === hoy);
+  const bloquesHechos = bloquesDeHoy.filter((b) => b.estado === 'hecho').length;
+
+  const baldosas: DatosBaldosa[] = [
+    {
+      clave: 'cliente',
+      icono: 'briefcase-outline',
+      colores: colorBaldosa.cliente,
+      numero: String(nClientes),
+      etiqueta: contar(nClientes, 'cliente', 'clientes'),
+      lectura: `${nClientes} ${contar(nClientes, 'cliente', 'clientes')} hoy. Ver la lista`,
+    },
+    {
+      clave: 'amigos',
+      icono: 'people-outline',
+      colores: colorBaldosa.amigos,
+      numero: String(nAmigos),
+      etiqueta: contar(nAmigos, 'plan con amigos', 'planes con amigos'),
+      lectura: `${nAmigos} ${contar(nAmigos, 'plan con amigos', 'planes con amigos')} hoy. Ver la lista`,
+    },
+    {
+      clave: 'tareas',
+      icono: 'checkbox-outline',
+      colores: colorBaldosa.neutro,
+      numero: String(pendientes.length),
+      etiqueta: contar(pendientes.length, 'tarea', 'tareas'),
+      lectura: `${pendientes.length} ${contar(pendientes.length, 'tarea pendiente', 'tareas pendientes')}. Ver la lista`,
+    },
+    epoca
+      ? {
+          clave: 'estudio',
+          icono: 'school-outline',
+          colores: colorBaldosa.estudio,
+          numero: `${bloquesHechos}/${bloquesDeHoy.length}`,
+          etiqueta: 'bloques de estudio',
+          lectura: `${bloquesHechos} de ${bloquesDeHoy.length} bloques de estudio hechos. Ver el plan`,
+        }
+      : {
+          clave: 'yo',
+          icono: 'person-outline',
+          colores: colorBaldosa.yo,
+          numero: String(nYo),
+          etiqueta: contar(nYo, 'cosa tuya', 'cosas tuyas'),
+          lectura: `${nYo} ${contar(nYo, 'cosa tuya', 'cosas tuyas')} hoy. Ver la lista`,
+        },
+    {
+      clave: 'dia',
+      icono: 'calendar-outline',
+      colores: colorBaldosa.neutro,
+      etiqueta: 'Todo el día',
+      lectura: 'Todo el día, por horas. Ver la lista',
+    },
+    {
+      clave: 'epoca',
+      icono: epoca ? 'star' : 'star-outline',
+      colores: colorBaldosa.estudio,
+      etiqueta: epoca ? `Época dorada · ${textoQuedan(epoca, hoy)}` : 'Época dorada',
+      lectura: epoca ? `Época dorada, ${textoQuedan(epoca, hoy)}. Abrir` : 'Época dorada. Abrir',
+    },
+  ];
+
+  const pulsarBaldosa = (clave: DatosBaldosa['clave']) => {
+    if (clave === 'epoca') {
+      router.push('/epoca');
+      return;
+    }
+    setVista((actual) => (actual === clave ? null : clave));
+  };
+
+  const selectorEnergia = (
+    <Selector etiqueta="¿Cómo vas de energía?" opciones={OPCIONES_ENERGIA} valor={energia} alCambiar={setEnergia} />
+  );
+
+  // Filas de eventos (con sus huecos si es "Todo el día"), con las animaciones de siempre.
+  const listaEventos = (items: typeof lista, vacio: string) =>
+    items.length === 0 ? (
+      <Texto secundario>{vacio}</Texto>
+    ) : (
+      <LayoutAnimationConfig skipEntering>
+        <View style={separacion}>
+          {items.map((item) => (
+            <Animated.View
+              key={item.evento ? item.evento.id : `hueco-${item.inicio}`}
+              layout={RECOLOCAR}
+              entering={APARECER}
+              exiting={DESAPARECER}>
+              {item.evento ? (
+                <FilaEvento evento={item.evento} pasado={intervaloDe(item.evento).fin <= minutoActual} />
+              ) : (
+                <TarjetaHueco hueco={item.hueco as Intervalo} />
+              )}
+            </Animated.View>
+          ))}
+        </View>
+      </LayoutAnimationConfig>
+    );
+  const soloEventos = (tipo: Evento['tipo']) =>
+    deTipo(tipo).map((evento) => ({ inicio: intervaloDe(evento).inicio, evento, hueco: null }));
+
   return (
     <View style={estilos.contenedor}>
       <Pantalla contentContainerStyle={estilos.contenido} colorArriba={colores.tinta}>
-        {/* Cabecera oscura: fecha, saludo, resumen del día y lo siguiente. */}
+        {/* Cabecera oscura: fecha, saludo y lo siguiente. */}
         <View style={estilos.cabecera}>
           <View style={estilos.cabeceraFila}>
             <View style={estilos.textos}>
@@ -155,103 +276,103 @@ export function PantallaHoy() {
             </View>
             <BotonInicial nombre={nombre} sobreTinta onPress={() => router.push('/perfil')} />
           </View>
-          {cargado ? (
-            <Texto style={estilos.resumen} accessibilityLiveRegion="polite">
-              {frase}
-            </Texto>
-          ) : null}
           {cargado && siguiente ? <TarjetaSiguiente siguiente={siguiente} hoy={hoy} perfil={perfil} ahora={ahora} /> : null}
         </View>
-        {epoca ? <FranjaEpoca epoca={epoca} hoy={hoy} /> : null}
-        <CapturaRapida hoy={hoy} />
-        <AvisoPantallaInicio />
-        {cargado && !epoca ? <BotonEpoca /> : null}
-        <ResumenFinEpoca epocas={epocas} registro={registro} hoy={hoy} />
 
-        <Selector
-          etiqueta="¿Cómo vas de energía?"
-          opciones={OPCIONES_ENERGIA}
-          valor={energia}
-          alCambiar={setEnergia}
+        <CapturaRapida
+          hoy={hoy}
+          plegada={!capturaAbierta}
+          alRellenarAMano={() => {
+            setCapturaAbierta(false);
+            nuevoEvento(hoy);
+          }}
         />
+        <AvisoPantallaInicio />
+        <ResumenFinEpoca epocas={epocas} registro={registro} hoy={hoy} />
 
         {cargado ? (
           <>
             <ConfirmacionMovidas />
+            <PanelHoy baldosas={baldosas} elegida={vista} alPulsar={pulsarBaldosa} />
 
-            {epoca && plan ? (
-              <PlanDeHoy epoca={epoca} plan={plan} registro={registro} perfil={perfil} ahora={ahora} energia={energia} />
-            ) : null}
+            {vista ? (
+              <Animated.View key={vista} entering={APARECER} style={estilos.vista}>
+                <Titulo nivel={2}>{TITULO_VISTA[vista]}</Titulo>
 
-            <Titulo nivel={2} style={estilos.seccion}>
-              Tu día
-            </Titulo>
-            {lista.length === 0 ? (
-              <Texto secundario>Nada con hora por hoy.</Texto>
-            ) : (
-              <LayoutAnimationConfig skipEntering>
-                <View style={separacion}>
-                  {lista.map((item) => (
-                    <Animated.View
-                      key={item.evento ? item.evento.id : `hueco-${item.inicio}`}
-                      layout={RECOLOCAR}
-                      entering={APARECER}
-                      exiting={DESAPARECER}>
-                      {item.evento ? (
-                        <FilaEvento evento={item.evento} pasado={intervaloDe(item.evento).fin <= minutoActual} />
-                      ) : (
-                        <TarjetaHueco hueco={item.hueco as Intervalo} />
-                      )}
-                    </Animated.View>
-                  ))}
-                </View>
-              </LayoutAnimationConfig>
-            )}
+                {vista === 'dia' ? listaEventos(lista, 'Nada con hora por hoy.') : null}
+                {vista === 'cliente' ? listaEventos(soloEventos('cliente'), 'Hoy no tienes clientes.') : null}
+                {vista === 'amigos' ? listaEventos(soloEventos('amigos'), 'Hoy no hay planes con amigos.') : null}
+                {vista === 'yo' ? listaEventos(soloEventos('yo'), 'Hoy no tienes nada tuyo con hora.') : null}
 
-            {pendientes.length + hechasHoy.length > 0 ? (
-              <>
-                <View style={estilos.seccion}>
-                  <Titulo nivel={2}>Tareas flexibles</Titulo>
-                  <Texto pequeno secundario>
-                    {explicacionEnergia(energia, rindeMas)}
-                  </Texto>
-                </View>
-                <LayoutAnimationConfig skipEntering>
-                  <View style={separacion}>
-                    {filasTareas.map((fila) => (
-                      <Animated.View key={fila.tarea.id} layout={RECOLOCAR} entering={APARECER} exiting={DESAPARECER}>
-                        <FilaTarea {...fila} />
-                      </Animated.View>
-                    ))}
-                    {reparto.paraManana.length > 0 ? (
-                      <Animated.View key="pasar-a-manana" layout={RECOLOCAR}>
-                        <Boton
-                          variante="secundario"
-                          titulo={`Pasar el resto a mañana (${reparto.paraManana.length})`}
-                          onPress={() =>
-                            moverTareas(
-                              reparto.paraManana.map((t) => t.id),
-                              sumarDias(hoy, 1),
-                            )
-                          }
-                        />
-                      </Animated.View>
-                    ) : null}
-                    {filasHechas.map((fila) => (
-                      <Animated.View key={fila.tarea.id} layout={RECOLOCAR} entering={APARECER} exiting={DESAPARECER}>
-                        <FilaTarea {...fila} />
-                      </Animated.View>
-                    ))}
-                  </View>
-                </LayoutAnimationConfig>
-              </>
+                {vista === 'estudio' && epoca && plan ? (
+                  <>
+                    {selectorEnergia}
+                    <PlanDeHoy epoca={epoca} plan={plan} registro={registro} perfil={perfil} ahora={ahora} energia={energia} />
+                  </>
+                ) : null}
+
+                {vista === 'tareas' ? (
+                  <>
+                    {selectorEnergia}
+                    {pendientes.length + hechasHoy.length === 0 ? (
+                      <Texto secundario>No te queda ninguna tarea. Bien.</Texto>
+                    ) : (
+                      <>
+                        <Texto pequeno secundario>
+                          {explicacionEnergia(energia, rindeMas)}
+                        </Texto>
+                        <LayoutAnimationConfig skipEntering>
+                          <View style={separacion}>
+                            {filasTareas.map((fila) => (
+                              <Animated.View
+                                key={fila.tarea.id}
+                                layout={RECOLOCAR}
+                                entering={APARECER}
+                                exiting={DESAPARECER}>
+                                <FilaTarea {...fila} />
+                              </Animated.View>
+                            ))}
+                            {reparto.paraManana.length > 0 ? (
+                              <Animated.View key="pasar-a-manana" layout={RECOLOCAR}>
+                                <Boton
+                                  variante="secundario"
+                                  titulo={`Pasar el resto a mañana (${reparto.paraManana.length})`}
+                                  onPress={() =>
+                                    moverTareas(
+                                      reparto.paraManana.map((t) => t.id),
+                                      sumarDias(hoy, 1),
+                                    )
+                                  }
+                                />
+                              </Animated.View>
+                            ) : null}
+                            {filasHechas.map((fila) => (
+                              <Animated.View
+                                key={fila.tarea.id}
+                                layout={RECOLOCAR}
+                                entering={APARECER}
+                                exiting={DESAPARECER}>
+                                <FilaTarea {...fila} />
+                              </Animated.View>
+                            ))}
+                          </View>
+                        </LayoutAnimationConfig>
+                      </>
+                    )}
+                  </>
+                ) : null}
+              </Animated.View>
             ) : null}
           </>
         ) : (
           <Texto secundario>Cargando tu día…</Texto>
         )}
       </Pantalla>
-      <BotonFlotante etiqueta="Añadir evento" onPress={() => nuevoEvento(hoy)} />
+      <BotonFlotante
+        etiqueta={capturaAbierta ? 'Cerrar la captura rápida' : 'Apuntar algo'}
+        icono={capturaAbierta ? 'close' : 'add'}
+        onPress={() => setCapturaAbierta((abierta) => !abierta)}
+      />
     </View>
   );
 }
@@ -351,8 +472,7 @@ const estilos = StyleSheet.create({
   fechaTinta: { color: colores.textoSecundarioSobreTinta },
   textoTinta: { color: colores.textoSobreTinta },
   horaTinta: { color: colores.textoSecundarioSobreTinta, fontFamily: fuentes.hora },
-  resumen: { color: colores.textoSobreTinta, fontSize: tamanos.normal, lineHeight: 24 },
-  seccion: { marginTop: espacio.m },
+  vista: { gap: espacio.m, marginTop: espacio.s },
   siguiente: {
     backgroundColor: colores.tintaSuave,
     borderLeftWidth: 4,

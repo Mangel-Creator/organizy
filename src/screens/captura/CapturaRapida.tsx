@@ -20,8 +20,12 @@ import { TarjetaConfirmacion } from './TarjetaConfirmacion';
 // como título.
 //
 // "accesorio" deja poner otro botón junto al de enviar (el micrófono de la fase 9).
+// "plegada": en Hoy va escondida hasta que se toca el "+" (lo pidió el usuario para
+// que Hoy respire). Sigue montada aunque no se vea, así que enviarFraseACaptura
+// funciona igual: si llega una frase de fuera, se despliega sola mientras piensa.
+// "alRellenarAMano" pone el enlace para abrir la ficha vacía.
 
-type Props = { hoy: ClaveDia; accesorio?: ReactNode };
+type Props = { hoy: ClaveDia; accesorio?: ReactNode; plegada?: boolean; alRellenarAMano?: () => void };
 
 // Para mandar una frase desde fuera (por ejemplo, la voz de la fase 9): la pone
 // en el campo y la envía como si se hubiera escrito. Devuelve false si Hoy no
@@ -44,7 +48,7 @@ function textoGuardado(evento: Evento): string {
   return `Apuntado: «${evento.titulo}», ${cuando}.`;
 }
 
-export function CapturaRapida({ hoy, accesorio }: Props) {
+export function CapturaRapida({ hoy, accesorio, plegada = false, alRellenarAMano }: Props) {
   const { perfil } = usePerfil();
   const [frase, setFrase] = useState('');
   const [pensando, setPensando] = useState(false);
@@ -89,9 +93,12 @@ export function CapturaRapida({ hoy, accesorio }: Props) {
 
   const puedeEnviar = frase.trim().length > 0 && !pensando;
 
+  // Plegada y sin nada en marcha: no enseña nada (pero sigue escuchando frases de fuera).
+  if (plegada && !pensando && !propuesta && !hecho) return null;
+
   return (
     <View style={estilos.contenedor}>
-      <Titulo nivel={3}>Captura rápida</Titulo>
+      <Titulo nivel={3}>¿Qué apunto?</Titulo>
       <View style={estilos.fila}>
         <TextInput
           ref={campo}
@@ -110,6 +117,7 @@ export function CapturaRapida({ hoy, accesorio }: Props) {
           returnKeyType="send"
           submitBehavior="blurAndSubmit"
           autoCapitalize="none"
+          autoFocus={!plegada}
           style={estilos.campo}
         />
         {accesorio}
@@ -141,9 +149,19 @@ export function CapturaRapida({ hoy, accesorio }: Props) {
           {hecho}
         </Texto>
       ) : !propuesta ? (
-        <Texto pequeno secundario>
-          Escríbelo como te salga. También puedes dictarlo con el micrófono del teclado.
-        </Texto>
+        <Texto pequeno secundario>Escríbelo como te salga, o díctalo con el micrófono del teclado.</Texto>
+      ) : null}
+
+      {alRellenarAMano && !propuesta && !pensando ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={alRellenarAMano}
+          style={({ pressed }) => [estilos.enlace, pressed && estilos.pulsado]}>
+          <Ionicons name="create-outline" size={18} color={colores.principal} />
+          <Texto fuerte style={estilos.textoEnlace}>
+            Mejor lo relleno a mano
+          </Texto>
+        </Pressable>
       ) : null}
 
       {propuesta ? (
@@ -189,4 +207,6 @@ const estilos = StyleSheet.create({
   // Apagado sin opacidad: el azul pasa a gris de borde, y el icono sigue viéndose.
   enviarApagado: { backgroundColor: colores.cargaNormal },
   pulsado: { transform: [{ scale: 0.94 }] },
+  enlace: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, minHeight: alturaTactil, alignSelf: 'flex-start' },
+  textoEnlace: { color: colores.principal },
 });

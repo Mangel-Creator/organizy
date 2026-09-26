@@ -5,13 +5,14 @@ import { colores, espacio, radio } from '@/theme';
 
 type Props = Omit<PressableProps, 'children'> & {
   etiqueta: string; // lo que lee el lector de pantalla, por ejemplo "Añadir evento"
+  icono?: 'add' | 'close'; // "close" cuando lo que abrió está abierto
 };
 
 const TAMANO = 60;
 
 // Botón azul con un "+", fijo abajo a la derecha de la pantalla.
 // Va dentro de un contenedor con flex: 1, al lado (no dentro) de <Pantalla>.
-export function BotonFlotante({ etiqueta, style, ...resto }: Props) {
+export function BotonFlotante({ etiqueta, icono = 'add', style, ...resto }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -22,7 +23,7 @@ export function BotonFlotante({ etiqueta, style, ...resto }: Props) {
         typeof style === 'function' ? style(estado) : style,
       ]}
       {...resto}>
-      <Ionicons name="add" size={32} color={colores.textoSobrePrincipal} />
+      <Ionicons name={icono} size={32} color={colores.textoSobrePrincipal} />
     </Pressable>
   );
 }

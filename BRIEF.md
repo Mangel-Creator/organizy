@@ -37,6 +37,27 @@ y app en Expo Go). Tiene que leerse de un vistazo.
   interruptores, barras de progreso y de carga, la inicial de Perfil.
 - Solo modo claro, sin degradados; la única sombra es la del "+", que flota.
 
+### Hoy como panel de casillas (26/09/2026)
+
+El usuario veía la app "muy muy supercargada" y la quería "mucho más visual". Hoy apilaba
+diez bloques casi todos de texto. Vio tres dibujos (línea del día, una cosa grande, panel
+de iconos) y eligió **el panel de iconos con las dos casillas de acceso de la "una cosa
+grande"**:
+
+- Cabecera oscura: fecha, saludo y "Lo siguiente". La frase de resumen desaparece: lo
+  dicen los números de las casillas.
+- Seis casillas grandes, de dos en dos: icono en un cuadrado de color suave del tipo
+  (`colorBaldosa`), número grande y etiqueta corta. Clientes, planes con amigos, tareas,
+  cosas tuyas (o bloques de estudio con época), "Todo el día" y "Época dorada".
+- Al tocar una, su lista sale debajo y la casilla se pone en tinta. Así se enseña una
+  sola cosa cada vez.
+- La captura rápida, plegada detrás del "+". La energía, solo donde sirve (tareas y estudio).
+
+Y los formularios, empezando por la Época dorada ("un coñazo y largos"): lo esencial con
+casillas de icono (`SelectorVisual`) y lo opcional plegado en "Más ajustes" (`Plegable`)
+con una línea de resumen. Valores por defecto en vez de preguntas: nombre automático,
+empieza hoy, bloques de 50 + 10.
+
 ### Época dorada en Hoy (25/09/2026)
 
 El usuario veía la Época dorada amontonada: cada bloque repetía el examen y la dirección

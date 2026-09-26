@@ -9,11 +9,13 @@ import {
   CampoTexto,
   Interruptor,
   Pantalla,
+  Plegable,
   Selector,
   SelectorCantidad,
   SelectorDias,
   SelectorFecha,
   SelectorHora,
+  SelectorVisual,
   Tarjeta,
   Texto,
   Titulo,
@@ -34,6 +36,7 @@ import {
   comprobarPaso3,
   epocaDesdeBorrador,
   hayErrores,
+  nombrePorDefecto,
   type BorradorEpoca,
   type EleccionLugar,
   type Errores,
@@ -43,16 +46,19 @@ import { EditorHitos } from './epoca/EditorHitos';
 import { EditorImprescindibles } from './epoca/EditorImprescindibles';
 import { SelectorLugarEpoca } from './epoca/SelectorLugarEpoca';
 import {
+  DESCANSO_TEXTO,
   formatoHoras,
   NOMBRES_DIAS,
   OPCIONES_DESCANSO,
-  OPCIONES_MOMENTO_EPOCA,
-  OPCIONES_TIPO_EPOCA,
+  OPCIONES_MOMENTO_VISUAL,
+  OPCIONES_TIPO_VISUAL,
   OPCIONES_TRAYECTO,
 } from './epoca/textos';
 import { MensajeError } from './formulario-perfil/MensajeError';
 
-// Formulario de la Época dorada en 3 pasos, con el mismo estilo que la bienvenida.
+// Formulario de la Época dorada en 3 pasos cortos (26/09/2026: el usuario lo veía
+// largo y pesado). Cada paso enseña solo lo esencial con casillas de icono; lo
+// opcional va plegado en "Más ajustes" con un resumen de lo que ya está puesto.
 // Sirve para crear una época (/epoca-editar) y para editarla (/epoca-editar?id=...,
 // y ?paso=3 para ir directo a los hitos). Al guardar, el plan se recalcula solo.
 
@@ -179,46 +185,38 @@ function Formulario({ epoca, epocas, perfil, pasoInicial }: Props) {
 
       {paso === 1 ? (
         <>
-          <Titulo>¿Qué época se viene?</Titulo>
-          <CampoTexto
-            etiqueta="Nombre"
-            placeholder="Exámenes de enero"
-            value={b.nombre}
-            onChangeText={(nombre) => cambiar({ nombre })}
-            autoCapitalize="sentences"
-            error={errores.nombre}
-          />
+          <Titulo>¿Qué se viene?</Titulo>
           <View>
-            <Selector
-              etiqueta="Tipo"
-              opciones={OPCIONES_TIPO_EPOCA}
-              valor={b.tipo}
-              alCambiar={(tipo) => cambiar({ tipo })}
-            />
+            <SelectorVisual opciones={OPCIONES_TIPO_VISUAL} valor={b.tipo} alCambiar={(tipo) => cambiar({ tipo })} />
             <MensajeError texto={errores.tipo} />
           </View>
-          <SelectorFecha etiqueta="Empieza" valor={b.inicio} alCambiar={(inicio) => cambiar({ inicio })} />
           <View>
-            <SelectorFecha etiqueta="Termina" valor={b.fin} alCambiar={(fin) => cambiar({ fin })} />
+            <SelectorFecha etiqueta="¿Hasta cuándo?" valor={b.fin} alCambiar={(fin) => cambiar({ fin })} />
             <MensajeError texto={errores.fin} />
           </View>
+          <Plegable
+            titulo="Más ajustes"
+            resumen={`Empieza ${b.inicio === hoy ? 'hoy' : formatearDiaCorto(fechaDesdeClave(b.inicio)).toLocaleLowerCase('es-ES')} · «${b.nombre.trim() || nombrePorDefecto(b)}»`}
+            abierto={!!errores.nombre}>
+            <CampoTexto
+              etiqueta="Nombre (si no, le pongo uno)"
+              placeholder={nombrePorDefecto(b)}
+              value={b.nombre}
+              onChangeText={(nombre) => cambiar({ nombre })}
+              autoCapitalize="sentences"
+              error={errores.nombre}
+            />
+            <SelectorFecha etiqueta="Empieza" valor={b.inicio} alCambiar={(inicio) => cambiar({ inicio })} />
+          </Plegable>
           <Boton titulo="Siguiente" onPress={() => siguiente(() => comprobarPaso1(b, hoy), 2)} />
         </>
       ) : null}
 
       {paso === 2 ? (
         <>
-          <Titulo>Tu ritmo en esta época</Titulo>
-          <View>
-            <View style={estilos.fila}>
-              <SelectorHora etiqueta="Me levanto" valor={b.levantarse} alCambiar={(levantarse) => cambiar({ levantarse })} />
-              <SelectorHora etiqueta="Me acuesto" valor={b.acostarse} alCambiar={(acostarse) => cambiar({ acostarse })} />
-            </View>
-            <MensajeError texto={errores.acostarse} />
-          </View>
-
+          <Titulo>Tu ritmo</Titulo>
           <SelectorLugarEpoca
-            etiqueta="¿Dónde vas a estudiar o trabajar?"
+            etiqueta="¿Dónde vas a estar?"
             valor={b.lugar}
             alCambiar={(lugar) => cambiar({ lugar })}
             perfil={perfil}
@@ -226,42 +224,8 @@ function Formulario({ epoca, epocas, perfil, pasoInicial }: Props) {
             alCambiarDireccion={(direccion) => cambiar({ direccion })}
             error={errores.direccion}
           />
-          <SelectorDias
-            etiqueta="Qué días vas (los demás días, en casa)"
-            valor={b.diasVas}
-            alCambiar={(diasVas) => cambiar({ diasVas })}
-          />
-          <Interruptor
-            etiqueta="Un sitio distinto según el día"
-            ayuda="Por ejemplo, la biblioteca de lunes a jueves y casa el viernes."
-            valor={b.distintoPorDia}
-            alCambiar={(distintoPorDia) => cambiar({ distintoPorDia })}
-          />
-          {b.distintoPorDia
-            ? b.diasVas.map((dia) => (
-                <Selector
-                  key={dia}
-                  etiqueta={NOMBRES_DIAS[dia]}
-                  opciones={opcionesDia}
-                  valor={b.lugarPorDia[dia] ?? 'epoca'}
-                  alCambiar={(eleccion) => cambiar({ lugarPorDia: { ...b.lugarPorDia, [dia]: eleccion } })}
-                />
-              ))
-            : null}
-          {b.distintoPorDia ? (
-            <Texto pequeno secundario>Para elegir aquí otro sitio, añádelo antes a tus sitios habituales en Perfil.</Texto>
-          ) : null}
-          {vaFuera ? (
-            <Selector
-              etiqueta="¿Cuánto tardas en llegar? (para avisarte de cuándo salir)"
-              opciones={OPCIONES_TRAYECTO}
-              valor={b.trayecto}
-              alCambiar={(trayecto: Trayecto) => cambiar({ trayecto })}
-            />
-          ) : null}
-
           <SelectorCantidad
-            etiqueta="Horas de estudio o trabajo al día"
+            etiqueta="Horas al día"
             valor={b.horasDia}
             alCambiar={(horasDia) => cambiar({ horasDia })}
             minimo={0.5}
@@ -270,33 +234,81 @@ function Formulario({ epoca, epocas, perfil, pasoInicial }: Props) {
             formato={formatoHoras}
           />
           <View>
-            <Selector
-              etiqueta="¿Cuándo rindes más en esta época?"
-              opciones={OPCIONES_MOMENTO_EPOCA}
+            <SelectorVisual
+              etiqueta="¿Cuándo rindes más?"
+              opciones={OPCIONES_MOMENTO_VISUAL}
               valor={b.rindeMas}
               alCambiar={(rindeMas) => cambiar({ rindeMas })}
             />
             <MensajeError texto={errores.rindeMas} />
           </View>
-          <View>
+
+          <Plegable
+            titulo="Más ajustes"
+            resumen={[
+              `De ${b.levantarse} a ${b.acostarse}`,
+              b.descanso ? DESCANSO_TEXTO[b.descanso] : null,
+              b.diaLibre === null ? 'sin día libre' : `libre el ${NOMBRES_DIAS[b.diaLibre].toLocaleLowerCase('es-ES')}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            abierto={!!(errores.acostarse || errores.descanso)}>
+            <View>
+              <View style={estilos.fila}>
+                <SelectorHora etiqueta="Me levanto" valor={b.levantarse} alCambiar={(levantarse) => cambiar({ levantarse })} />
+                <SelectorHora etiqueta="Me acuesto" valor={b.acostarse} alCambiar={(acostarse) => cambiar({ acostarse })} />
+              </View>
+              <MensajeError texto={errores.acostarse} />
+            </View>
+            <View>
+              <Selector
+                etiqueta="Bloques de estudio"
+                opciones={OPCIONES_DESCANSO}
+                valor={b.descanso}
+                alCambiar={(descanso) => cambiar({ descanso })}
+              />
+              <MensajeError texto={errores.descanso} />
+            </View>
             <Selector
-              etiqueta="Cómo te gusta descansar (trabajo + descanso)"
-              opciones={OPCIONES_DESCANSO}
-              valor={b.descanso}
-              alCambiar={(descanso) => cambiar({ descanso })}
+              etiqueta="Día libre a la semana"
+              opciones={opcionesLibre}
+              valor={b.diaLibre === null ? 'ninguno' : String(b.diaLibre)}
+              alCambiar={(valor) => cambiar({ diaLibre: valor === 'ninguno' ? null : (Number(valor) as DiaSemana) })}
             />
-            <MensajeError texto={errores.descanso} />
-          </View>
-          <Selector
-            etiqueta="Día libre a la semana"
-            opciones={opcionesLibre}
-            valor={b.diaLibre === null ? 'ninguno' : String(b.diaLibre)}
-            alCambiar={(valor) => cambiar({ diaLibre: valor === 'ninguno' ? null : (Number(valor) as DiaSemana) })}
-          />
-          <EditorImprescindibles
-            lista={b.imprescindibles}
-            alCambiar={(imprescindibles) => cambiar({ imprescindibles })}
-          />
+            <SelectorDias
+              etiqueta="Qué días vas (los demás, en casa)"
+              valor={b.diasVas}
+              alCambiar={(diasVas) => cambiar({ diasVas })}
+            />
+            <Interruptor
+              etiqueta="Un sitio distinto según el día"
+              valor={b.distintoPorDia}
+              alCambiar={(distintoPorDia) => cambiar({ distintoPorDia })}
+            />
+            {b.distintoPorDia
+              ? b.diasVas.map((dia) => (
+                  <Selector
+                    key={dia}
+                    etiqueta={NOMBRES_DIAS[dia]}
+                    opciones={opcionesDia}
+                    valor={b.lugarPorDia[dia] ?? 'epoca'}
+                    alCambiar={(eleccion) => cambiar({ lugarPorDia: { ...b.lugarPorDia, [dia]: eleccion } })}
+                  />
+                ))
+              : null}
+            {vaFuera ? (
+              <Selector
+                etiqueta="¿Cuánto tardas en llegar?"
+                opciones={OPCIONES_TRAYECTO}
+                valor={b.trayecto}
+                alCambiar={(trayecto: Trayecto) => cambiar({ trayecto })}
+              />
+            ) : null}
+            <EditorImprescindibles
+              lista={b.imprescindibles}
+              alCambiar={(imprescindibles) => cambiar({ imprescindibles })}
+            />
+          </Plegable>
 
           <View style={estilos.botones}>
             <Boton titulo="Siguiente" onPress={() => siguiente(() => comprobarPaso2(b), 3)} />
@@ -308,10 +320,7 @@ function Formulario({ epoca, epocas, perfil, pasoInicial }: Props) {
       {paso === 3 ? (
         <>
           <Titulo>¿Qué tienes por delante?</Titulo>
-          <Texto secundario>
-            Exámenes o entregas. Con las horas de preparación de cada uno te hago el plan día a día. Puedes
-            cambiarlos cuando quieras, también durante la época.
-          </Texto>
+          <Texto secundario>Añade cada examen o entrega y te preparo el plan día a día.</Texto>
           <EditorHitos
             hitos={b.hitos}
             alCambiar={(hitos) => cambiar({ hitos })}

@@ -4,10 +4,11 @@ import { StyleSheet, View } from 'react-native';
 import {
   Boton,
   CampoTexto,
-  Selector,
+  Plegable,
   SelectorCantidad,
   SelectorFecha,
   SelectorHora,
+  SelectorVisual,
   Tarjeta,
   Texto,
 } from '@/components';
@@ -21,7 +22,7 @@ import { MensajeError } from '../formulario-perfil/MensajeError';
 import { eleccionDesdeLugar, lugarDesdeEleccion, type EleccionLugar } from './borrador';
 import { BotonIcono } from './EditorImprescindibles';
 import { SelectorLugarEpoca } from './SelectorLugarEpoca';
-import { formatoHoras, NOMBRE_DIFICULTAD, OPCIONES_DIFICULTAD } from './textos';
+import { formatoHoras, NOMBRE_DIFICULTAD, OPCIONES_DIFICULTAD_VISUAL } from './textos';
 
 type Props = {
   hitos: Hito[];
@@ -32,8 +33,8 @@ type Props = {
 };
 
 // Lista de hitos (exámenes o entregas): se pueden añadir, editar y quitar,
-// también durante la época. Cada uno con fecha, hora, lugar, dificultad y horas
-// de preparación.
+// también durante la época. A la vista solo lo esencial (nombre, fecha, dificultad
+// con llamas y horas de preparación); la hora y el lugar van plegados.
 export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
   const [editando, setEditando] = useState<Hito | null>(null);
   const [nombre, setNombre] = useState('');
@@ -71,7 +72,7 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
   };
 
   const guardar = async () => {
-    if (!nombre.trim()) return setError('Escribe el nombre o la asignatura.');
+    if (!nombre.trim()) return setError('¿De qué es? Escribe la asignatura.');
     if (fecha < inicio || fecha > fin) return setError('La fecha tiene que caer dentro de la época.');
     if (lugar === 'otro' && !direccion.trim()) return setError('Escribe la dirección o elige otro lugar.');
     setOcupado(true);
@@ -96,7 +97,7 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
   return (
     <View style={estilos.seccion}>
       {ordenados.length === 0 ? (
-        <Texto secundario>Aún no hay hitos. Añade tus exámenes o entregas para que prepare el plan.</Texto>
+        <Texto secundario>Aún no hay nada. Añade el primero aquí abajo.</Texto>
       ) : null}
       {ordenados.map((h) => {
         const sitio = resolverLugar(h.lugar, perfil);
@@ -109,7 +110,7 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
                 {sitio ? ` · ${sitio.nombre ?? sitio.direccion}` : ''}
               </Texto>
               <Texto pequeno secundario>
-                Dificultad {NOMBRE_DIFICULTAD[h.dificultad]} · {formatoHoras(h.horasPreparacion)} de preparación
+                {NOMBRE_DIFICULTAD[h.dificultad]} · {formatoHoras(h.horasPreparacion)}
               </Texto>
             </View>
             <BotonIcono icono="create-outline" etiqueta={`Editar ${h.nombre}`} alPulsar={() => editar(h)} />
@@ -126,9 +127,9 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
       })}
 
       <Tarjeta style={estilos.formulario}>
-        {editando ? <Texto fuerte>Cambiando «{editando.nombre}»</Texto> : <Texto fuerte>Nuevo hito</Texto>}
+        {editando ? <Texto fuerte>Cambiando «{editando.nombre}»</Texto> : <Texto fuerte>Añadir un examen o entrega</Texto>}
         <CampoTexto
-          etiqueta="Nombre o asignatura"
+          etiqueta="¿De qué es?"
           placeholder="Estadística"
           value={nombre}
           onChangeText={(texto) => {
@@ -137,20 +138,15 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
           }}
           autoCapitalize="sentences"
         />
-        <SelectorFecha etiqueta="Fecha" valor={fecha} alCambiar={setFecha} />
-        <SelectorHora etiqueta="Hora" valor={hora} alCambiar={setHora} />
-        <SelectorLugarEpoca
-          etiqueta="Lugar"
-          valor={lugar}
-          alCambiar={setLugar}
-          perfil={perfil}
-          direccion={direccion}
-          alCambiarDireccion={setDireccion}
-          conNinguno
+        <SelectorFecha etiqueta="¿Cuándo?" valor={fecha} alCambiar={setFecha} />
+        <SelectorVisual
+          etiqueta="¿Cómo de difícil?"
+          opciones={OPCIONES_DIFICULTAD_VISUAL}
+          valor={dificultad}
+          alCambiar={setDificultad}
         />
-        <Selector etiqueta="Dificultad" opciones={OPCIONES_DIFICULTAD} valor={dificultad} alCambiar={setDificultad} />
         <SelectorCantidad
-          etiqueta="Horas de preparación que calculas"
+          etiqueta="Horas para prepararlo"
           valor={horas}
           alCambiar={setHoras}
           minimo={1}
@@ -158,10 +154,25 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
           paso={1}
           formato={formatoHoras}
         />
+        <Plegable
+          titulo="Hora y lugar"
+          resumen={`A las ${hora}${lugar === 'ninguno' ? ' · sin lugar' : ''}`}
+          abierto={lugar === 'otro' && !!error}>
+          <SelectorHora etiqueta="Hora" valor={hora} alCambiar={setHora} />
+          <SelectorLugarEpoca
+            etiqueta="Lugar"
+            valor={lugar}
+            alCambiar={setLugar}
+            perfil={perfil}
+            direccion={direccion}
+            alCambiarDireccion={setDireccion}
+            conNinguno
+          />
+        </Plegable>
         <MensajeError texto={error} />
         <Boton
           variante="secundario"
-          titulo={ocupado ? 'Buscando la dirección…' : editando ? 'Guardar hito' : 'Añadir hito'}
+          titulo={ocupado ? 'Buscando la dirección…' : editando ? 'Guardar cambios' : 'Añadir'}
           disabled={ocupado}
           onPress={guardar}
         />
