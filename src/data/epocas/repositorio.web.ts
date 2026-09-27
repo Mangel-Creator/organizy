@@ -36,4 +36,9 @@ export const repositorio: RepositorioEpocas = {
     const registro = await leerRegistro();
     await guardarAjuste(CLAVE_REGISTRO, registro.filter((r) => r.id !== id));
   },
+
+  async reemplazarTodo(epocas, registro) {
+    await guardarAjuste(CLAVE_EPOCAS, epocas);
+    await guardarAjuste(CLAVE_REGISTRO, registro);
+  },
 };

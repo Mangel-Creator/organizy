@@ -74,7 +74,8 @@
           "microphonePermission": "Organizy usa el micrófono solo mientras tocas el botón del micro, para apuntar lo que le dices.",
           "speechRecognitionPermission": "Organizy pasa a texto lo que le dices para apuntarlo en tu agenda."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

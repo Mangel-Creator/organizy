@@ -41,4 +41,8 @@ export const repositorio: RepositorioEventos = {
     const eventos = await leer();
     await guardarAjuste(CLAVE, eventos.filter((e) => !e.ejemplo));
   },
+
+  async reemplazarTodos(eventos) {
+    await guardarAjuste(CLAVE, eventos);
+  },
 };

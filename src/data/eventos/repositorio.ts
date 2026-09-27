@@ -122,4 +122,13 @@ export const repositorio: RepositorioEventos = {
     const bd = await obtenerBD();
     await bd.runAsync('DELETE FROM eventos WHERE ejemplo = 1');
   },
+
+  async reemplazarTodos(eventos) {
+    const bd = await obtenerBD();
+    // Todo o nada: si algo falla a medias, se quedan los eventos de antes.
+    await bd.withTransactionAsync(async () => {
+      await bd.runAsync('DELETE FROM eventos');
+      for (const e of eventos) await repositorio.guardar(e);
+    });
+  },
 };

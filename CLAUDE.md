@@ -331,8 +331,10 @@ src/
                        salidas.ts y horasPunta.ts (tráfico calculado), radares/ (DGT),
                        alarmas.ts (alarmas, ajustes y adelantos de la inteligente),
                        planes.ts (planes con votación y sus votos),
-                       recordatorios.ts (recordatorios a clientes: ajustes y envíos).
+                       recordatorios.ts (recordatorios a clientes: ajustes y envíos),
+                       copia.ts (reunir y recuperar la copia de seguridad).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
+                       copia/ (formato de la copia de seguridad y su archivo; con pruebas),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
                        avisos/ (notificaciones locales; con pruebas),
@@ -1165,6 +1167,37 @@ borran solos a los 7 días.
   de usuario del sistema), `WHATSAPP_PHONE_ID`; nunca en la app ni en git. Precio en España
   ~0,017 € por plantilla de utilidad entregada (tarifa del 1/07/2026; gratis si el cliente
   escribió en las 24 h anteriores). El número de prueba de Meta envía gratis a 5 teléfonos.
+
+## Copia de seguridad (27/09/2026)
+
+- Primera mejora tras el análisis de la competencia (el usuario la eligió): sin ella, perder
+  el móvil es perderlo todo, y no hay forma de pasar los datos de la web a la app ni de un
+  móvil a otro. **Sin servidor**: un archivo JSON que guarda la persona.
+- Perfil > "Copia de seguridad" (`screens/perfil/SeccionCopia.tsx`): "Guardar una copia",
+  "Recuperar una copia" (tarjeta con el resumen y "Sí, recuperar") y, plegado, dónde
+  guardarla. Dice cuándo se hizo la última en ese dispositivo (`organizy:ultimaCopia`) y,
+  pasado un mes, lo pone en granate.
+- **Qué lleva** (`services/copia/formato.ts`, puro, con pruebas): eventos, épocas y su
+  registro (sin los de ejemplo) y **todas las claves `organizy:` salvo las de `NO_VIAJAN`**
+  (lo calculado: salidas, horas punta, adelantos; y lo de ese dispositivo: alarmas nativas
+  ya programadas, última copia, explicaciones vistas). Si añades una clave nueva que sea del
+  dispositivo o se calcule sola, **añádela a `NO_VIAJAN`**; si no, viaja sola. La sesión
+  anónima de Supabase no viaja: los votos de los planes abiertos solo se ven donde se
+  crearon (se avisa al recuperar). `formato` sube si cambia la forma del archivo;
+  `leerCopia` rechaza las de un formato más nuevo.
+- **Recuperar cambia todo** lo del dispositivo por lo de la copia (no mezcla): eventos y
+  épocas con `reemplazarTodos`/`reemplazarTodo` de los repositorios (en SQLite, en una
+  transacción: si falla, no se toca nada), después AsyncStorage, y se reinicia la app
+  (`reloadAppAsync` de `expo`; en la web, recargar) porque cada parte tiene sus datos en
+  memoria. Los avisos y alarmas se reprograman solos al arrancar.
+- **Archivo** (`services/copia/archivo.ts` y `.web.ts`): en el móvil, `expo-file-system`
+  (lo escribe en la caché) + `expo-sharing` (menú de compartir: "Guardar en Archivos",
+  correo...) y `expo-document-picker` para elegirlo; las tres vienen en Expo Go. En la web,
+  en pantallas táctiles el menú de compartir del navegador (Web Share con archivos) y si no,
+  descarga; para elegirlo, `expo-document-picker` con `base64: false`.
+- Probado el 27/09 en la web a tamaño móvil: guardar, recuperar una copia modificada (se
+  reinicia con el nombre y el evento de la copia) y rechazar un archivo que no es copia.
+  **Falta probarla en el iPhone** (Expo Go): el menú de compartir y el selector de Archivos.
 
 ## Hoja de ruta
 

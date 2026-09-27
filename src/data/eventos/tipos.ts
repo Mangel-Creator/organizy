@@ -76,4 +76,5 @@ export type RepositorioEventos = {
   guardar(evento: Evento): Promise<void>; // crea o sustituye
   borrar(id: string): Promise<void>;
   borrarEjemplos(): Promise<void>;
+  reemplazarTodos(eventos: Evento[]): Promise<void>; // al recuperar una copia
 };

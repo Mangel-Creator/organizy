@@ -1,3 +1,5 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
 import { obtenerBD } from '@/data/db';
 import { normalizarLugar } from '@/data/eventos/tipos';
 
@@ -39,6 +41,53 @@ type FilaBloque = {
   estado: RegistroBloque['estado'];
 };
 
+// Escribe la época y sus hitos. Va siempre dentro de una transacción.
+async function insertarEpoca(bd: SQLiteDatabase, e: Epoca) {
+  await bd.runAsync(
+    `INSERT OR REPLACE INTO epocas (id, nombre, tipo, inicio, fin, ritmo, avisos, ejemplo, resumen_visto)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    e.id,
+    e.nombre,
+    e.tipo,
+    e.inicio,
+    e.fin,
+    JSON.stringify(e.ritmo),
+    JSON.stringify(e.avisos),
+    e.ejemplo ? 1 : 0,
+    e.resumenVisto ? 1 : 0,
+  );
+  // Los hitos se sustituyen todos: así se reflejan los añadidos, cambios y quitados.
+  await bd.runAsync('DELETE FROM hitos WHERE epoca_id = ?', e.id);
+  for (const h of e.hitos) {
+    await bd.runAsync(
+      `INSERT INTO hitos (id, epoca_id, nombre, fecha, hora, lugar, dificultad, horas_preparacion)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      h.id,
+      e.id,
+      h.nombre,
+      h.fecha,
+      h.hora,
+      h.lugar ? JSON.stringify(h.lugar) : null,
+      h.dificultad,
+      h.horasPreparacion,
+    );
+  }
+}
+
+async function insertarRegistro(bd: SQLiteDatabase, r: RegistroBloque) {
+  await bd.runAsync(
+    `INSERT OR REPLACE INTO bloques_epoca (id, epoca_id, hito_id, dia, inicio, fin, estado)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    r.id,
+    r.epocaId,
+    r.hitoId,
+    r.dia,
+    r.inicio,
+    r.fin,
+    r.estado,
+  );
+}
+
 export const repositorio: RepositorioEpocas = {
   async leerEpocas() {
     const bd = await obtenerBD();
@@ -72,37 +121,7 @@ export const repositorio: RepositorioEpocas = {
 
   async guardarEpoca(e) {
     const bd = await obtenerBD();
-    await bd.withTransactionAsync(async () => {
-      await bd.runAsync(
-        `INSERT OR REPLACE INTO epocas (id, nombre, tipo, inicio, fin, ritmo, avisos, ejemplo, resumen_visto)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        e.id,
-        e.nombre,
-        e.tipo,
-        e.inicio,
-        e.fin,
-        JSON.stringify(e.ritmo),
-        JSON.stringify(e.avisos),
-        e.ejemplo ? 1 : 0,
-        e.resumenVisto ? 1 : 0,
-      );
-      // Los hitos se sustituyen todos: así se reflejan los añadidos, cambios y quitados.
-      await bd.runAsync('DELETE FROM hitos WHERE epoca_id = ?', e.id);
-      for (const h of e.hitos) {
-        await bd.runAsync(
-          `INSERT INTO hitos (id, epoca_id, nombre, fecha, hora, lugar, dificultad, horas_preparacion)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          h.id,
-          e.id,
-          h.nombre,
-          h.fecha,
-          h.hora,
-          h.lugar ? JSON.stringify(h.lugar) : null,
-          h.dificultad,
-          h.horasPreparacion,
-        );
-      }
-    });
+    await bd.withTransactionAsync(() => insertarEpoca(bd, e));
   },
 
   async borrarEpoca(id) {
@@ -127,21 +146,21 @@ export const repositorio: RepositorioEpocas = {
 
   async guardarRegistro(r) {
     const bd = await obtenerBD();
-    await bd.runAsync(
-      `INSERT OR REPLACE INTO bloques_epoca (id, epoca_id, hito_id, dia, inicio, fin, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      r.id,
-      r.epocaId,
-      r.hitoId,
-      r.dia,
-      r.inicio,
-      r.fin,
-      r.estado,
-    );
+    await insertarRegistro(bd, r);
   },
 
   async borrarRegistro(id) {
     const bd = await obtenerBD();
     await bd.runAsync('DELETE FROM bloques_epoca WHERE id = ?', id);
+  },
+
+  async reemplazarTodo(epocas, registro) {
+    const bd = await obtenerBD();
+    // Todo o nada. Borrar las épocas borra también sus hitos y su registro.
+    await bd.withTransactionAsync(async () => {
+      await bd.runAsync('DELETE FROM epocas');
+      for (const e of epocas) await insertarEpoca(bd, e);
+      for (const r of registro) await insertarRegistro(bd, r);
+    });
   },
 };

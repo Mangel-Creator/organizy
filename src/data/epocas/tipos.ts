@@ -93,4 +93,6 @@ export type RepositorioEpocas = {
   leerRegistro(): Promise<RegistroBloque[]>;
   guardarRegistro(registro: RegistroBloque): Promise<void>;
   borrarRegistro(id: string): Promise<void>;
+  // Al recuperar una copia: quita todo y pone lo de la copia.
+  reemplazarTodo(epocas: Epoca[], registro: RegistroBloque[]): Promise<void>;
 };
