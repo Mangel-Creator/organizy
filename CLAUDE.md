@@ -266,6 +266,8 @@ sesión que fuera**:
 - Se prueba con Expo Go mientras no haga falta código nativo propio.
 - Alarmas de verdad: `react-native-alarm-scheduler` (solo en la app propia; en Expo Go no
   se carga, ver "Fase 7").
+- Dictado por voz: `expo-speech-recognition` (solo en la app propia; en Expo Go no se carga,
+  ver "Fase 9"). En la web, el reconocimiento del navegador.
 - Instala librerías siempre con `npx expo install <paquete>`.
 - Pruebas automáticas con Jest (`jest-expo`): `npm test`. Están junto al código en
   carpetas `__tests__`. Importa `describe`, `it` y `expect` de `@jest/globals`
@@ -319,6 +321,7 @@ src/
                        avisos/ (notificaciones locales; con pruebas),
                        epoca/ (plan, progreso y cuenta atrás de la época; con pruebas),
                        captura/ (captura rápida con IA y validación; con pruebas),
+                       dictado/ (voz a texto para el micro de la captura; con pruebas),
                        rutas/ (rutas con tráfico, radares, hora de salida y horas
                        punta, navegación por voz; con pruebas), ubicacion.ts (dónde
                        estás, sin preguntar), voz.ts (hablar en voz alta),
@@ -1050,6 +1053,40 @@ borran solos a los 7 días.
 - Probado el 26/09 en la web a tamaño móvil: crear, abrir WhatsApp con el mensaje, votar
   desde un navegador sin bienvenida, ver "1 nuevo", cerrar (evento en el calendario y
   página en "Ya está decidido") y "Proponer plan" en Semana.
+
+## Fase 9: voz sin abrir la app y widget (en curso, por partes)
+
+- **Qué puede ir dónde** (explicado al usuario el 25-27/09): el micro dentro de la app va
+  en la **web** (Web Speech API: Safari del iPhone y Chrome) y en la **app propia**
+  (`expo-speech-recognition`); **en Expo Go no** (no trae el módulo): ahí se esconde y queda
+  el micro del teclado. Siri, el widget y los accesos directos de Android solo en la app
+  propia (se dejan hechos para cuando haya build de EAS; no se pueden probar antes). El
+  Asistente de Google y sus App Actions dejaron de existir el 4/09/2026 (Gemini no ofrece
+  nada parecido): en Android, accesos directos del icono y widget. Siri no deja decir la
+  frase entera de una vez con texto libre: "Oye Siri, apunta en Organizy" → "¿Qué quieres
+  apuntar?" → la frase.
+- **Parte 1, micro en la captura rápida (hecha):**
+  - `services/dictado/` (`index.ts` móvil, `index.web.ts` navegador, `textos.ts` puro con
+    pruebas): `dictadoDisponible()`, `consultarPermisoDictado()`, `pedirPermisoDictado()`,
+    `empezarDictado({ alOir, alTerminar, alFallar })` (devuelve la función para terminar) y
+    `cancelarDictado()`. Español de España, una frase (`continuous: false`). El móvil usa
+    `requireOptionalNativeModule('ExpoSpeechRecognition')` (null en Expo Go, como las
+    alarmas). No confundir con `services/voz.ts`, que es hablar en voz alta.
+  - `screens/captura/useDictado.ts` y `BotonMicrofono.tsx` (botón y `AvisoMicrofono`),
+    dentro de `CapturaRapida`: lo que dices sale en el campo y al terminar se envía con el
+    mismo `enviar` que lo escrito (misma IA, misma tarjeta de confirmación o la ficha si no
+    se entiende). La primera vez explica para qué es el micro ("Vale" / "Ahora no",
+    `organizy:dictadoExplicado`) antes del permiso del sistema; si se deniega, "Abrir
+    Ajustes" (en la web, dónde se da en Safari).
+  - **`/?voz=1`** abre la captura en Hoy y, en el móvil, empieza a escuchar sola
+    (`escucharAlAbrir`); en la web solo la abre, porque el navegador exige un toque para el
+    micro. Lo usarán los accesos directos, el widget y el Atajo.
+  - `app.json`: plugin de `expo-speech-recognition` con los textos del permiso, y
+    `expo-audio` pasa de `microphonePermission: false` a la misma frase (con `false` borraba
+    el permiso del micro del iPhone y la app se cerraría al dictar).
+  - Probado en la web a tamaño móvil con un reconocimiento simulado (el navegador de
+    pruebas no tiene micro): explicación, "Te escucho…", texto en el campo y ficha con la
+    frase como título (sin la clave de Anthropic, como en la fase 5).
 
 ## Hoja de ruta
 

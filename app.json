@@ -52,7 +52,7 @@
         "expo-audio",
         {
           "enableBackgroundPlayback": true,
-          "microphonePermission": false,
+          "microphonePermission": "Organizy usa el micrófono solo mientras tocas el botón del micro, para apuntar lo que le dices.",
           "recordAudioAndroid": false
         }
       ],
@@ -66,6 +66,13 @@
         "expo-contacts",
         {
           "contactsPermission": "Organizy usa tu agenda solo para poner el nombre de quien elijas en un plan. No guarda ni envía tus contactos."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Organizy usa el micrófono solo mientras tocas el botón del micro, para apuntar lo que le dices.",
+          "speechRecognitionPermission": "Organizy pasa a texto lo que le dices para apuntarlo en tu agenda."
         }
       ]
     ],

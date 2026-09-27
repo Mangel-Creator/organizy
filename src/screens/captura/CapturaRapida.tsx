@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Texto, Titulo } from '@/components';
 import type { Evento } from '@/data/eventos';
@@ -11,7 +11,9 @@ import { dejarBorrador, type BorradorFicha } from '@/services/captura/borrador';
 import { fechaDesdeClave, formatearDiaCorto, type ClaveDia } from '@/services/fechas';
 import { alturaTactil, colores, espacio, fuentes, radio, tamanos } from '@/theme';
 
+import { AvisoMicrofono, BotonMicrofono } from './BotonMicrofono';
 import { TarjetaConfirmacion } from './TarjetaConfirmacion';
+import { useDictado } from './useDictado';
 
 // Captura rápida (fase 5): escribes (o dictas con el micrófono del teclado)
 // «pádel con Javi el jueves a las 8» y la IA rellena el evento. Sale una tarjeta
@@ -24,8 +26,21 @@ import { TarjetaConfirmacion } from './TarjetaConfirmacion';
 // que Hoy respire). Sigue montada aunque no se vea, así que enviarFraseACaptura
 // funciona igual: si llega una frase de fuera, se despliega sola mientras piensa.
 // "alRellenarAMano" pone el enlace para abrir la ficha vacía.
+//
+// Micro (fase 9): si el móvil o el navegador sabe pasar voz a texto, sale un botón de
+// micro. Lo que dices va apareciendo en el campo y al terminar se envía igual que lo
+// escrito (misma IA, misma tarjeta de confirmación). En Expo Go no sale (no trae el
+// módulo): queda el micro del teclado. "escucharAlAbrir" (un número que cambia cada
+// vez) empieza a escuchar sin tocar nada: lo usan /?voz=1, los accesos directos y el
+// widget. En la web no, porque el navegador solo deja usar el micro tras un toque.
 
-type Props = { hoy: ClaveDia; accesorio?: ReactNode; plegada?: boolean; alRellenarAMano?: () => void };
+type Props = {
+  hoy: ClaveDia;
+  accesorio?: ReactNode;
+  plegada?: boolean;
+  alRellenarAMano?: () => void;
+  escucharAlAbrir?: number;
+};
 
 // Para mandar una frase desde fuera (por ejemplo, la voz de la fase 9): la pone
 // en el campo y la envía como si se hubiera escrito. Devuelve false si Hoy no
@@ -48,7 +63,7 @@ function textoGuardado(evento: Evento): string {
   return `Apuntado: «${evento.titulo}», ${cuando}.`;
 }
 
-export function CapturaRapida({ hoy, accesorio, plegada = false, alRellenarAMano }: Props) {
+export function CapturaRapida({ hoy, accesorio, plegada = false, alRellenarAMano, escucharAlAbrir }: Props) {
   const { perfil } = usePerfil();
   const [frase, setFrase] = useState('');
   const [pensando, setPensando] = useState(false);
@@ -85,16 +100,37 @@ export function CapturaRapida({ hoy, accesorio, plegada = false, alRellenarAMano
     };
   });
 
+  const dictado = useDictado({
+    alOir: (texto) => {
+      setFrase(texto);
+      setHecho(null);
+    },
+    alTerminar: (texto) => enviar(texto),
+  });
+  const escuchando = dictado.fase === 'escuchando';
+
+  // Cada vez que llega un número nuevo en escucharAlAbrir, empieza a escuchar solo.
+  const ultimaEscucha = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!escucharAlAbrir || escucharAlAbrir === ultimaEscucha.current) return;
+    ultimaEscucha.current = escucharAlAbrir;
+    if (dictado.disponible && Platform.OS !== 'web' && !escuchando) dictado.pulsar();
+  });
+
   const terminar = (mensaje: string | null) => {
     setPropuesta(null);
     setFrase('');
     setHecho(mensaje);
   };
 
-  const puedeEnviar = frase.trim().length > 0 && !pensando;
+  const puedeEnviar = frase.trim().length > 0 && !pensando && !escuchando;
 
   // Plegada y sin nada en marcha: no enseña nada (pero sigue escuchando frases de fuera).
-  if (plegada && !pensando && !propuesta && !hecho) return null;
+  if (plegada && !pensando && !propuesta && !hecho && dictado.fase === 'quieto') return null;
+
+  const ayuda = dictado.disponible
+    ? 'Escríbelo como te salga, o toca el micro y dímelo.'
+    : 'Escríbelo como te salga, o díctalo con el micrófono del teclado.';
 
   return (
     <View style={estilos.contenedor}>
@@ -108,19 +144,22 @@ export function CapturaRapida({ hoy, accesorio, plegada = false, alRellenarAMano
             setHecho(null);
           }}
           onSubmitEditing={() => enviar(frase)}
-          placeholder="pádel con Javi el jueves a las 8"
+          placeholder={escuchando ? 'Te escucho…' : 'pádel con Javi el jueves a las 8'}
           placeholderTextColor={colores.textoSecundario}
           accessibilityLabel="Captura rápida"
           accessibilityHint="Escribe o dicta lo que tienes que hacer y te preparo el evento."
           maxLength={MAX_FRASE}
-          editable={!pensando}
+          editable={!pensando && !escuchando}
           returnKeyType="send"
           submitBehavior="blurAndSubmit"
           autoCapitalize="none"
-          autoFocus={!plegada}
+          autoFocus={!plegada && !escucharAlAbrir}
           style={estilos.campo}
         />
         {accesorio}
+        {dictado.disponible ? (
+          <BotonMicrofono escuchando={escuchando} desactivado={pensando} alPulsar={dictado.pulsar} />
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Enviar"
@@ -140,19 +179,34 @@ export function CapturaRapida({ hoy, accesorio, plegada = false, alRellenarAMano
         </Pressable>
       </View>
 
+      <AvisoMicrofono
+        fase={dictado.fase}
+        alAceptar={dictado.aceptar}
+        alCerrar={dictado.cerrar}
+        alAbrirAjustes={dictado.abrirAjustes}
+      />
+
       {pensando ? (
         <Texto pequeno secundario accessibilityLiveRegion="polite">
           Un segundo, lo estoy apuntando…
+        </Texto>
+      ) : escuchando ? (
+        <Texto pequeno secundario accessibilityLiveRegion="polite">
+          Te escucho. Para terminar, calla un momento o toca el cuadrado.
+        </Texto>
+      ) : dictado.mensaje ? (
+        <Texto pequeno style={estilos.fallo} accessibilityLiveRegion="polite">
+          {dictado.mensaje}
         </Texto>
       ) : hecho ? (
         <Texto pequeno accessibilityLiveRegion="polite">
           {hecho}
         </Texto>
-      ) : !propuesta ? (
-        <Texto pequeno secundario>Escríbelo como te salga, o díctalo con el micrófono del teclado.</Texto>
+      ) : !propuesta && dictado.fase === 'quieto' ? (
+        <Texto pequeno secundario>{ayuda}</Texto>
       ) : null}
 
-      {alRellenarAMano && !propuesta && !pensando ? (
+      {alRellenarAMano && !propuesta && !pensando && !escuchando ? (
         <Pressable
           accessibilityRole="button"
           onPress={alRellenarAMano}
@@ -209,4 +263,5 @@ const estilos = StyleSheet.create({
   pulsado: { transform: [{ scale: 0.94 }] },
   enlace: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, minHeight: alturaTactil, alignSelf: 'flex-start' },
   textoEnlace: { color: colores.principal },
+  fallo: { color: colores.aviso },
 });

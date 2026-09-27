@@ -1,6 +1,6 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from 'react-native-reanimated';
 
@@ -107,6 +107,22 @@ export function PantallaHoy() {
   const separacion = { gap: medidas.separacion };
   const [vista, setVista] = useState<Vista | null>(null);
   const [capturaAbierta, setCapturaAbierta] = useState(false);
+
+  // /?voz=1 (accesos directos, widget y Atajo; fase 9): abre la captura y empieza a
+  // escuchar. Se quita de la dirección para que no vuelva a pasar al volver a Hoy.
+  const { voz } = useLocalSearchParams<{ voz?: string }>();
+  const [escucharAlAbrir, setEscucharAlAbrir] = useState<number | undefined>(undefined);
+  const [vozAtendida, setVozAtendida] = useState(false);
+  if ((voz === '1') !== vozAtendida) {
+    setVozAtendida(voz === '1');
+    if (voz === '1') {
+      setCapturaAbierta(true);
+      setEscucharAlAbrir((n) => (n ?? 0) + 1);
+    }
+  }
+  useEffect(() => {
+    if (voz === '1') router.replace('/');
+  }, [voz]);
 
   const nombre = perfil?.nombre ?? '';
   const saludo = saludoSegunHora(ahora, nombre);
@@ -282,6 +298,7 @@ export function PantallaHoy() {
         <CapturaRapida
           hoy={hoy}
           plegada={!capturaAbierta}
+          escucharAlAbrir={escucharAlAbrir}
           alRellenarAMano={() => {
             setCapturaAbierta(false);
             nuevoEvento(hoy);
