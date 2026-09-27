@@ -252,7 +252,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return respuestaPrevia(req);
   if (req.method !== 'POST') return respuestaJson(req, { error: 'Solo POST' }, 405);
 
-  const clave = Deno.env.get('TOMTOM_API_KEY');
+  // Vale con cualquiera de los dos nombres (el usuario la guardó como TOMTOM_KEY).
+  const clave = Deno.env.get('TOMTOM_API_KEY') || Deno.env.get('TOMTOM_KEY');
   if (!clave) return respuestaJson(req, { error: 'Falta configurar el tráfico en el servidor.' }, 500);
 
   const usuario = await usuarioDeLaPeticion(req);
