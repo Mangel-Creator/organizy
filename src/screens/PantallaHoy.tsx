@@ -21,10 +21,12 @@ import { useEnergia } from '@/data/energia';
 import { marcarHecha, moverTareas, useEventos, type Evento } from '@/data/eventos';
 import { usePerfil, type MomentoDelDia, type Perfil } from '@/data/perfil';
 import {
+  DATOS_CUADRANTE,
   calcularHuecos,
   duracionTarea,
   eventosDelDia,
   intervaloDe,
+  ordenarPorPrioridad,
   repartirTareas,
   resolverLugar,
   siguienteEvento,
@@ -59,6 +61,7 @@ import { PlanDeHoy } from './epoca/PlanDeHoy';
 import { ResumenFinEpoca } from './epoca/ResumenFinEpoca';
 import { useEpocaActiva } from './epoca/useEpoca';
 import { PanelHoy, type DatosBaldosa, type Vista } from './hoy/PanelHoy';
+import { MatrizTareas, useModoTareas, type ModoTareas } from './tareas/MatrizTareas';
 
 const NOMBRE_MOMENTO: Record<MomentoDelDia, string> = {
   manana: 'por la mañana',
@@ -66,11 +69,17 @@ const NOMBRE_MOMENTO: Record<MomentoDelDia, string> = {
   noche: 'por la noche',
 };
 
+// Las tareas van ordenadas por la matriz de Eisenhower: lo importante, primero.
 function explicacionEnergia(energia: Energia, rindeMas: MomentoDelDia): string {
-  if (energia === 'a-tope') return `Te las coloco ${NOMBRE_MOMENTO[rindeMas]}, cuando rindes más.`;
-  if (energia === 'normal') return 'Repartidas entre tus huecos libres.';
-  return 'Hoy vas tranqui: como mucho 2.';
+  if (energia === 'a-tope') return `Te las coloco ${NOMBRE_MOMENTO[rindeMas]}, cuando rindes más. Lo importante, primero.`;
+  if (energia === 'normal') return 'Repartidas entre tus huecos libres. Lo importante, primero.';
+  return 'Hoy vas tranqui: como mucho 2, las más importantes.';
 }
+
+const OPCIONES_MODO_TAREAS: { valor: ModoTareas; etiqueta: string }[] = [
+  { valor: 'horas', etiqueta: 'Por horas' },
+  { valor: 'matriz', etiqueta: 'Matriz' },
+];
 
 // "1 cliente" / "2 clientes"
 function contar(n: number, uno: string, varios: string): string {
@@ -110,6 +119,7 @@ export function PantallaHoy() {
   const separacion = { gap: medidas.separacion };
   const [vista, setVista] = useState<Vista | null>(null);
   const [capturaAbierta, setCapturaAbierta] = useState(false);
+  const [modoTareas, setModoTareas] = useModoTareas();
 
   // /?voz=1 (accesos directos, widget y Atajo; fase 9): abre la captura y empieza a
   // escuchar. Se quita de la dirección para que no vuelva a pasar al volver a Hoy.
@@ -152,7 +162,9 @@ export function PantallaHoy() {
   const quedan = { inicio: desde, fin: ventana.fin };
   const huecos = calcularHuecos(ocupados, quedan);
 
-  const pendientes = tareasPendientes(eventos, hoy, hoy);
+  // Ordenadas por la matriz de Eisenhower: las importantes cogen antes los huecos (y con
+  // energía "Tranqui" son las que se quedan hoy).
+  const pendientes = ordenarPorPrioridad(tareasPendientes(eventos, hoy, hoy));
   const reparto = repartirTareas(pendientes, duracionTarea, calcularHuecos(ocupados, quedan, 15), energia, rindeMas);
   const hechasHoy = eventos.filter((e) => e.flexible && e.hecha && e.fecha === hoy);
   const siguiente = siguienteEvento(eventos, ahora);
@@ -356,9 +368,21 @@ export function PantallaHoy() {
 
                 {vista === 'tareas' ? (
                   <>
-                    {selectorEnergia}
+                    <Selector
+                      etiqueta="Ver"
+                      opciones={OPCIONES_MODO_TAREAS}
+                      valor={modoTareas}
+                      alCambiar={setModoTareas}
+                    />
+                    {modoTareas === 'horas' ? selectorEnergia : null}
                     {pendientes.length + hechasHoy.length === 0 ? (
                       <Texto secundario>No te queda ninguna tarea. Bien.</Texto>
+                    ) : modoTareas === 'matriz' ? (
+                      pendientes.length === 0 ? (
+                        <Texto secundario>Hoy ya lo has hecho todo. Bien.</Texto>
+                      ) : (
+                        <MatrizTareas tareas={pendientes} />
+                      )
                     ) : (
                       <>
                         <Texto pequeno secundario>
@@ -491,6 +515,12 @@ function FilaTarea({ tarea, detalle, apagada }: FilaTareaLista) {
         </Texto>
         <Texto pequeno secundario>
           {detalle}
+          {tarea.cuadrante && !apagada ? (
+            <Texto pequeno style={tarea.cuadrante === 'hazlo' ? estilos.hazlo : undefined}>
+              {' · '}
+              {DATOS_CUADRANTE[tarea.cuadrante].nombre}
+            </Texto>
+          ) : null}
         </Texto>
       </Pressable>
     </View>
@@ -538,4 +568,6 @@ const estilos = StyleSheet.create({
   apagada: { backgroundColor: 'transparent' },
   textoApagado: { color: colores.textoSecundario },
   tachada: { textDecorationLine: 'line-through' },
+  // "Hazlo ya" en granate, como los demás avisos. Los otros cuadrantes, en gris.
+  hazlo: { color: colores.aviso, fontFamily: fuentes.textoMedio },
 });

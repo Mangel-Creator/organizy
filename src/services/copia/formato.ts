@@ -1,5 +1,5 @@
 import type { Epoca, RegistroBloque } from '@/data/epocas/tipos';
-import { normalizarLugar, type Evento } from '@/data/eventos/tipos';
+import { normalizarCuadrante, normalizarLugar, type Evento } from '@/data/eventos/tipos';
 import { claveDia, formatearFechaLarga, formatearHora } from '@/services/fechas';
 
 // Copia de seguridad: todo lo de la persona en un archivo JSON que guarda ella
@@ -153,6 +153,7 @@ export function leerCopia(texto: string): LecturaCopia {
         lugar: normalizarLugar(e.lugar),
         avisoMin: e.avisoMin ?? null,
         cliente: e.cliente ?? null,
+        cuadrante: normalizarCuadrante(e.cuadrante),
       })),
       epocas,
       // Solo el registro de épocas que vienen en la copia.

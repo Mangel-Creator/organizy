@@ -337,6 +337,7 @@ src/
     planes/            Piezas de Planes (botón de WhatsApp, fila de votos, hueco de
                        Semana con "Proponer plan").
     clientes/          Datos del cliente en la ficha y su recordatorio por WhatsApp.
+    tareas/            Matriz de Eisenhower: selector de cuadrante y vista "Matriz" de Hoy.
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
@@ -356,7 +357,8 @@ src/
                        calendarios/ (traer Google, iCloud u Outlook por su enlace iCal;
                        con pruebas),
                        lugares.ts (texto -> coordenadas), permisos.ts,
-                       agenda/ (huecos, carga, resumen, reparto; con pruebas),
+                       agenda/ (huecos, carga, resumen, reparto, prioridad de las
+                       tareas con la matriz de Eisenhower; con pruebas),
                        avisos/ (notificaciones locales; con pruebas),
                        epoca/ (plan, progreso y cuenta atrás de la época; con pruebas),
                        captura/ (captura rápida con IA y validación; con pruebas),
@@ -513,7 +515,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
   `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`; 4: tablas `epocas`, `hitos` y
   `bloques_epoca` (fase 4b); 5: columna `cliente` (fase 10); 6: columna `origen` (otros
-  calendarios). Solo se usa en Android e iOS.
+  calendarios); 7: columna `cuadrante` (matriz de Eisenhower). Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -1319,6 +1321,34 @@ borran solos a los 7 días.
   "Quitar" borrando y enlaces erróneos. **Falta** que el usuario pegue sus enlaces de verdad.
 - **Pendiente**: eventos de todo el día (cumpleaños, festivos, vacaciones) cuando Organizy
   los tenga; lectura directa con `expo-calendar` en la app propia (ver la decisión del 27/09).
+
+## Matriz de Eisenhower en las tareas (27/09/2026)
+
+- Lo pidió el usuario: clasificar cada tarea con la matriz de Eisenhower. Solo las **tareas
+  flexibles**; los eventos con hora no llevan cuadrante.
+- `Evento.cuadrante?: Cuadrante | null` (`hazlo` importante y con prisa, `planifica`
+  importante sin prisa, `delega` con prisa y poco importante, `elimina` ni lo uno ni lo
+  otro; null = sin clasificar). SQLite: **migración 7**, columna `cuadrante`; en la web,
+  dentro del evento. Lo desconocido se lee como null (`normalizarCuadrante`, también en la
+  copia de seguridad). Si deja de ser tarea, se borra. Para cambiarlo fuera de la ficha,
+  `clasificarTarea(id, cuadrante)`.
+- `services/agenda/prioridad.ts` (puro, con pruebas): `DATOS_CUADRANTE` (nombre, descripción,
+  consejo), `cuadranteDe(importante, urgente)`, `ordenarPorPrioridad` (hazlo, planifica, sin
+  clasificar, delega, elimina; estable) y `agruparPorCuadrante`.
+- **Hoy > Tareas**: las pendientes van ordenadas por prioridad antes de `repartirTareas`, así
+  que lo importante coge antes los huecos y con energía "Tranqui" se quedan hoy las 2 más
+  importantes. Selector "Ver": **Por horas** (la lista de siempre; cada fila dice su
+  cuadrante, "Hazlo ya" en granate) o **Matriz** (`screens/tareas/MatrizTareas.tsx`: arriba
+  las sin clasificar y debajo las cuatro cajas de dos en dos; al tocar una tarea sale el
+  selector para colocarla sin abrir la ficha, y "Abrir la tarea"). Se recuerda en
+  `organizy:vistaTareas`.
+- **Ficha de tarea**: "¿Qué prioridad tiene?" con las cuatro casillas colocadas como la matriz
+  (`SelectorCuadrante`: arriba lo importante, a la izquierda lo que corre prisa); tocar otra
+  vez la elegida la quita. Debajo, qué significa y un consejo.
+- Colores: "Hazlo ya" en granate (`aviso`); los demás cuadrantes en tinta y gris. Nada de
+  naranja ni verde.
+- **Pendiente (idea)**: que la captura con IA proponga el cuadrante al apuntar y que los plazos
+  del correo entren como "Hazlo ya"; cuando el usuario ponga la clave de Anthropic.
 
 ## Hoja de ruta
 

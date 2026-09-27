@@ -19,6 +19,7 @@ import {
 import {
   borrarEvento,
   guardarEvento,
+  type Cuadrante,
   type DatosCliente,
   nuevoId,
   useEventos,
@@ -57,6 +58,7 @@ import {
 import { OrigenEvento } from './calendario/OrigenEvento';
 import { CamposCliente, errorTelefono, type BorradorCliente } from './clientes/CamposCliente';
 import { RecordatorioCliente } from './clientes/RecordatorioCliente';
+import { SelectorCuadrante } from './tareas/SelectorCuadrante';
 import { MENSAJE_NO_ENCONTRADO } from './formulario-perfil/borrador';
 import { MensajeError } from './formulario-perfil/MensajeError';
 
@@ -123,6 +125,7 @@ type Borrador = BorradorCliente & {
   horaFin: string;
   flexible: boolean;
   duracion: Duracion;
+  cuadrante: Cuadrante | null; // matriz de Eisenhower, solo en tareas
   hecha: boolean;
   foco: boolean;
   repeticion: Repeticion;
@@ -169,6 +172,7 @@ function borradorInicial(
       horaFin: rellenar?.horaFin ?? horaDesdeMinutos(minutosDesdeHora(inicio) + 60),
       flexible: rellenar?.flexible ?? false,
       duracion: (OPCIONES_DURACION.find((o) => o.valor === String(rellenar?.duracionMin))?.valor ?? '30') as Duracion,
+      cuadrante: null,
       hecha: false,
       foco: false,
       repeticion: 'nunca',
@@ -191,6 +195,7 @@ function borradorInicial(
     horaFin: evento.horaFin ?? horaDesdeMinutos(minutosDesdeHora(inicio) + 60),
     flexible: evento.flexible,
     duracion: (OPCIONES_DURACION.find((o) => o.valor === String(evento.duracionMin))?.valor ?? '30') as Duracion,
+    cuadrante: evento.cuadrante ?? null,
     hecha: evento.hecha,
     foco: evento.foco,
     repeticion: evento.repeticion,
@@ -354,6 +359,7 @@ function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) 
       // Si vino de otro calendario se conserva: así, al traerlo otra vez, se sabe que
       // lo has cambiado aquí y no se duplica ni se pisa.
       origen: evento?.origen ?? null,
+      cuadrante: b.flexible ? b.cuadrante : null,
     };
 
     const bloque = bloqueDeFocoQuePisa(nuevo, eventos);
@@ -433,6 +439,11 @@ function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) 
             opciones={OPCIONES_DURACION}
             valor={b.duracion}
             alCambiar={(duracion) => cambiar({ duracion })}
+          />
+          <SelectorCuadrante
+            etiqueta="¿Qué prioridad tiene?"
+            valor={b.cuadrante}
+            alCambiar={(cuadrante) => cambiar({ cuadrante })}
           />
           {evento ? (
             <Interruptor etiqueta="Ya está hecha" valor={b.hecha} alCambiar={(hecha) => cambiar({ hecha })} />

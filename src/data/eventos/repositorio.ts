@@ -1,6 +1,13 @@
 import { obtenerBD } from '@/data/db';
 
-import type { DatosCliente, Evento, LugarEvento, OrigenEvento, RepositorioEventos } from './tipos';
+import {
+  normalizarCuadrante,
+  type DatosCliente,
+  type Evento,
+  type LugarEvento,
+  type OrigenEvento,
+  type RepositorioEventos,
+} from './tipos';
 
 // Guardado de eventos en el móvil (Android e iOS) con SQLite.
 // En la web se usa repositorio.web.ts, que tiene las mismas funciones.
@@ -27,6 +34,7 @@ type Fila = {
   aviso_min: number | null; // migración 3
   cliente: string | null; // migración 5: DatosCliente en JSON
   origen: string | null; // migración 6: OrigenEvento en JSON
+  cuadrante: string | null; // migración 7: matriz de Eisenhower
 };
 
 function lugarDesdeFila(f: Fila): LugarEvento | null {
@@ -73,6 +81,7 @@ function eventoDesdeFila(f: Fila): Evento {
     ejemplo: f.ejemplo === 1,
     cliente: desdeJson<DatosCliente>(f.cliente),
     origen: desdeJson<OrigenEvento>(f.origen),
+    cuadrante: normalizarCuadrante(f.cuadrante),
   };
 }
 
@@ -90,8 +99,8 @@ export const repositorio: RepositorioEventos = {
       `INSERT OR REPLACE INTO eventos (
         id, titulo, fecha, hora_inicio, hora_fin, tipo,
         lugar_tipo, lugar_sitio_id, lugar_direccion, lugar_latitud, lugar_longitud,
-        notas, repeticion, flexible, duracion_min, hecha, foco, ejemplo, aviso_min, cliente, origen
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        notas, repeticion, flexible, duracion_min, hecha, foco, ejemplo, aviso_min, cliente, origen, cuadrante
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       e.id,
       e.titulo,
       e.fecha,
@@ -113,6 +122,7 @@ export const repositorio: RepositorioEventos = {
       e.avisoMin,
       e.cliente ? JSON.stringify(e.cliente) : null,
       e.origen ? JSON.stringify(e.origen) : null,
+      e.cuadrante ?? null,
     );
   },
 

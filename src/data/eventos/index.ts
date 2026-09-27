@@ -6,9 +6,9 @@ import { claveDia } from '@/services/fechas';
 import { crearEjemplos } from './ejemplos';
 // En el móvil carga repositorio.ts (SQLite) y en la web repositorio.web.ts.
 import { repositorio } from './repositorio';
-import type { Evento } from './tipos';
+import type { Cuadrante, Evento } from './tipos';
 
-export type { DatosCliente, Evento, LugarEvento, OrigenEvento, Repeticion, TipoEvento } from './tipos';
+export type { Cuadrante, DatosCliente, Evento, LugarEvento, OrigenEvento, Repeticion, TipoEvento } from './tipos';
 
 // Eventos del calendario. Se leen todos del dispositivo una vez y se guardan
 // en memoria para que todas las pantallas vean lo mismo al momento.
@@ -75,6 +75,12 @@ export async function cambiarEventos(guardar: Evento[], borrar: string[]): Promi
 export async function marcarHecha(id: string, hecha: boolean): Promise<void> {
   const evento = estado.eventos.find((e) => e.id === id);
   if (evento) await guardarEvento({ ...evento, hecha });
+}
+
+// Coloca una tarea en la matriz de Eisenhower (null = sin clasificar).
+export async function clasificarTarea(id: string, cuadrante: Cuadrante | null): Promise<void> {
+  const evento = estado.eventos.find((e) => e.id === id);
+  if (evento) await guardarEvento({ ...evento, cuadrante });
 }
 
 // Pasa varias tareas flexibles a otro día (por ejemplo, "Pasar el resto a mañana").

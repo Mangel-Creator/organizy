@@ -1,6 +1,6 @@
 import { guardarAjuste, leerAjuste } from '@/data/ajustes';
 
-import { normalizarLugar, type Evento, type RepositorioEventos } from './tipos';
+import { normalizarCuadrante, normalizarLugar, type Evento, type RepositorioEventos } from './tipos';
 
 // Guardado de eventos en la versión web.
 //
@@ -15,13 +15,14 @@ async function leer(): Promise<Evento[]> {
   const eventos = await leerAjuste<Evento[]>(CLAVE, []);
   // Convierte los lugares guardados con el formato antiguo (ver normalizarLugar).
   // Los eventos guardados antes de la fase 4 no tienen "avisoMin": usan el del perfil.
-  // Los de antes de la fase 10 no tienen "cliente".
+  // Los de antes de la fase 10 no tienen "cliente", ni los de antes de la matriz "cuadrante".
   return eventos.map((e) => ({
     ...e,
     lugar: normalizarLugar(e.lugar),
     avisoMin: e.avisoMin ?? null,
     cliente: e.cliente ?? null,
     origen: e.origen ?? null,
+    cuadrante: normalizarCuadrante(e.cuadrante),
   }));
 }
 

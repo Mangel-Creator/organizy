@@ -38,6 +38,18 @@ export function normalizarLugar(lugar: unknown): LugarEvento | null {
 // Datos del cliente de una cita de tipo "cliente" (fase 10). Solo se guardan en el
 // dispositivo. Sin "acepta" no se le recuerda nada; el teléfono va tal cual lo
 // escribió la persona (services/clientes lo pasa al formato de WhatsApp).
+// Matriz de Eisenhower de una tarea flexible: importante y urgente ("hazlo"),
+// importante sin prisa ("planifica"), con prisa pero poco importante ("delega") o ni
+// lo uno ni lo otro ("elimina"). null = sin clasificar. Ver services/agenda/prioridad.ts.
+export type Cuadrante = 'hazlo' | 'planifica' | 'delega' | 'elimina';
+
+const CUADRANTES_VALIDOS: readonly string[] = ['hazlo', 'planifica', 'delega', 'elimina'];
+
+// Lo guardado que no sea un cuadrante conocido se lee como "sin clasificar".
+export function normalizarCuadrante(valor: unknown): Cuadrante | null {
+  return typeof valor === 'string' && CUADRANTES_VALIDOS.includes(valor) ? (valor as Cuadrante) : null;
+}
+
 export type DatosCliente = {
   nombre: string;
   telefono: string;
@@ -69,6 +81,8 @@ export type Evento = {
   cliente?: DatosCliente | null;
   // Si se trajo de otro calendario (Google, iCloud...). Opcional, como "cliente".
   origen?: OrigenEvento | null;
+  // Solo en tareas flexibles: su sitio en la matriz de Eisenhower. Opcional, como "cliente".
+  cuadrante?: Cuadrante | null;
 };
 
 // De dónde viene un evento traído de otro calendario (services/calendarios).

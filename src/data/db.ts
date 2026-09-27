@@ -97,6 +97,11 @@ const MIGRACIONES: Migracion[] = [
   async (bd) => {
     await bd.execAsync('ALTER TABLE eventos ADD COLUMN origen TEXT;');
   },
+  // 7. Matriz de Eisenhower de las tareas flexibles: "hazlo", "planifica", "delega" o
+  //    "elimina". NULL = sin clasificar.
+  async (bd) => {
+    await bd.execAsync('ALTER TABLE eventos ADD COLUMN cuadrante TEXT;');
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;
