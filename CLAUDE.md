@@ -1087,6 +1087,14 @@ borran solos a los 7 días.
   - Probado en la web a tamaño móvil con un reconocimiento simulado (el navegador de
     pruebas no tiene micro): explicación, "Te escucho…", texto en el campo y ficha con la
     frase como título (sin la clave de Anthropic, como en la fase 5).
+- **Pendiente (27/09/2026)**: el usuario aún no ha probado el micro con su voz en el iPhone.
+  Faltan la parte 2 (Siri y Atajos con App Intents: módulo propio en `modules/` con su
+  plugin; "apunta en Organizy" pide la frase después, llama a la Edge Function `captura` con
+  la sesión anónima y responde "Apuntado: …"; "¿qué tengo hoy/mañana?" y "¿cuándo tengo que
+  salir?"), la parte 3 (Android: accesos directos del icono "Apuntar por voz" y "Mi día" a
+  `/?voz=1` y `/`) y la parte 4 (widget: `expo-widgets` en iPhone, otra librería en
+  Android; próximo evento, "Sal a las HH:MM" y micro grande a `/?voz=1`). Todo eso solo se
+  prueba con la app propia; en la web, como mucho un Atajo que abra `/?voz=1`.
 
 ## Hoja de ruta
 
