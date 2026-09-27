@@ -17,6 +17,7 @@ import { cargarPerfil, usePerfil } from '@/data/perfil';
 import { vigilarActualizacionesWeb } from '@/services/actualizacionWeb';
 import { atenderAlarmasNativas, iniciarAlarmas } from '@/services/alarmas';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
+import { iniciarCalendarios } from '@/services/calendarios';
 import { formatearHora } from '@/services/fechas';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { iniciarCorreo } from '@/services/correo';
@@ -77,6 +78,8 @@ export default function LayoutRaiz() {
   useEffect(() => iniciarPlanes(), []);
   // Resúmenes de correo (fase 11): los trae del ayudante de Gmail al abrir y al volver.
   useEffect(() => iniciarCorreo(), []);
+  // Otros calendarios (Google, iCloud...): lo nuevo de fuera, al abrir y al volver.
+  useEffect(() => iniciarCalendarios(), []);
 
   useEffect(() => {
     if (listo) {

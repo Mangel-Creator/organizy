@@ -21,6 +21,7 @@ async function leer(): Promise<Evento[]> {
     lugar: normalizarLugar(e.lugar),
     avisoMin: e.avisoMin ?? null,
     cliente: e.cliente ?? null,
+    origen: e.origen ?? null,
   }));
 }
 
@@ -44,5 +45,11 @@ export const repositorio: RepositorioEventos = {
 
   async reemplazarTodos(eventos) {
     await guardarAjuste(CLAVE, eventos);
+  },
+
+  async cambiarVarios(guardar, borrar) {
+    const quitar = new Set([...borrar, ...guardar.map((e) => e.id)]);
+    const eventos = await leer();
+    await guardarAjuste(CLAVE, [...eventos.filter((e) => !quitar.has(e.id)), ...guardar]);
   },
 };

@@ -43,6 +43,8 @@ const NO_VIAJAN = new Set([
   // van en un archivo: en el móvil nuevo se vuelve a pegar el enlace y se traen solos.
   'correo',
   'correos',
+  // Enlaces de otros calendarios: también son una llave. Los eventos traídos sí viajan.
+  'calendarios',
 ]);
 
 // Cachés que se borran al recuperar una copia (se vuelven a calcular solas).

@@ -433,3 +433,8 @@ verify_jwt = false
 # (gmail/organizy-correo.js) con su sesión anónima; la comprueba por dentro.
 [functions.correo]
 verify_jwt = false
+
+# Otros calendarios (Google, iCloud...) para la web: descarga el .ics y lo devuelve
+# sin guardarlo. Comprueba la sesión anónima por dentro, como las demás.
+[functions.calendario]
+verify_jwt = false

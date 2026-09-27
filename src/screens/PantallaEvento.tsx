@@ -54,6 +54,7 @@ import {
   OPCIONES_TIPO,
   rangoHoras,
 } from './calendario/textos';
+import { OrigenEvento } from './calendario/OrigenEvento';
 import { CamposCliente, errorTelefono, type BorradorCliente } from './clientes/CamposCliente';
 import { RecordatorioCliente } from './clientes/RecordatorioCliente';
 import { MENSAJE_NO_ENCONTRADO } from './formulario-perfil/borrador';
@@ -350,6 +351,9 @@ function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) 
       ejemplo: evento?.ejemplo ?? false,
       // Solo en citas con clientes; si deja de serlo, sus datos se borran.
       cliente: conCliente ? clienteDelBorrador() : null,
+      // Si vino de otro calendario se conserva: así, al traerlo otra vez, se sabe que
+      // lo has cambiado aquí y no se duplica ni se pisa.
+      origen: evento?.origen ?? null,
     };
 
     const bloque = bloqueDeFocoQuePisa(nuevo, eventos);
@@ -379,6 +383,7 @@ function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) 
     <Pantalla ref={scroll}>
       <BotonVolver />
       <Titulo>{evento ? `Editar ${nombre}` : b.flexible ? 'Nueva tarea' : 'Nuevo evento'}</Titulo>
+      {evento ? <OrigenEvento evento={evento} /> : null}
       {rellenar?.mensaje ? (
         <Texto secundario accessibilityLiveRegion="polite">
           {rellenar.mensaje}

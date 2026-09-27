@@ -31,6 +31,7 @@ import { CamposSobreTi } from './formulario-perfil/CamposSobreTi';
 import { MensajeError } from './formulario-perfil/MensajeError';
 import { TarjetaPermiso } from './formulario-perfil/permisos';
 import { SeccionAvisos } from './perfil/SeccionAvisos';
+import { SeccionCalendarios } from './perfil/SeccionCalendarios';
 import { SeccionCopia } from './perfil/SeccionCopia';
 import { SeccionEpocas } from './perfil/SeccionEpocas';
 import { SeccionRecordatorios } from './perfil/SeccionRecordatorios';
@@ -195,6 +196,11 @@ export function PantallaPerfil() {
         Épocas doradas
       </Titulo>
       <SeccionEpocas />
+
+      <Titulo nivel={2} style={estilos.seccion}>
+        Tus otros calendarios
+      </Titulo>
+      <SeccionCalendarios />
 
       <Titulo nivel={2} style={estilos.seccion}>
         Copia de seguridad

@@ -8,7 +8,7 @@ import { crearEjemplos } from './ejemplos';
 import { repositorio } from './repositorio';
 import type { Evento } from './tipos';
 
-export type { DatosCliente, Evento, LugarEvento, Repeticion, TipoEvento } from './tipos';
+export type { DatosCliente, Evento, LugarEvento, OrigenEvento, Repeticion, TipoEvento } from './tipos';
 
 // Eventos del calendario. Se leen todos del dispositivo una vez y se guardan
 // en memoria para que todas las pantallas vean lo mismo al momento.
@@ -61,6 +61,15 @@ export async function borrarEvento(id: string): Promise<void> {
   await cargarEventos();
   await repositorio.borrar(id);
   cambiar(estado.eventos.filter((e) => e.id !== id));
+}
+
+// Muchos cambios de una vez (al traer otro calendario): se avisa a las pantallas una sola vez.
+export async function cambiarEventos(guardar: Evento[], borrar: string[]): Promise<void> {
+  if (guardar.length === 0 && borrar.length === 0) return;
+  await cargarEventos();
+  await repositorio.cambiarVarios(guardar, borrar);
+  const quitar = new Set([...borrar, ...guardar.map((e) => e.id)]);
+  cambiar([...estado.eventos.filter((e) => !quitar.has(e.id)), ...guardar]);
 }
 
 export async function marcarHecha(id: string, hecha: boolean): Promise<void> {

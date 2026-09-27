@@ -67,6 +67,17 @@ export type Evento = {
   ejemplo: boolean; // creado como ejemplo (se puede borrar desde Perfil)
   // Solo en citas con clientes (fase 10). Opcional: los eventos anteriores no lo tienen.
   cliente?: DatosCliente | null;
+  // Si se trajo de otro calendario (Google, iCloud...). Opcional, como "cliente".
+  origen?: OrigenEvento | null;
+};
+
+// De dónde viene un evento traído de otro calendario (services/calendarios).
+// "huella" resume cómo llegó: si el evento ya no coincide con ella, se ha cambiado
+// en Organizy y el calendario de fuera deja de tocarlo.
+export type OrigenEvento = {
+  fuente: string; // id del calendario (data/calendarios)
+  uid: string; // el del evento en ese calendario
+  huella: string;
 };
 
 // Lo que tiene que saber hacer el guardado, sea SQLite (móvil) o el
@@ -77,4 +88,6 @@ export type RepositorioEventos = {
   borrar(id: string): Promise<void>;
   borrarEjemplos(): Promise<void>;
   reemplazarTodos(eventos: Evento[]): Promise<void>; // al recuperar una copia
+  // Muchos de golpe (al traer otro calendario): crea o sustituye y borra por id.
+  cambiarVarios(guardar: Evento[], borrar: string[]): Promise<void>;
 };

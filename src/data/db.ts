@@ -92,6 +92,11 @@ const MIGRACIONES: Migracion[] = [
   async (bd) => {
     await bd.execAsync('ALTER TABLE eventos ADD COLUMN cliente TEXT;');
   },
+  // 6. Calendarios de fuera (Google, iCloud...): de dónde vino el evento, como JSON
+  //    (OrigenEvento). NULL = creado en Organizy.
+  async (bd) => {
+    await bd.execAsync('ALTER TABLE eventos ADD COLUMN origen TEXT;');
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;

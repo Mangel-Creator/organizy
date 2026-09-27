@@ -217,6 +217,14 @@ sesión que fuera**:
   Apps Script) en su propia cuenta de Google: los correos no pasan por el servidor de
   Organizy mientras no haya IA; con IA, el texto pasa por la función `correo` sin guardarse
   (como las frases de la captura).
+- 27/09/2026 — **Otros calendarios** (ver "Otros calendarios"): usa Google Calendar e iCloud
+  y quiere **mover todo lo que tiene allí a Organizy**. Se hace con el enlace iCal de cada
+  calendario, en la web y en Expo Go: lo traído son eventos normales de Organizy y lo nuevo
+  de fuera llega solo. **En la web el calendario pasa por la función `calendario` de
+  Supabase sin guardarse** (el navegador no deja leerlo directamente); lo aprobó el usuario.
+  En el móvil se lee directamente. La lectura directa del calendario del iPhone
+  (`expo-calendar`, que no viene en Expo Go) **queda para la app propia, en el futuro**: no
+  se programa todavía.
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -341,9 +349,12 @@ src/
                        planes.ts (planes con votación y sus votos),
                        recordatorios.ts (recordatorios a clientes: ajustes y envíos),
                        copia.ts (reunir y recuperar la copia de seguridad),
-                       correos.ts (resúmenes de correo y enlace del ayudante de Gmail).
+                       correos.ts (resúmenes de correo y enlace del ayudante de Gmail),
+                       calendarios.ts (enlaces de otros calendarios).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        copia/ (formato de la copia de seguridad y su archivo; con pruebas),
+                       calendarios/ (traer Google, iCloud u Outlook por su enlace iCal;
+                       con pruebas),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
                        avisos/ (notificaciones locales; con pruebas),
@@ -501,7 +512,8 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   tablas, añade una función al final de `MIGRACIONES` (la versión se guarda en
   `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
   `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`; 4: tablas `epocas`, `hitos` y
-  `bloques_epoca` (fase 4b); 5: columna `cliente` (fase 10). Solo se usa en Android e iOS.
+  `bloques_epoca` (fase 4b); 5: columna `cliente` (fase 10); 6: columna `origen` (otros
+  calendarios). Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -1266,6 +1278,47 @@ borran solos a los 7 días.
   tarea creada, "Nuevo", "No es un plazo" y la casilla. La función `correo`, el alta anónima
   y su renovación, probadas contra Supabase. **Falta**: que el usuario instale el ayudante y
   lo pruebe con su Gmail y los avisos en el iPhone.
+
+## Otros calendarios (27/09/2026)
+
+- Segunda mejora tras el análisis de la competencia: la gente ya tiene su vida en Google
+  Calendar o iCloud y no la va a copiar a mano. El usuario quiere **mover todo a
+  Organizy** (ver "Decisiones del usuario", 27/09).
+- **Perfil > "Tus otros calendarios"** (`screens/perfil/SeccionCalendarios.tsx`): pegar el
+  enlace iCal (`https://` o `webcal://`), elegir qué son sus eventos (Míos, Amigos o
+  Clientes: su tipo en Organizy) y "Traer eventos". Cada calendario sale con cuántos eventos
+  trajo, cuándo y los de todo el día sin traer; "Traer ahora" y "Quitar" (quedarse los
+  eventos o borrarlos; los cambiados aquí se quedan siempre). Plegado, dónde está el enlace
+  en Google Calendar ("Dirección secreta en formato iCal") y en iCloud ("Calendario
+  público" > "Compartir enlace"). Enlaces en `organizy:calendarios` (`data/calendarios.ts`);
+  **no viajan en la copia de seguridad** (son una llave), los eventos traídos sí.
+- **Lo traído son eventos normales** (cuentan para huecos, carga, planes, época y avisos)
+  con `Evento.origen` = { fuente, uid, huella } (SQLite: migración 6, columna `origen`).
+  Id `cal-<resumen de fuente y uid>`. La ficha lo dice (`screens/calendario/OrigenEvento.tsx`)
+  y **conserva `origen` al guardar** (si no, se duplicaría).
+- **Se mantiene al día solo** (`iniciarCalendarios()` en `_layout`): al abrir la app y al
+  volver a ella, si hace más de 1 h. `sincronizar` (puro, con pruebas): lo nuevo se crea, lo
+  cambiado fuera se cambia y lo borrado fuera se borra, **salvo lo que hayas cambiado en
+  Organizy** (`cambiadoAqui`: su huella ya no coincide), que ya no se toca. Lo anterior a
+  la ventana no se borra. Se guarda de golpe (`cambiarEventos`, `cambiarVarios` de los
+  repositorios).
+- **Lectura** (`services/calendarios/ics.ts`, librería `ical.js`, pura, con pruebas): ventana
+  desde hace 3 meses hasta dentro de 2 años. Zonas horarias del propio archivo (VTIMEZONE)
+  pasadas a la del dispositivo. Series sencillas (cada día, cada semana el mismo día, cada
+  mes el mismo número; sin fin, sin días quitados ni cambiados) → serie de Organizy; las
+  demás, una cita suelta por vez (máx. 400 por serie). Lo que cruza la medianoche se corta a
+  las 23:59. **Los de todo el día no se traen** (Organizy no los tiene): se cuentan y se dice.
+  Cancelados, fuera.
+- **Descarga**: en el móvil, `fetch` directo (`descargar.ts`). En la web, función
+  `calendario` de Supabase (`descargar.web.ts`; ya desplegada): solo Google Calendar,
+  `*.icloud.com` y Outlook, redirecciones comprobadas, 5 MB, 15 s, 60 al día por persona y
+  3000 en total (`CALENDARIO_LIMITE_*`), sin guardar ni apuntar el enlace ni el contenido.
+- Probado el 27/09 en la web a tamaño móvil: el calendario público de festivos de Google a
+  través de la función (386 de todo el día, ninguno traído, como debe), y con un calendario
+  simulado: traer 3, "Está al día", "1 cambiado y 1 borrado", ficha con su origen, Semana,
+  "Quitar" borrando y enlaces erróneos. **Falta** que el usuario pegue sus enlaces de verdad.
+- **Pendiente**: eventos de todo el día (cumpleaños, festivos, vacaciones) cuando Organizy
+  los tenga; lectura directa con `expo-calendar` en la app propia (ver la decisión del 27/09).
 
 ## Hoja de ruta
 
