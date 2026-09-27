@@ -29,6 +29,10 @@ jobs:
       - name: Comprobar que existe EXPO_TOKEN
         id: token
         run: echo "hay=${{ secrets.EXPO_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+      # Sin el secreto no se publica: se avisa en el resumen de la ejecución, pero no se
+      # marca como fallo para no poner en rojo cada subida mientras el usuario lo crea.
+      - if: steps.token.outputs.hay != 'true'
+        run: echo "::warning title=Expo Go sin publicar::Falta el secreto EXPO_TOKEN en GitHub. Expo Go (sin ordenador) se queda en la última versión publicada a mano."
       - if: steps.token.outputs.hay == 'true'
         uses: actions/checkout@v4
       - if: steps.token.outputs.hay == 'true'
