@@ -758,7 +758,7 @@ eventos, solo cuenta usos.
   si se pasa, deja de responder hasta el día siguiente, nunca cobra. No calcula
   transporte público: con `transporte-publico` no se piden rutas y se ofrece Google Maps.
   Waze no da datos a otras apps: solo se abre con un enlace.
-- **Claves**: `TOMTOM_API_KEY` (rutas) solo en los secretos de Supabase. Para la web hay
+- **Claves**: la de rutas solo en los secretos de Supabase, como `TOMTOM_API_KEY` o `TOMTOM_KEY` (el usuario la guardó así el 27/09; la función acepta los dos nombres). Es la clave "My First API key" de su cuenta de TomTom (plan Evaluation, todos los productos, rotada el 27/09). Para la web hay
   otra clave de TomTom **pública**, restringida al dominio `mangel-creator.github.io` y
   solo a mapas (Map Display y Traffic tiles), en la variable del repositorio
   `TOMTOM_MAPA_KEY` → `EXPO_PUBLIC_TOMTOM_MAPA_KEY` (pages.yml); sirve para el fondo del mapa
@@ -952,7 +952,7 @@ eventos, solo cuenta usos.
 - [x] 4. Avisos (notificaciones).
 - [x] 4b. Época dorada: modo para exámenes o épocas de trabajo intenso (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-04b-epoca-dorada.md)
 - [x] 5. Captura rápida con IA. Supabase montado y funciones desplegadas (proyecto `hwemrpexabisyueyizjz`). Falta solo la clave de Anthropic: el usuario la pondrá cuando la app esté terminada (ver "Decisiones del usuario", 26/09/2026).
-- [x] 6. Mapa, tráfico, radares y rutas (el código está hecho; falta que el usuario cree la cuenta de TomTom, ponga la clave en Supabase y se despliegue la función `rutas`: ver "Fase 6").
+- [x] 6. Mapa, tráfico, radares y rutas (funcionando con TomTom desde el 27/09/2026: ver "Fase 6").
 - [x] 7. Alarmas (en Expo Go son avisos con sonido; las alarmas de verdad están programadas pero sin probar hasta que haya build de EAS: ver "Fase 7").
 - [ ] 8. Planes con WhatsApp y votación.
 - [ ] 9. Voz sin abrir la app y widget.
