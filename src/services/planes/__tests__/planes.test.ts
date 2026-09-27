@@ -326,6 +326,7 @@ describe('recordatorio 3 h antes', () => {
       cierreDia: false,
       cierreSinPendientes: 'nada',
       salida: false,
+      plazosCorreo: false,
     };
     const avisos = planificarAvisos({
       ahora: new Date(2026, 9, 1, 12, 0),

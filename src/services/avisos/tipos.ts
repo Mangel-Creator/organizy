@@ -20,7 +20,8 @@ export type TipoAviso =
   | 'alarma-salida'
   | 'dormir'
   | 'plan-recordatorio' // "Recordar a todos 3 h antes" (fase 8)
-  | 'recordatorio-cliente'; // el día antes de una cita con un cliente (fase 10)
+  | 'recordatorio-cliente' // el día antes de una cita con un cliente (fase 10)
+  | 'plazo-correo'; // la víspera de un plazo que llegó por correo (fase 11)
 
 // Los que van primero al recortar a MAX_AVISOS: una alarma nunca se queda fuera.
 export const TIPOS_ALARMA: readonly TipoAviso[] = ['alarma', 'alarma-salida'];
@@ -31,7 +32,8 @@ export type Destino =
   | { pantalla: 'alarmas' }
   | { pantalla: 'evento'; id: string }
   | { pantalla: 'mapa'; id: string; dia: ClaveDia } // la ruta hasta ese evento (fase 6)
-  | { pantalla: 'plan'; id: string }; // un plan con votación (fase 8)
+  | { pantalla: 'plan'; id: string } // un plan con votación (fase 8)
+  | { pantalla: 'resumenes' }; // resúmenes de correo (fase 11)
 
 // Botones dentro de la notificación. Cada categoría se registra una vez al
 // arrancar (services/avisos/programar.ts).
@@ -65,9 +67,10 @@ export type AvisoPlanificado = {
 };
 
 // Lo que se guarda dentro de la notificación para saber qué hacer al tocarla.
-// "plan-voto" es el push que manda el servidor cuando alguien vota (fase 8).
+// "plan-voto" es el push que manda el servidor cuando alguien vota (fase 8) y
+// "correo", el que manda el ayudante de Gmail del usuario (fase 11).
 export type DatosAviso = {
-  tipo: TipoAviso | 'prueba' | 'plan-voto';
+  tipo: TipoAviso | 'prueba' | 'plan-voto' | 'correo';
   dia: ClaveDia;
   destino: Destino;
   mensaje?: string;

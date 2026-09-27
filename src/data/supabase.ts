@@ -48,3 +48,7 @@ export async function asegurarSesion(supabase: SupabaseClient): Promise<void> {
   const { error } = await supabase.auth.signInAnonymously();
   if (error) throw error;
 }
+
+// Dirección y clave pública, para el ayudante de Gmail del usuario (fase 11): la
+// app se las pasa para que pueda usar la IA de Organizy con su propia sesión anónima.
+export const datosPublicosSupabase = supabaseConfigurado ? { url: URL, clave: CLAVE_PUBLICA } : null;

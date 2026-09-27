@@ -38,6 +38,11 @@ const NO_VIAJAN = new Set([
   'dictadoExplicado',
   'avisoPantallaInicioCerrado',
   'recargaPorVersion',
+  // Resúmenes de correo (fase 11): el enlace del ayudante de Gmail deja leer los
+  // resúmenes a quien lo tenga, y los resúmenes son el contenido de los correos. No
+  // van en un archivo: en el móvil nuevo se vuelve a pegar el enlace y se traen solos.
+  'correo',
+  'correos',
 ]);
 
 // Cachés que se borran al recuperar una copia (se vuelven a calcular solas).

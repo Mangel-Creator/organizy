@@ -15,6 +15,7 @@ import {
   Texto,
   Titulo,
 } from '@/components';
+import { useCorreos } from '@/data/correos';
 import { useDensidad } from '@/data/densidad';
 import { useEnergia } from '@/data/energia';
 import { marcarHecha, moverTareas, useEventos, type Evento } from '@/data/eventos';
@@ -33,6 +34,7 @@ import {
   type Intervalo,
   type Siguiente,
 } from '@/services/agenda';
+import { contarNuevos } from '@/services/correo/correos';
 import { imprescindiblesDelDia, textoQuedan, ventanaEpoca } from '@/services/epoca';
 import {
   claveDia,
@@ -100,6 +102,7 @@ export function PantallaHoy() {
   const hoy = claveDia(ahora);
   const { perfil } = usePerfil();
   const { cargado, eventos } = useEventos();
+  const correo = useCorreos();
   const [energia, setEnergia] = useEnergia(hoy);
   // Época dorada activa (fase 4b): cambia el horario del día y añade su plan.
   const { epoca, plan, epocas, registro } = useEpocaActiva(hoy, eventos, energia);
@@ -184,6 +187,8 @@ export function PantallaHoy() {
   const bloquesDeHoy = (plan?.bloques ?? []).filter((b) => b.dia === hoy);
   const bloquesHechos = bloquesDeHoy.filter((b) => b.estado === 'hecho').length;
 
+  const correosNuevos = contarNuevos(correo.correos);
+
   const baldosas: DatosBaldosa[] = [
     {
       clave: 'cliente',
@@ -240,11 +245,32 @@ export function PantallaHoy() {
       etiqueta: epoca ? `Época dorada · ${textoQuedan(epoca, hoy)}` : 'Época dorada',
       lectura: epoca ? `Época dorada, ${textoQuedan(epoca, hoy)}. Abrir` : 'Época dorada. Abrir',
     },
+    // Resúmenes de correo (fase 11). Va la última y ocupa toda la fila.
+    correo.conexion
+      ? {
+          clave: 'resumenes',
+          icono: correosNuevos > 0 ? 'mail-unread-outline' : 'mail-outline',
+          colores: colorBaldosa.neutro,
+          numero: String(correosNuevos),
+          etiqueta: contar(correosNuevos, 'correo nuevo', 'correos nuevos'),
+          lectura: `${correosNuevos} ${contar(correosNuevos, 'correo nuevo', 'correos nuevos')}. Ver los resúmenes`,
+        }
+      : {
+          clave: 'resumenes',
+          icono: 'mail-outline',
+          colores: colorBaldosa.neutro,
+          etiqueta: 'Resúmenes de tu correo',
+          lectura: 'Resúmenes de tu correo. Conectar Gmail',
+        },
   ];
 
   const pulsarBaldosa = (clave: DatosBaldosa['clave']) => {
     if (clave === 'epoca') {
       router.push('/epoca');
+      return;
+    }
+    if (clave === 'resumenes') {
+      router.push('/resumenes');
       return;
     }
     setVista((actual) => (actual === clave ? null : clave));

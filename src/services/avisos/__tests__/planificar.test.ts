@@ -24,6 +24,7 @@ const AJUSTES_AVISOS_POR_DEFECTO: AjustesAvisos = {
   cierreDia: true,
   cierreSinPendientes: 'buenas-noches',
   salida: true,
+  plazosCorreo: true,
 };
 
 const perfil: Perfil = {

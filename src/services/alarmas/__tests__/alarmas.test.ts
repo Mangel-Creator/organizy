@@ -342,6 +342,7 @@ const AJUSTES_AVISOS: AjustesAvisos = {
   cierreDia: false,
   cierreSinPendientes: 'nada',
   salida: true,
+  plazosCorreo: false,
 };
 
 function contextoAlarmas(lista: Alarma[], ajustes: Partial<AjustesAlarmas>, comoAvisos: boolean) {

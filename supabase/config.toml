@@ -428,3 +428,8 @@ verify_jwt = false
 # que deja entrar es el código largo del enlace, que la función comprueba.
 [functions.votar]
 verify_jwt = false
+
+# Resumen de correos con IA (fase 11). La llama el ayudante de Gmail del usuario
+# (gmail/organizy-correo.js) con su sesión anónima; la comprueba por dentro.
+[functions.correo]
+verify_jwt = false

@@ -19,6 +19,7 @@ import { atenderAlarmasNativas, iniciarAlarmas } from '@/services/alarmas';
 import { atenderRespuesta, escucharRespuestas, iniciarAvisos } from '@/services/avisos';
 import { formatearHora } from '@/services/fechas';
 import { completarCoordenadasPendientes } from '@/services/lugares';
+import { iniciarCorreo } from '@/services/correo';
 import { iniciarPlanes } from '@/services/planes';
 import { iniciarTrafico } from '@/services/rutas/actualizar';
 // Registra la tarea de navegación con el móvil bloqueado (solo en la app propia).
@@ -74,6 +75,8 @@ export default function LayoutRaiz() {
 
   // Votos de los planes (fase 8): al abrir la app, al volver a ella y al llegar un aviso.
   useEffect(() => iniciarPlanes(), []);
+  // Resúmenes de correo (fase 11): los trae del ayudante de Gmail al abrir y al volver.
+  useEffect(() => iniciarCorreo(), []);
 
   useEffect(() => {
     if (listo) {
@@ -92,6 +95,8 @@ export default function LayoutRaiz() {
         router.push({ pathname: '/evento', params: { id: destino.id } });
       } else if (destino.pantalla === 'plan') {
         router.push({ pathname: '/plan', params: { id: destino.id } });
+      } else if (destino.pantalla === 'resumenes') {
+        router.push('/resumenes');
       } else if (destino.pantalla === 'mapa') {
         router.navigate({ pathname: '/mapa', params: { evento: destino.id, dia: destino.dia } });
       } else if (destino.pantalla === 'alarmas') {
@@ -143,6 +148,7 @@ export default function LayoutRaiz() {
           <Stack.Screen name="alarma" />
           <Stack.Screen name="plan" />
           <Stack.Screen name="plan-nuevo" />
+          <Stack.Screen name="resumenes" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />

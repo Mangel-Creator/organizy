@@ -3,6 +3,7 @@ import { AppState, Linking } from 'react-native';
 import { leerAjuste } from '@/data/ajustes';
 import { leerAdelantos, leerAlarmas, suscribirseAdelantos, suscribirseAlarmas } from '@/data/alarmas';
 import { leerAjustesAvisos, suscribirseAjustesAvisos } from '@/data/avisos';
+import { leerCorreos, suscribirseCorreos } from '@/data/correos';
 import { leerEpocas, suscribirseEpocas } from '@/data/epocas';
 import { leerEventos, moverTareas, suscribirseEventos } from '@/data/eventos';
 import { cargarPerfil, suscribirsePerfil } from '@/data/perfil';
@@ -90,7 +91,7 @@ export function reprogramarAvisos(): Promise<void> {
     if (!perfil || !bienvenidaCompletada) return;
     const ahora = new Date();
     const hoy = claveDia(ahora);
-    const [eventos, ajustes, { epocas, registro }, energia, salidas, alarmas, adelantos, nivel, planes, recordatorios] =
+    const [eventos, ajustes, { epocas, registro }, energia, salidas, alarmas, adelantos, nivel, planes, recordatorios, correo] =
       await Promise.all([
         leerEventos(),
         leerAjustesAvisos(),
@@ -102,6 +103,7 @@ export function reprogramarAvisos(): Promise<void> {
         nivelEfectivo(),
         leerPlanes(),
         leerRecordatorios(),
+        leerCorreos(),
       ]);
     // Época dorada activa (o que empieza estos días) con su plan, para sus avisos.
     const epoca = epocaProxima(epocas, hoy, DIAS_A_PROGRAMAR);
@@ -122,6 +124,8 @@ export function reprogramarAvisos(): Promise<void> {
         planes,
         // Recordatorios a clientes (fase 10): el día antes, a la hora elegida.
         recordatorios,
+        // Plazos que llegaron por correo (fase 11): la víspera.
+        correos: correo.correos,
       }),
     );
   });
@@ -157,6 +161,7 @@ export function iniciarAvisos(): () => void {
     suscribirsePermisoAlarmas(reprogramarEnUnMomento),
     suscribirsePlanes(reprogramarEnUnMomento), // "Recordar a todos 3 h antes" (fase 8)
     suscribirseRecordatorios(reprogramarEnUnMomento), // recordatorios a clientes (fase 10)
+    suscribirseCorreos(reprogramarEnUnMomento), // plazos que llegaron por correo (fase 11)
   ];
   // Cada vez que se vuelve a abrir la app: así siempre hay avisos para los próximos días.
   const app = AppState.addEventListener('change', (estado) => {
@@ -174,6 +179,7 @@ export type DestinoApp =
   | { pantalla: 'evento'; id: string }
   | { pantalla: 'mapa'; id: string; dia: string }
   | { pantalla: 'plan'; id: string } // un plan con votación (fase 8)
+  | { pantalla: 'resumenes' } // resúmenes de correo (fase 11)
   | { pantalla: 'ninguna' }; // "Parar": no hace falta abrir nada
 
 // Hace lo que pide la respuesta y dice a qué pantalla ir.

@@ -209,6 +209,14 @@ sesión que fuera**:
     datos solo en el dispositivo": el servidor guardará solo los recordatorios pendientes
     de clientes que hayan aceptado (nombre, teléfono, día, hora y sitio) y los borrará al
     enviarlos o al pasar la cita. El token, solo en los secretos de Supabase.
+- 27/09/2026 — Fase 11 (correo; ver "Fase 11"), elegido por el usuario: **solo su Gmail**
+  (leer el Gmail de cualquiera exige la verificación de Google con auditoría de seguridad de
+  pago), **varias cuentas juntas reenviándolas a ese Gmail** (la app Mail del iPhone no deja
+  a otras apps leer correos), **sin IA por ahora** (reglas; la IA se enciende sola cuando
+  ponga la clave de Anthropic) y **solo la pestaña Principal**. Lo hace un ayudante (Google
+  Apps Script) en su propia cuenta de Google: los correos no pasan por el servidor de
+  Organizy mientras no haya IA; con IA, el texto pasa por la función `correo` sin guardarse
+  (como las frases de la captura).
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -332,7 +340,8 @@ src/
                        alarmas.ts (alarmas, ajustes y adelantos de la inteligente),
                        planes.ts (planes con votación y sus votos),
                        recordatorios.ts (recordatorios a clientes: ajustes y envíos),
-                       copia.ts (reunir y recuperar la copia de seguridad).
+                       copia.ts (reunir y recuperar la copia de seguridad),
+                       correos.ts (resúmenes de correo y enlace del ayudante de Gmail).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        copia/ (formato de la copia de seguridad y su archivo; con pruebas),
                        lugares.ts (texto -> coordenadas), permisos.ts,
@@ -349,8 +358,12 @@ src/
                        planes/ (horas sugeridas, recuento, mensajes de WhatsApp,
                        servidor y votación; con pruebas), contactos.ts (agenda),
                        clientes/ (recordatorios a clientes: teléfono, mensaje, estado;
-                       con pruebas).
+                       con pruebas),
+                       correo/ (resúmenes de correo: traerlos, plazos como tareas; con
+                       pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
+gmail/                 Ayudante de Gmail (Google Apps Script) que el usuario pega en su
+                       cuenta de Google, con sus pruebas. Ver "Fase 11".
 ```
 
 El alias `@/` apunta a `src/`.
@@ -1199,6 +1212,61 @@ borran solos a los 7 días.
   reinicia con el nombre y el evento de la copia) y rechazar un archivo que no es copia.
   **Falta probarla en el iPhone** (Expo Go): el menú de compartir y el selector de Archivos.
 
+## Fase 11: correo, plazos y resúmenes (27/09/2026)
+
+- **Ayudante de Gmail** (`gmail/organizy-correo.js`, JavaScript de Google Apps Script): lo
+  pega el usuario en script.google.com (guía "Fase 11 - Correo.md"), ejecuta `instalar`
+  (revisión cada 10 min con un disparador y recoge el último día sin avisar) y lo implementa
+  como **Aplicación web** ("Ejecutar como: yo", acceso "Cualquier usuario"). La URL `/exec`
+  se pega en Organizy (Hoy > Resúmenes) y **es la llave**: quien la tenga lee los
+  resúmenes. Busca `in:inbox category:primary -from:me after:<última revisión − 20 min>`,
+  como mucho 25 hilos por vuelta; guarda en las propiedades del script los ids vistos
+  (150), 7 días de resúmenes (máx. 200, límite de 500 KB) y los tokens de avisos (5).
+  Funciones para el usuario: `instalar`, `probarAviso`, `olvidarMoviles`, `desinstalar`.
+  **Si cambias el script**, el usuario tiene que pegarlo otra vez y hacer "Gestionar
+  implementaciones > editar > Nueva versión" (así la URL no cambia): díselo.
+- **Reglas sin IA** (en el mismo archivo, sin nada de Google; Jest las prueba en
+  `gmail/__tests__`, con `module.exports` solo si existe `module`): fecha límite = una
+  fecha (05/10, 5 de octubre, 5 oct; "mañana", "el viernes" o "a final de mes" solo con
+  palabra fuerte) a menos de 60 letras después de una palabra de plazo (fecha límite,
+  plazo, vence, antes del, entregar...) o 25 antes, en la misma frase, de hoy a un año.
+  "Hasta el" solo vale con fecha escrita ("hasta el lunes" es una despedida). Resumen = las
+  primeras frases sin saludo, despedida, citas, firmas ni enlaces (240 letras); en un
+  reenvío, lo reenviado. Título = asunto sin "RE:", "RV:", "[EXTERNO]".
+- **Avisos** del ayudante por el servicio de Expo (`exp.host`, sin clave), a los tokens que
+  manda la app al pedir los correos; data `{ tipo: 'correo', destino: { pantalla:
+  'resumenes' } }`. Plazo: "Vence el lun 5 oct: …" / "Te lo he apuntado en las tareas.";
+  normal: título y "Remitente · resumen"; más de 3 normales en una vuelta, un solo aviso
+  "N correos nuevos". En la web no hay avisos.
+- **IA** (`supabase/functions/correo`, desplegada; Claude Haiku 4.5, salida con esquema:
+  título, resumen, `fechaLimite`, `tarea` con verbo): la app manda al ayudante la URL y la
+  clave **pública** de Supabase; el ayudante se da de alta como usuario anónimo
+  (`/auth/v1/signup`, sesión en sus propiedades) y llama a la función. Sin
+  `ANTHROPIC_API_KEY` contesta 503 `sin-clave` sin gastar nada y el ayudante no vuelve a
+  probar en 6 h (otros fallos, 30 min): se enciende sola al poner la clave. Límites
+  `CORREO_LIMITE_USUARIO` (150) y `CORREO_LIMITE_GLOBAL` (3000). No guarda el correo.
+- **En la app**: `data/correos.ts` (`organizy:correo` = enlace y estado;
+  `organizy:correos` = resúmenes, 30 días; las dos en `NO_VIAJAN` de la copia) y
+  `services/correo/` (`conectarCorreo`, `actualizarCorreos` —al abrir, al volver y al
+  llegar un push "correo"; `iniciarCorreo()` en `_layout`—, `quitarPlazo`,
+  `marcarCorreosVistos`). La petición es un POST `text/plain` (sin pregunta previa de
+  CORS; Google redirige y `fetch` lo sigue). Cada plazo nuevo de hoy en adelante se apunta
+  una vez como **tarea flexible de 30 min, tipo Yo, el día que vence** (con el correo y el
+  enlace en las notas); si se borra, no se vuelve a crear. "No es un plazo" borra la tarea
+  si no está hecha.
+- **Pantallas**: casilla "Resúmenes" en Hoy (la séptima, a lo ancho; número = correos sin
+  ver) y `/resumenes` (`PantallaResumenes`): sin conectar, cómo hacerlo y el campo del
+  enlace; conectado, "Con fecha límite" (barra de "Yo") y el resto por días (Hoy, Ayer, lun
+  5 oct), con "Nuevo" hasta salir de la pantalla; al tocar uno, "Abrir en Gmail", "Ver la
+  tarea" y "No es un plazo"; "Más ajustes": otras cuentas y desconectar.
+- **Aviso de la víspera** (`services/avisos/correos.ts`, tipo `plazo-correo`, interruptor
+  `plazosCorreo` en Perfil > Avisos): "Mañana vence: …" a la hora de levantarse, si la
+  tarea sigue sin hacer.
+- Probado el 27/09 en la web a tamaño móvil con un ayudante simulado: enlace erróneo, conectar,
+  tarea creada, "Nuevo", "No es un plazo" y la casilla. La función `correo`, el alta anónima
+  y su renovación, probadas contra Supabase. **Falta**: que el usuario instale el ayudante y
+  lo pruebe con su Gmail y los avisos en el iPhone.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
@@ -1212,3 +1280,4 @@ borran solos a los 7 días.
 - [x] 8. Planes con WhatsApp y votación (servidor y función `votar` ya desplegados: ver "Fase 8").
 - [ ] 9. Voz sin abrir la app y widget.
 - [x] 10. Recordatorios a clientes por WhatsApp (parte A, gratis y sin servidor, hecha el 27/09/2026; la parte B, envío automático con WhatsApp Business, espera a que el usuario cree las cuentas de Meta: ver "Fase 10").
+- [x] 11. Correo: plazos al calendario y resúmenes con aviso (hecho el 27/09/2026; falta que el usuario instale el ayudante en su Gmail: ver "Fase 11").

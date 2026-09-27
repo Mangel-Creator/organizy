@@ -206,7 +206,7 @@ describe('aviso del día antes', () => {
       ahora,
       eventos: [cita()],
       perfil,
-      ajustes: { eventos: false, resumenManana: false, cierreDia: false, cierreSinPendientes: 'nada', salida: false },
+      ajustes: { eventos: false, resumenManana: false, cierreDia: false, cierreSinPendientes: 'nada', salida: false, plazosCorreo: false },
       recordatorios: { ajustes: AJUSTES, envios: {} },
     });
     expect(avisos.map((a) => a.id)).toEqual(['cliente:c1:2026-09-25']);

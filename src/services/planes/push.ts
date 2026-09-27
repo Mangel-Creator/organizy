@@ -34,10 +34,16 @@ export async function tokenDeAvisos(): Promise<string | null> {
 // Llama a "alLlegar" cuando llega un aviso de voto con la app abierta (para
 // refrescar los votos al momento).
 export function escucharVotos(alLlegar: () => void): () => void {
+  return escucharPush('plan-voto', alLlegar);
+}
+
+// Llama a "alLlegar" cuando llega con la app abierta un aviso push de ese tipo
+// ("plan-voto", o "correo" del ayudante de Gmail de la fase 11).
+export function escucharPush(tipo: string, alLlegar: () => void): () => void {
   if (!pushPosible) return () => {};
   const suscripcion = Notifications.addNotificationReceivedListener((aviso) => {
     const datos = aviso.request.content.data as { tipo?: string } | undefined;
-    if (datos?.tipo === 'plan-voto') alLlegar();
+    if (datos?.tipo === tipo) alLlegar();
   });
   return () => suscripcion.remove();
 }
