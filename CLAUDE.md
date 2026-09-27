@@ -194,6 +194,21 @@ sesión que fuera**:
     sola cosa", como los colores del tráfico del Mapa. Solo en los botones de WhatsApp.
   - El plan y sus votos se **borran del servidor 7 días después** de la última hora
     propuesta (o de la elegida).
+- 27/09/2026 — Fase 10 (recordatorios a clientes), elegido por el usuario: **primero la
+  vía gratis y sin servidor, y más adelante el envío automático con WhatsApp Business.**
+  - **Ahora (parte A)**: nombre, teléfono y "Acepta recordatorios por WhatsApp" en los
+    eventos de Clientes, **solo en el dispositivo**. El día antes, a la hora elegida en
+    Perfil, un aviso local; su botón abre WhatsApp en el chat de ese cliente
+    (`wa.me/<teléfono>?text=`) con el recordatorio escrito, y lo envía la persona.
+    Sin cuentas de Meta, sin coste y sin datos en el servidor.
+  - **Más adelante (parte B)**, cuando el usuario cree las cuentas de Meta (cartera
+    empresarial, app de desarrollador, número dedicado, tarjeta y plantilla de
+    "Utilidad" aprobada; ~0,017 € por mensaje en España, tarifa del 1/07/2026): envío
+    automático desde Supabase con la Cloud API, **solo para la cuenta del dueño** (el
+    número y el token de Meta son suyos). Aceptada ya como **tercera excepción** a "los
+    datos solo en el dispositivo": el servidor guardará solo los recordatorios pendientes
+    de clientes que hayan aceptado (nombre, teléfono, día, hora y sitio) y los borrará al
+    enviarlos o al pasar la cita. El token, solo en los secretos de Supabase.
 
 ## Cómo prueba el usuario en el iPhone
 
