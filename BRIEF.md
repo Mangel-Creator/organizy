@@ -88,8 +88,12 @@ texto normal, sin negrita roja) y "Cómo vas" (barras de progreso).
 | `cargaNormal` | `#8A8374` | Barrita de carga normal, borde de huecos, barra de filas pasadas | 3.8 : 1 |
 
 Regla: **cada color significa una sola cosa** (azul = pulsar, naranja = Clientes,
-verde = Amigos, negro = Yo, granate = aviso). Excepción, solo dentro del Mapa: la
-carretera pintada según el tráfico, estilo Waze (decisión del usuario, ver CLAUDE.md).
+verde = Amigos, negro = Yo, granate = aviso). Dos excepciones, las dos decididas por el
+usuario (ver CLAUDE.md):
+- Dentro del Mapa, la carretera pintada según el tráfico, estilo Waze.
+- Los botones "Enviar por WhatsApp" van en el verde de WhatsApp (`colores.whatsapp`,
+  `#25D366`, con texto oscuro encima), solo esos botones. Es la marca que todo el mundo
+  reconoce, igual que los colores del tráfico.
 
 ## Tipografía: IBM Plex
 
