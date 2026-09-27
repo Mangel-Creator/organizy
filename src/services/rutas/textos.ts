@@ -81,7 +81,8 @@ export function enlaceGoogleMaps(destino: Punto, transporte: Transporte = 'coche
 export const MENSAJE_RETRASO = 'Voy con unos 10 min de retraso, lo siento';
 
 // Abre WhatsApp con el mensaje escrito para que elijas a quién mandarlo.
-// Nunca se envía solo: lo manda la persona.
-export function enlaceWhatsapp(texto = MENSAJE_RETRASO): string {
-  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
+// Nunca se envía solo: lo manda la persona. Con "telefono" (solo cifras, con el
+// prefijo del país: "34612345678"), abre directamente el chat con ese número (fase 10).
+export function enlaceWhatsapp(texto = MENSAJE_RETRASO, telefono?: string): string {
+  return `https://wa.me/${telefono ?? ''}?text=${encodeURIComponent(texto)}`;
 }

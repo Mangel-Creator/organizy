@@ -35,6 +35,15 @@ export function normalizarLugar(lugar: unknown): LugarEvento | null {
   return null;
 }
 
+// Datos del cliente de una cita de tipo "cliente" (fase 10). Solo se guardan en el
+// dispositivo. Sin "acepta" no se le recuerda nada; el teléfono va tal cual lo
+// escribió la persona (services/clientes lo pasa al formato de WhatsApp).
+export type DatosCliente = {
+  nombre: string;
+  telefono: string;
+  acepta: boolean; // "Acepta recordatorios por WhatsApp"
+};
+
 export type Evento = {
   id: string;
   titulo: string;
@@ -56,6 +65,8 @@ export type Evento = {
   // Las tareas flexibles no tienen aviso (no tienen hora).
   avisoMin: number | null;
   ejemplo: boolean; // creado como ejemplo (se puede borrar desde Perfil)
+  // Solo en citas con clientes (fase 10). Opcional: los eventos anteriores no lo tienen.
+  cliente?: DatosCliente | null;
 };
 
 // Lo que tiene que saber hacer el guardado, sea SQLite (móvil) o el

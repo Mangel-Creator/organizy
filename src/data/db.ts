@@ -87,6 +87,11 @@ const MIGRACIONES: Migracion[] = [
       CREATE INDEX bloques_epoca_dia ON bloques_epoca (epoca_id, dia);
     `);
   },
+  // 5. Fase 10: datos del cliente de una cita (nombre, teléfono y si acepta
+  //    recordatorios por WhatsApp), como JSON. NULL = sin datos de cliente.
+  async (bd) => {
+    await bd.execAsync('ALTER TABLE eventos ADD COLUMN cliente TEXT;');
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;

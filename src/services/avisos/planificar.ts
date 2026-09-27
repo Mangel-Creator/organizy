@@ -39,6 +39,7 @@ import {
   type ClaveDia,
 } from '@/services/fechas';
 
+import { avisosDeClientes, type RecordatoriosParaAvisos } from './clientes';
 import { avisosDeEpoca, type EpocaParaAvisos } from './epoca';
 import { avisosDePlanes } from './planes';
 import { TIPOS_ALARMA, type AvisoPlanificado } from './tipos';
@@ -72,6 +73,8 @@ export type ContextoAvisos = {
   salidas?: Salida[];
   // Planes con votación (fase 8), para "Recordar a todos 3 h antes".
   planes?: Plan[];
+  // Recordatorios a clientes (fase 10): interruptor, hora y lo ya enviado.
+  recordatorios?: RecordatoriosParaAvisos | null;
   // Alarmas (fase 7). comoAvisos: en Expo Go (o sin alarmas de verdad) el despertador,
   // la inteligente y las de salida van como avisos con sonido; en la app propia las
   // programa nativo.ts y aquí solo queda el aviso de la hora de dormir.
@@ -326,6 +329,11 @@ const GENERADORES: Generador[] = [
   { activo: () => true, generar: avisoDormir },
   // Planes: cada plan tiene su interruptor "Recordar a todos 3 h antes" (Plan.recordar).
   { activo: () => true, generar: (ctx, dia) => avisosDePlanes(ctx.planes, ctx.eventos, dia) },
+  // Recordatorios a clientes: interruptor en Perfil > Recordatorios a clientes (fase 10).
+  {
+    activo: () => true,
+    generar: (ctx, dia) => avisosDeClientes(ctx.recordatorios, ctx.eventos, ctx.perfil, dia),
+  },
 ];
 
 // Para probar desde Perfil: el resumen o el cierre de hoy tal cual llegarían,

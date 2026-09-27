@@ -194,7 +194,7 @@ sesión que fuera**:
     sola cosa", como los colores del tráfico del Mapa. Solo en los botones de WhatsApp.
   - El plan y sus votos se **borran del servidor 7 días después** de la última hora
     propuesta (o de la elegida).
-- 27/09/2026 — Fase 10 (recordatorios a clientes), elegido por el usuario: **primero la
+- 27/09/2026 — Fase 10 (recordatorios a clientes; ver "Fase 10"), elegido por el usuario: **primero la
   vía gratis y sin servidor, y más adelante el envío automático con WhatsApp Business.**
   - **Ahora (parte A)**: nombre, teléfono y "Acepta recordatorios por WhatsApp" en los
     eventos de Clientes, **solo en el dispositivo**. El día antes, a la hora elegida en
@@ -320,6 +320,7 @@ src/
                        hora de dormir, aviso del nivel).
     planes/            Piezas de Planes (botón de WhatsApp, fila de votos, hueco de
                        Semana con "Proponer plan").
+    clientes/          Datos del cliente en la ficha y su recordatorio por WhatsApp.
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
@@ -329,7 +330,8 @@ src/
                        supabase.ts (conexión con el servidor propio),
                        salidas.ts y horasPunta.ts (tráfico calculado), radares/ (DGT),
                        alarmas.ts (alarmas, ajustes y adelantos de la inteligente),
-                       planes.ts (planes con votación y sus votos).
+                       planes.ts (planes con votación y sus votos),
+                       recordatorios.ts (recordatorios a clientes: ajustes y envíos).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
@@ -343,7 +345,9 @@ src/
                        alarmas/ (cuándo suena cada alarma, inteligente, alarmas de verdad
                        y Atajo de la web; con pruebas),
                        planes/ (horas sugeridas, recuento, mensajes de WhatsApp,
-                       servidor y votación; con pruebas), contactos.ts (agenda).
+                       servidor y votación; con pruebas), contactos.ts (agenda),
+                       clientes/ (recordatorios a clientes: teléfono, mensaje, estado;
+                       con pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 ```
 
@@ -482,7 +486,7 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   tablas, añade una función al final de `MIGRACIONES` (la versión se guarda en
   `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
   `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`; 4: tablas `epocas`, `hitos` y
-  `bloques_epoca` (fase 4b). Solo se usa en Android e iOS.
+  `bloques_epoca` (fase 4b); 5: columna `cliente` (fase 10). Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -1111,6 +1115,57 @@ borran solos a los 7 días.
   Android; próximo evento, "Sal a las HH:MM" y micro grande a `/?voz=1`). Todo eso solo se
   prueba con la app propia; en la web, como mucho un Atajo que abra `/?voz=1`.
 
+## Fase 10: recordatorios a clientes por WhatsApp (decisiones)
+
+- **Parte A (hecha, 27/09/2026)**: gratis, sin cuentas de Meta y sin servidor. Nada sale
+  del dispositivo: la app abre WhatsApp en el chat del cliente con el mensaje escrito
+  (`enlaceWhatsapp(texto, telefono)` → `wa.me/34612345678?text=`) y lo envía la persona.
+- **Datos del cliente** (`Evento.cliente?: DatosCliente | null`: nombre, teléfono tal como
+  se escribe y `acepta`): solo en eventos de Clientes con hora. SQLite: **migración 5**,
+  columna `cliente` (JSON); en la web, dentro del evento. Si el evento deja de ser de
+  Clientes (o es tarea flexible), se borran. En la ficha van plegados
+  (`screens/clientes/CamposCliente.tsx`, "Cliente y recordatorio"); el teléfono se revisa
+  al guardar (`telefonoWhatsapp`: 9 cifras españolas → prefijo 34; otros, con + o 00).
+- **Sin la casilla "Acepta recordatorios por WhatsApp" no se manda nada**: ni aviso ni
+  botón (`puedeRecordar`). Para retirar el consentimiento se desmarca.
+- **Aviso del día antes** (`services/avisos/clientes.ts`, en `GENERADORES`, tipo
+  `recordatorio-cliente`, categoría `cliente`): a la hora de Perfil (10:00 por defecto),
+  "Recuérdale la cita a Laura" con el botón "Enviar por WhatsApp" (reutiliza
+  `ACCION_WHATSAPP`; `DatosAviso.telefono` decide que va al chat del cliente). El botón
+  abre la app, que abre WhatsApp y apunta el envío; tocar el aviso abre la ficha. Uno por
+  cada repetición. Si la cita se crea después de esa hora del día antes, no hay aviso:
+  queda el botón de la ficha. Solo en el móvil (en la web no hay avisos).
+- **Estado de cada envío** (`data/recordatorios.ts`, `organizy:recordatoriosEnviados`, por
+  `"<evento>:<día>"`; se olvidan a los 60 días): `enviado` (al abrir WhatsApp; la app no
+  puede saber si luego se pulsó enviar, por eso existe "No llegué a enviarlo"), `fallido`
+  (no se pudo abrir WhatsApp) o `pendiente` (sin apunte). **Nunca dos veces**: enviado =
+  no vuelve el aviso; reenviar solo a mano ("Volver a enviarlo").
+- **Ficha** (`screens/clientes/RecordatorioCliente.tsx`, en citas de cliente ya guardadas):
+  "Recordatorio enviado ayer a las 11:02" (o el fallo, o "Te aviso hoy a las 10:00 para
+  mandárselo"), el mensaje y el botón verde "Enviar recordatorio por WhatsApp". Usa la
+  fecha y hora guardadas; si los datos del cliente cambiaron en la ficha, los guarda al
+  enviar.
+- **Perfil > Recordatorios a clientes** (`SeccionRecordatorios`,
+  `organizy:recordatoriosClientes`): interruptor general (apagado = sin aviso; el botón de
+  la ficha sigue), hora del aviso, botón "Probar el recordatorio a un cliente" (llega en 5
+  s con la próxima cita que lo acepte) y, plegado, "Lo básico de la protección de datos".
+- **Mensaje** (`textoRecordatorioCliente`), el mismo que la plantilla de la parte B: "Hola
+  Laura, te recuerdo nuestra cita mañana lunes 28 de septiembre a las 10:00 en <dirección>.
+  Si no puedes venir, respóndeme a este mensaje." Lleva la **dirección** (el cliente no
+  sabe qué es "Oficina" en tu perfil); "hoy", "mañana …" o "el …" según cuándo se mande.
+- **Parte B (pendiente, cuando el usuario tenga las cuentas de Meta; solo para el dueño)**:
+  plantilla de categoría "Utilidad" en español (`es_ES`) con 4 variables en el orden del
+  mensaje de arriba ({{1}} nombre, {{2}} "mañana lunes 28 de septiembre", {{3}} hora, {{4}}
+  sitio). Plan: tabla `recordatorios_clientes` en Supabase (solo pendientes de clientes que
+  aceptan; se borran al enviar o al pasar la cita) que la app rellena al guardar citas; Edge
+  Function `recordatorios` con `pg_cron` cada hora que envía con la Cloud API
+  (`/<phone-number-id>/messages`, `type: template`) y guarda `enviado`/`fallido`; la app
+  lo trae y lo enseña con `via: 'automatico'`. Solo para la cuenta del dueño (su usuario
+  anónimo, o una clave suya en los secretos). Secretos: `WHATSAPP_TOKEN` (token permanente
+  de usuario del sistema), `WHATSAPP_PHONE_ID`; nunca en la app ni en git. Precio en España
+  ~0,017 € por plantilla de utilidad entregada (tarifa del 1/07/2026; gratis si el cliente
+  escribió en las 24 h anteriores). El número de prueba de Meta envía gratis a 5 teléfonos.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
@@ -1123,4 +1178,4 @@ borran solos a los 7 días.
 - [x] 7. Alarmas (en Expo Go son avisos con sonido; las alarmas de verdad están programadas pero sin probar hasta que haya build de EAS: ver "Fase 7").
 - [x] 8. Planes con WhatsApp y votación (servidor y función `votar` ya desplegados: ver "Fase 8").
 - [ ] 9. Voz sin abrir la app y widget.
-- [ ] 10. Recordatorios a clientes por WhatsApp Business (opcional).
+- [x] 10. Recordatorios a clientes por WhatsApp (parte A, gratis y sin servidor, hecha el 27/09/2026; la parte B, envío automático con WhatsApp Business, espera a que el usuario cree las cuentas de Meta: ver "Fase 10").

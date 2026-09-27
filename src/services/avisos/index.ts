@@ -7,14 +7,18 @@ import { leerEpocas, suscribirseEpocas } from '@/data/epocas';
 import { leerEventos, moverTareas, suscribirseEventos } from '@/data/eventos';
 import { cargarPerfil, suscribirsePerfil } from '@/data/perfil';
 import { leerPlanes, suscribirsePlanes } from '@/data/planes';
+import { leerRecordatorios, suscribirseRecordatorios } from '@/data/recordatorios';
 import { leerSalidas, suscribirseSalidas } from '@/data/salidas';
 import { tareasPendientes, type Energia } from '@/services/agenda';
 import { nivelEfectivo, suscribirsePermisoAlarmas } from '@/services/alarmas/nativo';
+import { claveEnvio, proximaCita, puedeRecordar } from '@/services/clientes';
+import { mandarRecordatorio } from '@/services/clientes/enviar';
 import { epocaProxima, planificarEpoca } from '@/services/epoca';
 import { claveDia, formatearHora, sumarDias } from '@/services/fechas';
 import { consultarPermiso } from '@/services/permisos';
 import { enlaceWhatsapp } from '@/services/rutas/textos';
 
+import { avisosDeClientes } from './clientes';
 import { avisoDeHoy, DIAS_A_PROGRAMAR, planificarAvisos } from './planificar';
 // En el móvil carga programar.ts (expo-notifications) y en la web programar.web.ts.
 import {
@@ -45,6 +49,32 @@ export async function probarAvisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia' | '
   const ctx = { ahora: new Date(), eventos, perfil, ajustes, salidas: Object.values(salidas) };
   await enviarAvisoDePrueba(avisoDeHoy(tipo, ctx));
 }
+
+// Envía en 5 segundos el recordatorio de la próxima cita con un cliente que lo acepta
+// (fase 10), tal cual llegará el día antes. Devuelve false si no hay ninguna.
+export async function probarRecordatorioCliente(): Promise<boolean> {
+  const { perfil } = await cargarPerfil();
+  if (!perfil) return false;
+  const [eventos, { ajustes }] = await Promise.all([leerEventos(), leerRecordatorios()]);
+  const ahora = new Date();
+  const proximas = eventos
+    .filter(puedeRecordar)
+    .map((evento) => ({ evento, dia: proximaCita(evento, ahora) }))
+    .filter((p): p is { evento: typeof p.evento; dia: string } => p.dia !== null)
+    .sort((a, b) => `${a.dia} ${a.evento.horaInicio}`.localeCompare(`${b.dia} ${b.evento.horaInicio}`));
+  const primera = proximas[0];
+  if (!primera) return false;
+  // El aviso "del día antes" de esa cita, aunque ya esté enviado o el interruptor apagado.
+  const [aviso] = avisosDeClientes(
+    { ajustes: { ...ajustes, activo: true }, envios: {} },
+    [primera.evento],
+    perfil,
+    sumarDias(primera.dia, -1),
+  );
+  if (!aviso) return false;
+  await enviarAvisoDePrueba(aviso);
+  return true;
+}
 export type { RespuestaAviso } from './programar';
 export { horaCierre, textoAntelacion } from './planificar';
 
@@ -60,7 +90,7 @@ export function reprogramarAvisos(): Promise<void> {
     if (!perfil || !bienvenidaCompletada) return;
     const ahora = new Date();
     const hoy = claveDia(ahora);
-    const [eventos, ajustes, { epocas, registro }, energia, salidas, alarmas, adelantos, nivel, planes] =
+    const [eventos, ajustes, { epocas, registro }, energia, salidas, alarmas, adelantos, nivel, planes, recordatorios] =
       await Promise.all([
         leerEventos(),
         leerAjustesAvisos(),
@@ -71,6 +101,7 @@ export function reprogramarAvisos(): Promise<void> {
         leerAdelantos(),
         nivelEfectivo(),
         leerPlanes(),
+        leerRecordatorios(),
       ]);
     // Época dorada activa (o que empieza estos días) con su plan, para sus avisos.
     const epoca = epocaProxima(epocas, hoy, DIAS_A_PROGRAMAR);
@@ -89,6 +120,8 @@ export function reprogramarAvisos(): Promise<void> {
         alarmas: { lista: alarmas.alarmas, ajustes: alarmas.ajustes, adelantos, comoAvisos: nivel === 'avisos' },
         // Planes (fase 8): "Recordar a todos 3 h antes".
         planes,
+        // Recordatorios a clientes (fase 10): el día antes, a la hora elegida.
+        recordatorios,
       }),
     );
   });
@@ -123,6 +156,7 @@ export function iniciarAvisos(): () => void {
     suscribirseAdelantos(reprogramarEnUnMomento),
     suscribirsePermisoAlarmas(reprogramarEnUnMomento),
     suscribirsePlanes(reprogramarEnUnMomento), // "Recordar a todos 3 h antes" (fase 8)
+    suscribirseRecordatorios(reprogramarEnUnMomento), // recordatorios a clientes (fase 10)
   ];
   // Cada vez que se vuelve a abrir la app: así siempre hay avisos para los próximos días.
   const app = AppState.addEventListener('change', (estado) => {
@@ -170,6 +204,15 @@ export async function atenderRespuesta({
   // persona elige a quién mandarlo y lo envía ella. Detrás queda la ruta en el Mapa.
   if (accion === 'retraso') {
     await Linking.openURL(enlaceWhatsapp()).catch(() => {});
+  }
+  // "Enviar por WhatsApp" (cliente, fase 10): abre el chat del cliente con el recordatorio
+  // escrito y apunta el envío, así la ficha lo enseña y no se vuelve a avisar.
+  if (accion === 'whatsapp' && datos.mensaje && datos.telefono && datos.destino.pantalla === 'evento') {
+    await mandarRecordatorio(
+      claveEnvio(datos.destino.id, datos.dia),
+      enlaceWhatsapp(datos.mensaje, datos.telefono),
+    ).catch(() => {});
+    return datos.destino;
   }
   // "Recordar por WhatsApp" (planes, fase 8): lo mismo, con el recordatorio del plan.
   if (accion === 'whatsapp' && datos.mensaje) {

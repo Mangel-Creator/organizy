@@ -8,7 +8,7 @@ import { crearEjemplos } from './ejemplos';
 import { repositorio } from './repositorio';
 import type { Evento } from './tipos';
 
-export type { Evento, LugarEvento, Repeticion, TipoEvento } from './tipos';
+export type { DatosCliente, Evento, LugarEvento, Repeticion, TipoEvento } from './tipos';
 
 // Eventos del calendario. Se leen todos del dispositivo una vez y se guardan
 // en memoria para que todas las pantallas vean lo mismo al momento.

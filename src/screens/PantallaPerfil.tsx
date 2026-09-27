@@ -32,6 +32,7 @@ import { MensajeError } from './formulario-perfil/MensajeError';
 import { TarjetaPermiso } from './formulario-perfil/permisos';
 import { SeccionAvisos } from './perfil/SeccionAvisos';
 import { SeccionEpocas } from './perfil/SeccionEpocas';
+import { SeccionRecordatorios } from './perfil/SeccionRecordatorios';
 
 type EstadosPermisos = Record<Permiso, EstadoPermiso | undefined>;
 
@@ -177,6 +178,14 @@ export function PantallaPerfil() {
         Avisos
       </Titulo>
       <SeccionAvisos
+        permiso={permisos.notificaciones}
+        alActivarPermiso={() => activar('notificaciones')}
+      />
+
+      <Titulo nivel={2} style={estilos.seccion}>
+        Recordatorios a clientes
+      </Titulo>
+      <SeccionRecordatorios
         permiso={permisos.notificaciones}
         alActivarPermiso={() => activar('notificaciones')}
       />

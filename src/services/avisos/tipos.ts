@@ -19,7 +19,8 @@ export type TipoAviso =
   | 'alarma'
   | 'alarma-salida'
   | 'dormir'
-  | 'plan-recordatorio'; // "Recordar a todos 3 h antes" (fase 8)
+  | 'plan-recordatorio' // "Recordar a todos 3 h antes" (fase 8)
+  | 'recordatorio-cliente'; // el día antes de una cita con un cliente (fase 10)
 
 // Los que van primero al recortar a MAX_AVISOS: una alarma nunca se queda fuera.
 export const TIPOS_ALARMA: readonly TipoAviso[] = ['alarma', 'alarma-salida'];
@@ -34,7 +35,7 @@ export type Destino =
 
 // Botones dentro de la notificación. Cada categoría se registra una vez al
 // arrancar (services/avisos/programar.ts).
-export type CategoriaAviso = 'cierre-dia' | 'salida' | 'alarma' | 'alarma-salida' | 'plan';
+export type CategoriaAviso = 'cierre-dia' | 'salida' | 'alarma' | 'alarma-salida' | 'plan' | 'cliente';
 
 export const ACCION_A_MANANA = 'a-manana';
 export const ACCION_ABRIR = 'abrir';
@@ -45,7 +46,8 @@ export const ACCION_POSPONER = 'posponer';
 export const ACCION_PARAR = 'parar';
 export const ACCION_COMO_LLEGAR = 'como-llegar';
 export const MINUTOS_POSPONER = 5;
-// Recordatorio de un plan (fase 8): abre WhatsApp con el recordatorio escrito.
+// Recordatorio de un plan (fase 8) o a un cliente (fase 10): abre WhatsApp con el
+// recordatorio escrito (el de un cliente, directamente en su chat).
 export const ACCION_WHATSAPP = 'whatsapp';
 
 export type AvisoPlanificado = {
@@ -58,7 +60,8 @@ export type AvisoPlanificado = {
   cuerpo: string;
   destino: Destino;
   categoria?: CategoriaAviso;
-  mensaje?: string; // texto para WhatsApp (recordatorio de un plan)
+  mensaje?: string; // texto para WhatsApp (recordatorio de un plan o a un cliente)
+  telefono?: string; // chat de WhatsApp al que va el mensaje (cliente, fase 10)
 };
 
 // Lo que se guarda dentro de la notificación para saber qué hacer al tocarla.
@@ -68,4 +71,5 @@ export type DatosAviso = {
   dia: ClaveDia;
   destino: Destino;
   mensaje?: string;
+  telefono?: string;
 };
