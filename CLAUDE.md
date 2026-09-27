@@ -9,7 +9,10 @@ alarmas. En español de España.
 ## Para quién y dónde funciona (decidido el 23/09/2026)
 
 - **Para todo el mundo**, y **cada usuario solo ve sus datos**: todo se guarda en su
-  dispositivo (AsyncStorage/SQLite). No hay servidor con datos de usuarios.
+  dispositivo (AsyncStorage/SQLite). No hay servidor con datos de usuarios. **Única
+  excepción** (fase 8): para que los amigos voten un plan, el plan (qué es, las horas y
+  el número de invitados) y los nombres que escriben al votar están en Supabase y se
+  borran solos 7 días después (ver "Fase 8").
 - **Un solo código, dos versiones:**
   - **Web** para el resto de la gente: https://mangel-creator.github.io/organizy/
     Se publica sola con GitHub Actions (`.github/workflows/pages.yml`) al subir a
@@ -179,6 +182,18 @@ sesión que fuera**:
   subida a `main`, poniendo esa `runtimeVersion` solo durante la publicación; necesita
   el secreto `EXPO_TOKEN` de GitHub, que crea y guarda el propio usuario. Ver "Cómo
   prueba el usuario en el iPhone".
+- 26/09/2026 — Fase 8 (Planes), elegido por el usuario:
+  - La **página de votación va dentro de la propia web de GitHub Pages**
+    (`/organizy/votar#código`), sin Vercel ni Netlify ni cuentas nuevas. Funciona sin la
+    bienvenida y sin guardar nada en el móvil del invitado.
+  - **Aviso cuando alguien vota**: push en Expo Go (iPhone) y en la app propia; en la web
+    no hay avisos, pero al abrir Planes (o volver a la web) los votos nuevos salen
+    marcados.
+  - **El botón "Enviar por WhatsApp" es verde de WhatsApp** (`colores.whatsapp`,
+    `#25D366`, texto oscuro encima): **segunda excepción** a "cada color significa una
+    sola cosa", como los colores del tráfico del Mapa. Solo en los botones de WhatsApp.
+  - El plan y sus votos se **borran del servidor 7 días después** de la última hora
+    propuesta (o de la elegida).
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -286,6 +301,8 @@ src/
     mapa/              Piezas del Mapa (MapaRuta móvil y web, destinos, tarjetas, leyenda).
     alarmas/           Piezas de Alarmas (fila, tarjeta de la inteligente, salidas,
                        hora de dormir, aviso del nivel).
+    planes/            Piezas de Planes (botón de WhatsApp, fila de votos, hueco de
+                       Semana con "Proponer plan").
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
@@ -294,7 +311,8 @@ src/
                        epocas/ (épocas doradas y bloques marcados),
                        supabase.ts (conexión con el servidor propio),
                        salidas.ts y horasPunta.ts (tráfico calculado), radares/ (DGT),
-                       alarmas.ts (alarmas, ajustes y adelantos de la inteligente).
+                       alarmas.ts (alarmas, ajustes y adelantos de la inteligente),
+                       planes.ts (planes con votación y sus votos).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        lugares.ts (texto -> coordenadas), permisos.ts,
                        agenda/ (huecos, carga, resumen, reparto; con pruebas),
@@ -305,7 +323,9 @@ src/
                        punta, navegación por voz; con pruebas), ubicacion.ts (dónde
                        estás, sin preguntar), voz.ts (hablar en voz alta),
                        alarmas/ (cuándo suena cada alarma, inteligente, alarmas de verdad
-                       y Atajo de la web; con pruebas).
+                       y Atajo de la web; con pruebas),
+                       planes/ (horas sugeridas, recuento, mensajes de WhatsApp,
+                       servidor y votación; con pruebas), contactos.ts (agenda).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 ```
 
@@ -336,6 +356,7 @@ no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de
 | "Yo" (personal) | `yo` | `#1A1C24` (negro) |
 | Barrita de carga normal y borde de huecos | `cargaNormal` | `#8A8374` (gris) |
 | Solo la Época dorada (franja, bloques de estudio, días con hito) | `dorado` | `#B7892B` (texto oscuro encima) |
+| Solo los botones de WhatsApp (excepción del 26/09) | `whatsapp` | `#25D366` (texto oscuro encima) |
 
 Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
@@ -689,7 +710,8 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 
 Un solo proyecto de Supabase para todo lo que necesita claves secretas (fases 5, 6, 8...).
 Los datos del usuario siguen solo en su dispositivo: el servidor no guarda frases ni
-eventos, solo cuenta usos.
+eventos, solo cuenta usos. La excepción son los planes con votación (fase 8), que se
+borran solos a los 7 días.
 
 - **Cuentas**: las crea y administra el usuario (supabase.com y console.anthropic.com).
   Nunca le pidas contraseñas ni claves secretas: las escribe él en el panel de Supabase
@@ -712,7 +734,10 @@ eventos, solo cuenta usos.
   límite por usuario y día y otro global). Cada función lleva `verify_jwt = false` en
   `supabase/config.toml` (comprueba el usuario por dentro; así pasa el preflight CORS).
 - **Base de datos**: `supabase/migrations/` (tabla `usos_diarios` y función `sumar_uso`,
-  que solo puede llamar el servidor). Se aplica pegando el SQL en el SQL Editor del panel.
+  que solo puede llamar el servidor; tablas de planes de la fase 8). Se aplica pegando el
+  SQL en el SQL Editor del panel o, con la sesión de la CLI, con
+  `npx supabase db query --linked --project-ref <ref> --file <archivo.sql>` (así se aplicó
+  la de la fase 8). Mirar qué hay: `npx supabase db query --linked --project-ref <ref> "select ..."`.
 - **Desplegar** (desde `C:\proyectos\organizy`, con la sesión de la CLI iniciada por el
   usuario con `npx supabase login`): `npx supabase functions deploy <nombre>
   --project-ref <ref> --use-api`.
@@ -944,6 +969,88 @@ eventos, solo cuenta usos.
     "Pantalla completa" en Ajustes. El mapa en Android necesitará la clave de Google Maps
     (ver "Fase 6"). El usuario no tiene Android (26/09/2026).
 
+## Fase 8: planes con WhatsApp y votación (decisiones)
+
+- **WhatsApp solo se abre con el mensaje escrito** (`wa.me/?text=`, `enlaceWhatsapp` de
+  `services/rutas/textos.ts`): la persona elige el chat o el grupo y lo envía ella. La app
+  nunca lee ni escribe en sus chats. En la web, `prepararWhatsapp()`
+  (`screens/planes/piezas.tsx`) abre la pestaña al tocar y le pone la dirección cuando el
+  servidor responde (si no, el navegador la bloquea); si aun así se bloquea, navega en la
+  misma pestaña. No hay conector (MCP) oficial de WhatsApp: se le explicó al usuario el
+  26/09 y queda para la fase 10 (WhatsApp Business, vía oficial de Meta).
+- **Pestaña Planes** (`PantallaPlanes`): "Nuevo plan"; "Votando" (con "N nuevos" en azul),
+  "Cerrados" y, plegados, "Pasados" (`situacionPlan`). Trae los votos al entrar.
+- **Nuevo plan** (`/plan-nuevo`, `PantallaPlanNuevo`), corto y visual: casillas "Con amigos"
+  / "Con un cliente", "¿Qué?", horas (de 2 a 4, casillas grandes con día y hora en Plex
+  Mono; vienen marcadas las 3 primeras sugerencias; "Otra hora" plegado), "¿Con quién?"
+  (nombres a mano o "Elegir de la agenda"), "Más ajustes" (cuánto dura: 2 h con amigos y
+  1 h con cliente; "Recordar a todos 3 h antes", solo en el móvil; tu nombre en la
+  invitación, el del perfil), vista previa y "Enviar por WhatsApp". Desde Semana llega
+  con `?dia=...&hora=...` y esa hora ya marcada.
+- **Horas sugeridas** (`sugerirHoras`, puro, con pruebas): una por día, en días distintos,
+  sin pisar eventos y dentro de la ventana del día; hoy solo con 2 h de margen. Con amigos,
+  entre semana después de trabajar (21:00, 20:30, 20:00…) y el fin de semana comida o cena
+  (14:00, 21:00…); con clientes, solo días de trabajo y en su horario (10:00, 11:00, 12:00…).
+- **Semana**: los huecos de 2 h o más del día elegido (hoy, desde ahora; con la Época
+  dorada, descontando sus bloques) salen como `HuecoPlan` con "Proponer plan"
+  (`huecosParaPlan`, `horaParaHueco`: una hora habitual dentro del hueco o su principio).
+- **Contactos** (`services/contactos.ts`, `expo-contacts`, incluido en Expo Go): al tocar
+  "Elegir de la agenda" sale primero una tarjeta que explica para qué ("solo el nombre de
+  quien elijas; no guardo ni envío tu agenda"); luego el permiso y el selector del sistema
+  (`Contact.presentPicker`). Solo se guarda el nombre de pila. Si está bloqueado, "Abrir
+  Ajustes". En la web no sale: nombres a mano. Frase del permiso en `app.json`.
+- **Servidor** (`supabase/migrations/20260926000000_planes.sql`, ya aplicada):
+  - Tablas `planes` (con `codigo` de 32 caracteres al azar, `creador` = usuario anónimo,
+    título, tipo, organizador, `personas` = cuántos invitó —no sus nombres—, duración,
+    estado, hora elegida, `aviso_token` y `borrar_el`), `horas`, `invitados` (nombre y
+    `clave` normalizada, única por plan) y `votos`.
+  - **RLS**: el creador ve, cambia y borra sus planes y horas y lee invitados y votos;
+    nadie más toca las tablas. Límites con disparadores: 30 planes al día por persona, 4
+    horas por plan, borrado como tarde a los 90 días.
+  - **Borrado**: `pg_cron` cada noche borra los planes con `borrar_el` pasado (7 días
+    después de la última hora propuesta, o de la elegida al cerrar).
+  - **Función `votar`** (sin sesión, `verify_jwt = false`; la llave es el código):
+    acciones `ver` y `votar`. **Votos duplicados**: el mismo nombre (sin tildes, mayúsculas
+    ni espacios de más, `claveNombre`) cambia su voto en vez de sumar otro. Límite: 60
+    votos al día por plan y 5000 en total (`VOTAR_LIMITE_*`), 50 invitados por plan. Al
+    votar, manda el push al organizador por el servicio de Expo (sin clave).
+  - El recuento (`supabase/functions/_shared/recuento.ts`) es el mismo para la función y la
+    app (`services/planes/votos.ts` lo reexporta): "Ganan las 21:00 con 3 de 3." ("de N" =
+    invitados o votantes, lo que sea mayor; con horas en varios días, "las 21:00 del sáb
+    3"; empate: "Empatan…").
+- **En la app** (`services/planes/`): `crearPlan` (crea en el servidor con la sesión
+  anónima y lo guarda en el móvil), `actualizarPlanes` (trae los votos; `iniciarPlanes()`
+  en `_layout`: al abrir, al volver a la app y al llegar un push de voto con la app
+  abierta), `cerrarPlan`, `borrarPlan`, `cambiarRecordar`. Los planes se guardan en
+  AsyncStorage también en el móvil (`data/planes.ts`, `organizy:planes`): son pocos y el
+  historial sigue aunque el servidor los borre (`enServidor: false`).
+- **Página de votación** (`/votar#código`, `PantallaVotar`, fuera de las rutas protegidas):
+  "Miguel te invita a…", horas con casillas, votos y nombres de cada una, "Tu nombre" y
+  "Votar"; después, "Hecho, Laura. Tu voto ya cuenta." y "Cambiar mi voto". Cerrado: "Ya
+  está decidido" con la hora. Habla con la función con un `fetch` normal
+  (`services/planes/votacion.ts`): sin sesión ni nada guardado en el navegador. El código
+  va tras `#` (no llega a los registros de GitHub) y se lee con `useSyncExternalStore`.
+- **Push "Laura ha votado. Ganan las 21:00 con 3 de 3. ¿La cerramos?"**: el token de Expo
+  del móvil se guarda con cada plan al crearlo (`tokenDeAvisos`, solo con permiso de
+  avisos). Funciona en Expo Go de iPhone (también la de EAS Update) y en la app propia (en
+  iPhone, con la cuenta de Apple); **no en Expo Go de Android** (desde el SDK 53). Al
+  tocarlo se abre el plan (destino `plan`). En la web, los votos nuevos al abrir Planes.
+- **Ficha del plan** (`/plan?id=`, `PantallaPlan`): votos por hora (se elige la hora con
+  botones redondos; por defecto la que gana), "Cerrar: lunes 28 sept a las 21:00" (crea el
+  evento Amigos o Cliente con la duración del plan y "Con Laura y Javi" en las notas, y
+  avisa al servidor para que la página enseñe la hora), "Enviar la confirmación"
+  ("Cerrado: Cena de viernes, el viernes 2 de octubre a las 21:00. Nos vemos."),
+  "Recordar a todos 3 h antes", "Recordar ahora por WhatsApp", "Ver en el calendario" y
+  "Borrar plan" (el evento se queda).
+- **Recordatorio 3 h antes** (`services/avisos/planes.ts`, en `GENERADORES`, tipo
+  `plan-recordatorio`, categoría `plan`): aviso local "En 3 horas: Cena de viernes" con el
+  botón "Recordar por WhatsApp", que abre la app y esta abre WhatsApp con "Recordatorio:
+  Cena de viernes, hoy a las 21:00. Nos vemos." (`DatosAviso.mensaje`). Sale de la hora
+  del evento del calendario (si lo mueves, se mueve). Solo en el móvil.
+- Probado el 26/09 en la web a tamaño móvil: crear, abrir WhatsApp con el mensaje, votar
+  desde un navegador sin bienvenida, ver "1 nuevo", cerrar (evento en el calendario y
+  página en "Ya está decidido") y "Proponer plan" en Semana.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
@@ -954,6 +1061,6 @@ eventos, solo cuenta usos.
 - [x] 5. Captura rápida con IA. Supabase montado y funciones desplegadas (proyecto `hwemrpexabisyueyizjz`). Falta solo la clave de Anthropic: el usuario la pondrá cuando la app esté terminada (ver "Decisiones del usuario", 26/09/2026).
 - [x] 6. Mapa, tráfico, radares y rutas (funcionando con TomTom desde el 27/09/2026: ver "Fase 6").
 - [x] 7. Alarmas (en Expo Go son avisos con sonido; las alarmas de verdad están programadas pero sin probar hasta que haya build de EAS: ver "Fase 7").
-- [ ] 8. Planes con WhatsApp y votación.
+- [x] 8. Planes con WhatsApp y votación (servidor y función `votar` ya desplegados: ver "Fase 8").
 - [ ] 9. Voz sin abrir la app y widget.
 - [ ] 10. Recordatorios a clientes por WhatsApp Business (opcional).
