@@ -18,7 +18,24 @@ export async function contarAvisosProgramados(): Promise<number> {
 
 export async function enviarAvisoDePrueba(_aviso?: AvisoPlanificado): Promise<void> {}
 
-export type RespuestaAviso = { accion: 'tocar' | 'a-manana' | 'abrir'; datos: DatosAviso };
+export async function posponerAviso(
+  _titulo: string,
+  _cuerpo: string,
+  _datos: DatosAviso,
+  _categoria: string | null,
+): Promise<Date> {
+  return new Date();
+}
+
+export type AccionAviso = 'tocar' | 'a-manana' | 'abrir' | 'retraso' | 'posponer' | 'parar' | 'como-llegar';
+
+export type RespuestaAviso = {
+  accion: AccionAviso;
+  datos: DatosAviso;
+  titulo: string;
+  cuerpo: string;
+  categoria: string | null;
+};
 
 export function escucharRespuestas(_alResponder: (respuesta: RespuestaAviso) => void): () => void {
   return () => {};
