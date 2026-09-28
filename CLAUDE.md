@@ -254,7 +254,7 @@ sesión que fuera**:
   `app.json`; no se cambia después de publicar). Lo que pide cada tienda está en "Fase 7"
   > "Al subir a las tiendas". Las cuentas (Apple 99 €/año, Google Play 25 $ una vez) las
   crea él cuando decida publicar.
-- 28/09/2026 — **Organizy grupal (fase 14)**: modo **activable** en Perfil (apagado por
+- 28/09/2026 — **Organizy grupal (fase 15)**: modo **activable** en Perfil (apagado por
   defecto; sin activarlo la app no cambia) para que una empresa use Organizy con todos sus
   empleados: calendario de empresa, turnos, tareas asignadas y disponibilidad del equipo.
   **La empresa no ve nada personal**: solo lo de trabajo; cada empleado puede, si quiere,
@@ -262,8 +262,8 @@ sesión que fuera**:
   Google o Microsoft** del trabajo; el usuario pidió que **dar de alta a la gente no sea un
   lío para el jefe** (dominio propio con aprobación, o lista de correos / enlace). Lo de la
   empresa se guarda en Supabase: será una **excepción más** a "datos solo en el
-  dispositivo" (la apunta la sesión 14 con el detalle). Prompt en
-  `C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-14-organizy-grupal.md`.
+  dispositivo" (la apunta la sesión 15 con el detalle). Prompt en
+  `C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-15-organizy-grupal.md`.
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -1546,4 +1546,4 @@ borran solos a los 7 días.
 - [ ] 9. Voz sin abrir la app y widget.
 - [x] 10. Recordatorios a clientes por WhatsApp (parte A, gratis y sin servidor, hecha el 27/09/2026; la parte B, envío automático con WhatsApp Business, espera a que el usuario cree las cuentas de Meta: ver "Fase 10").
 - [x] 11. Correo: plazos al calendario y resúmenes con aviso (27/09/2026; "Vincular con Gmail / Outlook" y QR del ayudante el 28/09; falta que el usuario registre Organizy en Google y Microsoft y lo pruebe: ver "Fase 11").
-- [ ] 14. Organizy grupal: modo empresa activable (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-14-organizy-grupal.md).
+- [ ] 15. Organizy grupal: modo empresa activable (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-15-organizy-grupal.md).
