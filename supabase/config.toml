@@ -443,3 +443,9 @@ verify_jwt = false
 # la sesión anónima por dentro, como la captura.
 [functions.epoca]
 verify_jwt = false
+
+# "Vincular con Gmail / Outlook" (fase 11). Recibe la vuelta del inicio de sesión de
+# Google y Microsoft (sin sesión: la llave es el "state"), la revisión cada 5 min de
+# pg_cron (con su contraseña) y las peticiones de la app (comprueba la sesión anónima).
+[functions.correo-cuentas]
+verify_jwt = false

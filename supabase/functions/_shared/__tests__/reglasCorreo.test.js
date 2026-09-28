@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
-// Reglas del ayudante de Gmail (sin IA). El archivo es el mismo que se pega en Google.
-const reglas = require('../organizy-correo.js');
+// Reglas de los correos (sin IA): las usan el servidor y el ayudante de Gmail.
+import * as reglas from '../reglasCorreo.js';
 
 // Domingo 27 de septiembre de 2026, 10:00.
 const RECIBIDO = new Date(2026, 8, 27, 10, 0);

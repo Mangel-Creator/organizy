@@ -235,6 +235,20 @@ sesión que fuera**:
   (revisar que la captura y el correo también la lleven); hará falta una pantalla de permiso
   formal (una vez, con "Ahora no") y mencionarlo en la política de privacidad. Alternativa futura, solo para la app propia: la
   IA del propio móvil (Apple Intelligence o la de Android), gratis y sin salir del teléfono.
+- 28/09/2026 — Fase 11, **vincular el correo solo iniciando sesión** (corrige en parte la
+  entrada del 27/09): botones **"Vincular con Gmail"** y **"Vincular con Outlook"** (OAuth de
+  Google y Microsoft; el usuario solo inicia sesión) y, además, el **ayudante de Gmail con un
+  QR** que vincula sin pegar nada. Eligió **avisos al momento**, así que se acepta como
+  **cuarta excepción** a "los datos solo en el dispositivo": el servidor guarda, **cifrado**,
+  el permiso para leer el correo (refresh token, solo lectura; nunca la contraseña) y **7
+  días de títulos y resúmenes**; se borra todo al quitar la cuenta. **iCloud y la app Mail
+  del iPhone no se pueden vincular** (Apple no lo deja): se explica cómo reenviarlos a Gmail
+  u Outlook. Para que los botones funcionen, **el usuario registra una vez Organizy en Google
+  Cloud y en Microsoft Entra** y guarda sus claves en los secretos de Supabase (guía "Fase 11 -
+  Correo.md", parte A); mientras tanto dicen "Aún no está activado". Gmail va en modo
+  "prueba" de Google: solo para los usuarios de prueba que él añada (hasta 100) y hay que
+  volver a entrar cada 7 días; para abrirlo a todo el mundo haría falta la verificación de
+  Google con auditoría de pago.
 - 28/09/2026 — **Dejar la app preparada para subirla a la App Store y a Google Play.**
   Identificador de la app en las dos tiendas: `com.mangelcreator.organizy` (en
   `app.json`; no se cambia después de publicar). Lo que pide cada tienda está en "Fase 7"
@@ -353,6 +367,7 @@ src/
                        Semana con "Proponer plan").
     clientes/          Datos del cliente en la ficha y su recordatorio por WhatsApp.
     tareas/            Matriz de Eisenhower: selector de cuadrante y vista "Matriz" de Hoy.
+    correo/            Piezas de Resúmenes (fila de correo, "Vincular con…", tus cuentas).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
@@ -388,12 +403,13 @@ src/
                        servidor y votación; con pruebas), contactos.ts (agenda),
                        clientes/ (recordatorios a clientes: teléfono, mensaje, estado;
                        con pruebas),
-                       correo/ (resúmenes de correo: traerlos, plazos como tareas; con
-                       pruebas),
+                       correo/ (resúmenes de correo: traerlos del servidor y del ayudante,
+                       vincular y quitar cuentas, plazos como tareas; con pruebas),
                        servicios/ (Reservar servicios: enlaces de Booksy; con pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
-gmail/                 Ayudante de Gmail (Google Apps Script) que el usuario pega en su
-                       cuenta de Google, con sus pruebas. Ver "Fase 11".
+gmail/                 Ayudante de Gmail (Google Apps Script): ayudante.js (lo de Google) y
+                       organizy-correo.js, que se GENERA con `npm run ayudante-gmail` juntando
+                       ayudante.js y las reglas del servidor. Ver "Fase 11".
 ```
 
 El alias `@/` apunta a `src/`.
@@ -831,7 +847,8 @@ borran solos a los 7 días.
   límite por usuario y día y otro global). Cada función lleva `verify_jwt = false` en
   `supabase/config.toml` (comprueba el usuario por dentro; así pasa el preflight CORS).
 - **Base de datos**: `supabase/migrations/` (tabla `usos_diarios` y función `sumar_uso`,
-  que solo puede llamar el servidor; tablas de planes de la fase 8). Se aplica pegando el
+  que solo puede llamar el servidor; tablas de planes de la fase 8; cuentas de correo
+  vinculadas de la fase 11). Se aplica pegando el
   SQL en el SQL Editor del panel o, con la sesión de la CLI, con
   `npx supabase db query --linked --project-ref <ref> --file <archivo.sql>` (así se aplicó
   la de la fase 8). Mirar qué hay: `npx supabase db query --linked --project-ref <ref> "select ..."`.
@@ -1321,8 +1338,12 @@ borran solos a los 7 días.
   Funciones para el usuario: `instalar`, `probarAviso`, `olvidarMoviles`, `desinstalar`.
   **Si cambias el script**, el usuario tiene que pegarlo otra vez y hacer "Gestionar
   implementaciones > editar > Nueva versión" (así la URL no cambia): díselo.
-- **Reglas sin IA** (en el mismo archivo, sin nada de Google; Jest las prueba en
-  `gmail/__tests__`, con `module.exports` solo si existe `module`): fecha límite = una
+- **Reglas sin IA** (`supabase/functions/_shared/reglasCorreo.js`, módulo ES sin nada de
+  Google ni de Deno, con pruebas en `_shared/__tests__`): las usan el servidor y el ayudante.
+  **El ayudante que se pega en Google se genera**: `npm run ayudante-gmail`
+  (`scripts/generar-ayudante-gmail.js`) junta `gmail/ayudante.js` y las reglas sin los
+  "export" en `gmail/organizy-correo.js`; una prueba (`gmail/__tests__`) falla si se cambia
+  algo y no se genera. Nunca edites `organizy-correo.js` a mano. Fecha límite = una
   fecha (05/10, 5 de octubre, 5 oct; "mañana", "el viernes" o "a final de mes" solo con
   palabra fuerte) a menos de 60 letras después de una palabra de plazo (fecha límite,
   plazo, vence, antes del, entregar...) o 25 antes, en la misma frase, de hoy a un año.
@@ -1355,6 +1376,55 @@ borran solos a los 7 días.
   enlace; conectado, "Con fecha límite" (barra de "Yo") y el resto por días (Hoy, Ayer, lun
   5 oct), con "Nuevo" hasta salir de la pantalla; al tocar uno, "Abrir en Gmail", "Ver la
   tarea" y "No es un plazo"; "Más ajustes": otras cuentas y desconectar.
+- **QR del ayudante** (28/09): al abrir su URL `/exec` en el navegador (`doGet`), el ayudante
+  enseña un QR (qrcodejs de cdnjs) a `https://mangel-creator.github.io/organizy/resumenes#ayudante=<url>`;
+  Resúmenes lo lee (también `?ayudante=`), se conecta solo y limpia la dirección. Abre la
+  web: Expo Go no garantiza abrirse desde un enlace con una publicación de EAS Update
+  (`Linking.createURL` no es estable ahí), así que en Expo Go se pega el enlace.
+- **"Vincular con Gmail / Outlook"** (28/09, función `correo-cuentas`, desplegada; tablas en
+  `supabase/migrations/20260927000000_correo_cuentas.sql`, ya aplicada):
+  - **Tablas** `correo_cuentas` (usuario anónimo, proveedor, email, `llave` = refresh token
+    cifrado con AES-GCM y el secreto `CORREO_CLAVE_CIFRADO`, tokens de avisos (5), estado
+    `ok`/`caducada`, última revisión e ids vistos), `correo_estados` (un "state" por intento
+    de vincular, 15 min) y `correo_resumenes` (7 días). RLS sin políticas: solo la función.
+    Máximo 5 cuentas por persona. `pg_cron` limpia cada noche.
+  - **Vincular**: la app manda `empezar` (proveedor, vuelta y token de avisos) → URL de Google
+    (`gmail.readonly`, `access_type=offline`, `prompt=consent`) o Microsoft (`Mail.Read`,
+    `offline_access`, `User.Read`, endpoint `common`). La vuelta (GET con `code` y `state`)
+    canjea el código, cifra y guarda la llave, recoge el último día sin avisar y redirige a
+    la vuelta con `?correo=ok&cuenta=…` (o `cancelado`/`error`). Vueltas permitidas
+    (`vueltaValida`): `organizy://…`, `https://mangel-creator.github.io/organizy/…` y
+    `http://localhost:*`. En el móvil (también Expo Go) se abre con
+    `WebBrowser.openAuthSessionAsync(url, 'organizy://correo-vinculado')`: la ventana del
+    sistema se cierra sola al ver ese esquema. En la web, la página se va a Google y vuelve a
+    `/resumenes`.
+  - **Revisión cada 5 min**: `pg_cron` → `lanzar_revision_correo()` → `pg_net` POST
+    `{accion:'revisar'}` con la cabecera `x-organizy-cron` (contraseña en la bóveda,
+    `vault` "correo_cron", y en el secreto `CORREO_CRON_SECRETO`; no está en git). Por cuenta:
+    renueva la llave (Microsoft da otra y se guarda), lista la bandeja (Gmail
+    `category:primary`; Outlook solo "Prioritarios", `inferenceClassification`), analiza con
+    las reglas o Claude y avisa por Expo como el ayudante. `invalid_grant` o 401 → cuenta
+    `caducada` y aviso "Vuelve a entrar en Gmail". Ids de Outlook acortados (`o:` + SHA-256).
+  - **Secretos** (los pone el usuario; guía, parte A): `GOOGLE_CLIENT_ID`/`_SECRET` y
+    `MICROSOFT_CLIENT_ID`/`_SECRET`. Sin ellos, `estado` devuelve `proveedores` en false y
+    los botones dicen "Aún no está activado". Redirección registrada en los dos:
+    `https://hwemrpexabisyueyizjz.supabase.co/functions/v1/correo-cuentas`.
+  - **En la app**: `services/correo/servidor.ts` (`estadoEnServidor`, `empezarEnServidor`,
+    `quitarEnServidor`), `vincularCuenta`, `quitarCuenta` y `actualizarCorreos({ servidor })`,
+    que junta las dos vías (solo pregunta al servidor si hay cuentas, o al entrar en
+    Resúmenes). `organizy:cuentasCorreo` (en `NO_VIAJAN`: la sesión es de cada dispositivo).
+    Cada correo del servidor lleva `origen` y `cuenta`: "Abrir en Outlook" y, al quitar la
+    cuenta, se van sus resúmenes (las tareas se quedan).
+  - **Pantalla**: sin nada vinculado, "Vincula tu correo" con filas Gmail, Outlook, "iCloud o
+    Mail del iPhone" y "Otro correo" (estas dos explican el reenvío), la frase de qué se
+    guarda y qué se envía a la IA, y plegado "Sin guardar nada en el servidor" (ayudante:
+    QR o enlace). Con algo vinculado, "Tus cuentas" (revisado hace…, "Volver a entrar" en
+    granate si caducó, "Quitar" con confirmación) y "Vincular otra cuenta" plegado.
+  - Probado el 28/09: las funciones contra Supabase (vuelta sin datos, revisión sin y con la
+    contraseña de la bóveda, `estado` y `empezar` sin configurar) y la pantalla en la web a
+    tamaño móvil con el servidor real y con respuestas simuladas (cuentas, caducada, plazo
+    como tarea, "Abrir en Outlook", quitar). **Falta**: el paso A del usuario y probarlo con
+    su Gmail y su Outlook de verdad.
 - **Aviso de la víspera** (`services/avisos/correos.ts`, tipo `plazo-correo`, interruptor
   `plazosCorreo` en Perfil > Avisos): "Mañana vence: …" a la hora de levantarse, si la
   tarea sigue sin hacer.
@@ -1465,4 +1535,4 @@ borran solos a los 7 días.
 - [x] 8. Planes con WhatsApp y votación (servidor y función `votar` ya desplegados: ver "Fase 8").
 - [ ] 9. Voz sin abrir la app y widget.
 - [x] 10. Recordatorios a clientes por WhatsApp (parte A, gratis y sin servidor, hecha el 27/09/2026; la parte B, envío automático con WhatsApp Business, espera a que el usuario cree las cuentas de Meta: ver "Fase 10").
-- [x] 11. Correo: plazos al calendario y resúmenes con aviso (hecho el 27/09/2026; falta que el usuario instale el ayudante en su Gmail: ver "Fase 11").
+- [x] 11. Correo: plazos al calendario y resúmenes con aviso (27/09/2026; "Vincular con Gmail / Outlook" y QR del ayudante el 28/09; falta que el usuario registre Organizy en Google y Microsoft y lo pruebe: ver "Fase 11").

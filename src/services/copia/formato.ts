@@ -43,6 +43,9 @@ const NO_VIAJAN = new Set([
   // van en un archivo: en el móvil nuevo se vuelve a pegar el enlace y se traen solos.
   'correo',
   'correos',
+  // Las cuentas vinculadas son de la sesión de cada dispositivo en el servidor: en otro
+  // móvil se vuelven a vincular.
+  'cuentasCorreo',
   // Enlaces de otros calendarios: también son una llave. Los eventos traídos sí viajan.
   'calendarios',
 ]);

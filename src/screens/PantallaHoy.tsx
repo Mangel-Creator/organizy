@@ -258,7 +258,7 @@ export function PantallaHoy() {
       lectura: epoca ? `Época dorada, ${textoQuedan(epoca, hoy)}. Abrir` : 'Época dorada. Abrir',
     },
     // Resúmenes de correo (fase 11) y Reservar servicios (peluquería, Booksy...).
-    correo.conexion
+    correo.conexion || correo.cuentas.length > 0
       ? {
           clave: 'resumenes',
           icono: correosNuevos > 0 ? 'mail-unread-outline' : 'mail-outline',

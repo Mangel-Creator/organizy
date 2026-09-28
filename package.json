@@ -67,7 +67,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "radares": "node scripts/actualizar-radares.mjs"
+    "radares": "node scripts/actualizar-radares.mjs",
+    "ayudante-gmail": "node scripts/generar-ayudante-gmail.js"
   },
   "private": true,
   "jest": {

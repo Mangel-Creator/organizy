@@ -4,16 +4,33 @@ import type { ClaveDia } from '@/services/fechas';
 
 import { guardarAjuste, leerAjuste } from './ajustes';
 
-// Resúmenes de correo (fase 11). Los prepara el ayudante de Gmail del usuario
-// (gmail/organizy-correo.js, en su cuenta de Google) y la app los copia aquí, en el
-// dispositivo (AsyncStorage, "organizy:correos"), para verlos aunque no haya
-// conexión. La dirección del ayudante va en "organizy:correo".
+// Resúmenes de correo (fase 11). Llegan por dos vías:
+//   - cuentas vinculadas con "Vincular con Gmail / Outlook": las revisa el servidor de
+//     Organizy (función correo-cuentas); aquí se guarda la lista ("organizy:cuentasCorreo");
+//   - el ayudante de Gmail del usuario (gmail/organizy-correo.js, en su cuenta de
+//     Google): aquí se guarda su dirección ("organizy:correo").
+// La app copia los resúmenes en el dispositivo ("organizy:correos") para verlos aunque
+// no haya conexión.
 //
-//   - En pantallas: const { cargado, conexion, correos } = useCorreos();
+//   - En pantallas: const { cargado, conexion, cuentas, proveedores, correos } = useCorreos();
 //   - Fuera de pantallas: await leerCorreos(); suscribirseCorreos(...)
-//   - Para cambiar: guardarConexion, guardarCorreos (services/correo hace el resto).
+//   - Para cambiar: guardarConexion, guardarCuentas, guardarCorreos (services/correo hace el resto).
 
-// Lo que manda el ayudante.
+export type ProveedorCorreo = 'gmail' | 'outlook';
+
+// Una cuenta vinculada en el servidor.
+export type CuentaCorreo = {
+  id: string;
+  proveedor: ProveedorCorreo;
+  email: string;
+  estado: 'ok' | 'caducada'; // caducada: hay que volver a iniciar sesión
+  ultimaRevision: string | null;
+};
+
+// Qué botones de "Vincular con…" están activados en el servidor.
+export type ProveedoresCorreo = Record<ProveedorCorreo, boolean>;
+
+// Lo que manda el ayudante de Gmail o el servidor.
 export type CorreoRemoto = {
   id: string; // el del mensaje en Gmail
   recibido: string; // ISO
@@ -24,7 +41,9 @@ export type CorreoRemoto = {
   fechaLimite: ClaveDia | null; // si pide algo con plazo
   tarea: string | null; // lo que hay que hacer, para el calendario
   via: 'reglas' | 'ia';
-  enlace: string; // abre el correo en Gmail
+  enlace: string; // abre el correo en Gmail u Outlook
+  origen?: ProveedorCorreo; // solo en los de las cuentas vinculadas
+  cuenta?: string; // el correo de la cuenta vinculada de la que viene
 };
 
 export type CorreoResumido = CorreoRemoto & {
@@ -42,12 +61,19 @@ export type ConexionCorreo = {
   error: 'sin-conexion' | 'no-responde' | null;
 };
 
-type Estado = { cargado: boolean; conexion: ConexionCorreo | null; correos: CorreoResumido[] };
+type Estado = {
+  cargado: boolean;
+  conexion: ConexionCorreo | null;
+  cuentas: CuentaCorreo[];
+  proveedores: ProveedoresCorreo | null; // null hasta que conteste el servidor
+  correos: CorreoResumido[];
+};
 
 const CLAVE_CONEXION = 'correo';
 const CLAVE_CORREOS = 'correos';
+const CLAVE_CUENTAS = 'cuentasCorreo';
 
-let estado: Estado = { cargado: false, conexion: null, correos: [] };
+let estado: Estado = { cargado: false, conexion: null, cuentas: [], proveedores: null, correos: [] };
 let cargando: Promise<void> | null = null;
 const oyentes = new Set<() => void>();
 
@@ -61,20 +87,34 @@ export function cargarCorreos(): Promise<void> {
     cargando = Promise.all([
       leerAjuste<ConexionCorreo | null>(CLAVE_CONEXION, null),
       leerAjuste<CorreoResumido[]>(CLAVE_CORREOS, []),
-    ]).then(([conexion, correos]) => cambiar({ conexion, correos: Array.isArray(correos) ? correos : [] }));
+      leerAjuste<CuentaCorreo[]>(CLAVE_CUENTAS, []),
+    ]).then(([conexion, correos, cuentas]) =>
+      cambiar({
+        conexion,
+        correos: Array.isArray(correos) ? correos : [],
+        cuentas: Array.isArray(cuentas) ? cuentas : [],
+      }),
+    );
   }
   return cargando;
 }
 
-export async function leerCorreos(): Promise<{ conexion: ConexionCorreo | null; correos: CorreoResumido[] }> {
+export async function leerCorreos(): Promise<Omit<Estado, 'cargado'>> {
   await cargarCorreos();
-  return { conexion: estado.conexion, correos: estado.correos };
+  const { cargado: _cargado, ...resto } = estado;
+  return resto;
 }
 
 export async function guardarConexion(conexion: ConexionCorreo | null): Promise<void> {
   await cargarCorreos();
   cambiar({ conexion });
   await guardarAjuste(CLAVE_CONEXION, conexion);
+}
+
+export async function guardarCuentas(cuentas: CuentaCorreo[], proveedores?: ProveedoresCorreo): Promise<void> {
+  await cargarCorreos();
+  cambiar(proveedores ? { cuentas, proveedores } : { cuentas });
+  await guardarAjuste(CLAVE_CUENTAS, cuentas);
 }
 
 export async function guardarCorreos(correos: CorreoResumido[]): Promise<void> {

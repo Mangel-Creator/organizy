@@ -8,10 +8,12 @@ import {
   correosSinTarea,
   leerEnlace,
   mezclarCorreos,
+  sinCuenta,
   ordenarCorreos,
   tareaDeCorreo,
   textoGrupo,
   textoVence,
+  textoVuelta,
   validarRemoto,
 } from '../correos';
 
@@ -173,5 +175,33 @@ describe('aviso de la víspera', () => {
     expect(avisosDePlazos([correo], [{ ...tarea, hecha: true }], perfil, '2026-10-04')).toEqual([]);
     expect(avisosDePlazos([correo], [], perfil, '2026-10-04')).toEqual([]);
     expect(avisosDePlazos([{ ...correo, noEsPlazo: true }], [tarea], perfil, '2026-10-04')).toEqual([]);
+  });
+});
+
+describe('cuentas vinculadas', () => {
+  it('acepta enlaces de Outlook, el origen y la cuenta', () => {
+    const r = validarRemoto({
+      ...remoto(),
+      enlace: 'https://outlook.live.com/owa/?ItemID=1',
+      origen: 'outlook',
+      cuenta: 'yo@hotmail.com',
+    });
+    expect(r).toMatchObject({ enlace: 'https://outlook.live.com/owa/?ItemID=1', origen: 'outlook', cuenta: 'yo@hotmail.com' });
+    expect(validarRemoto({ ...remoto(), origen: 'yahoo', cuenta: 'no-es-correo' })).not.toHaveProperty('origen');
+  });
+
+  it('al quitar una cuenta se van sus resúmenes y se quedan los demás', () => {
+    const lista = [local({ id: 'a', cuenta: 'yo@gmail.com' }), local({ id: 'b', cuenta: 'otro@hotmail.com' }), local({ id: 'c' })];
+    expect(sinCuenta(lista, 'yo@gmail.com').map((c) => c.id)).toEqual(['b', 'c']);
+  });
+
+  it('dice qué pasó al volver de iniciar sesión', () => {
+    expect(textoVuelta({ correo: 'ok', cuenta: 'yo@gmail.com' })).toEqual({
+      bien: true,
+      texto: 'Listo: yo@gmail.com ya está vinculado. Te aviso en cuanto llegue algo.',
+    });
+    expect(textoVuelta({ correo: 'cancelado' })?.bien).toBe(false);
+    expect(textoVuelta({ correo: 'error', motivo: 'demasiadas' })?.texto).toContain('5 cuentas');
+    expect(textoVuelta({})).toBeNull();
   });
 });

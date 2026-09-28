@@ -1,4 +1,4 @@
-import type { CorreoRemoto, CorreoResumido } from '@/data/correos';
+import type { CorreoRemoto, CorreoResumido, ProveedorCorreo } from '@/data/correos';
 import type { Evento } from '@/data/eventos/tipos';
 import { DIAS_SEMANA_CORTOS, diaSemanaDesdeLunes, fechaDesdeClave, sumarDias, type ClaveDia } from '@/services/fechas';
 
@@ -19,6 +19,9 @@ export function leerEnlace(texto: string): string | null {
 
 const esTexto = (v: unknown, max: number): v is string => typeof v === 'string' && v.length <= max;
 
+// Solo se abren enlaces de Gmail u Outlook.
+const ENLACES_VALIDOS = /^https:\/\/(mail\.google\.com|outlook\.live\.com|outlook\.office(365)?\.com)\//;
+
 // Comprueba un correo que llega del ayudante. Devuelve null si algo no cuadra.
 export function validarRemoto(dato: unknown): CorreoRemoto | null {
   if (!dato || typeof dato !== 'object') return null;
@@ -26,7 +29,9 @@ export function validarRemoto(dato: unknown): CorreoRemoto | null {
   if (!esTexto(d.id, 64) || !d.id || !esTexto(d.recibido, 40) || Number.isNaN(Date.parse(d.recibido))) return null;
   if (!esTexto(d.titulo, 200) || !d.titulo.trim()) return null;
   const fecha = typeof d.fechaLimite === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.fechaLimite) ? d.fechaLimite : null;
-  const enlace = esTexto(d.enlace, 400) && d.enlace.startsWith('https://mail.google.com/') ? d.enlace : '';
+  const enlace = esTexto(d.enlace, 600) && ENLACES_VALIDOS.test(d.enlace) ? d.enlace : '';
+  const origen: ProveedorCorreo | undefined = d.origen === 'gmail' || d.origen === 'outlook' ? d.origen : undefined;
+  const cuenta = esTexto(d.cuenta, 320) && d.cuenta.includes('@') ? d.cuenta : undefined;
   return {
     id: d.id,
     recibido: d.recibido,
@@ -38,7 +43,33 @@ export function validarRemoto(dato: unknown): CorreoRemoto | null {
     tarea: fecha && esTexto(d.tarea, 200) && d.tarea.trim() ? d.tarea.trim() : null,
     via: d.via === 'ia' ? 'ia' : 'reglas',
     enlace,
+    ...(origen ? { origen } : {}),
+    ...(cuenta ? { cuenta } : {}),
   };
+}
+
+// Al desvincular una cuenta, sus resúmenes se van del móvil (las tareas se quedan).
+export function sinCuenta(correos: CorreoResumido[], email: string): CorreoResumido[] {
+  return correos.filter((c) => c.cuenta !== email);
+}
+
+export const NOMBRE_PROVEEDOR: Record<ProveedorCorreo, string> = { gmail: 'Gmail', outlook: 'Outlook' };
+
+// Qué decir al volver de iniciar sesión (?correo=ok&cuenta=… en la dirección).
+export function textoVuelta(datos: {
+  correo?: string;
+  cuenta?: string;
+  motivo?: string;
+}): { bien: boolean; texto: string } | null {
+  if (datos.correo === 'ok') {
+    return { bien: true, texto: `Listo: ${datos.cuenta ?? 'tu correo'} ya está vinculado. Te aviso en cuanto llegue algo.` };
+  }
+  if (datos.correo === 'cancelado') return { bien: false, texto: 'No se ha vinculado: cancelaste el inicio de sesión.' };
+  if (datos.correo === 'error') {
+    if (datos.motivo === 'demasiadas') return { bien: false, texto: 'Ya tienes 5 cuentas vinculadas. Quita una para añadir otra.' };
+    return { bien: false, texto: 'No se ha podido vincular. Prueba otra vez en un rato.' };
+  }
+  return null;
 }
 
 // Junta lo que ya había en el móvil con lo que manda el ayudante: los nuevos entran

@@ -1,41 +1,73 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { Boton, CampoTexto, Pantalla, Plegable, Tarjeta, Texto, Titulo } from '@/components';
-import { useCorreos, type ConexionCorreo, type CorreoResumido } from '@/data/correos';
+import { Pantalla, Plegable, Tarjeta, Texto, Titulo } from '@/components';
+import { useCorreos } from '@/data/correos';
 import {
   actualizarCorreos,
   conectarCorreo,
-  desconectarCorreo,
-  esPlazo,
   marcarCorreosVistos,
   ordenarCorreos,
-  quitarPlazo,
   textoGrupo,
-  textoVence,
+  textoVuelta,
 } from '@/services/correo';
-import { claveDia, formatearHora } from '@/services/fechas';
-import { alturaTactil, colorTipo, colores, espacio, fuentes, radio } from '@/theme';
+import { claveDia } from '@/services/fechas';
+import { alturaTactil, colores, espacio, radio } from '@/theme';
+
+import { CuentasCorreo } from './correo/CuentasCorreo';
+import { FilaCorreo } from './correo/FilaCorreo';
+import { VincularAyudante, VincularCorreo } from './correo/VincularCorreo';
 
 // Resúmenes de correo (fase 11): /resumenes, desde la casilla de Hoy o al tocar un
-// aviso de correo. Arriba, lo que tiene fecha límite (ya está en las tareas); debajo,
-// el resto de correos resumidos, por día. Sin conectar, explica cómo hacerlo.
+// aviso de correo.
+// - Sin nada vinculado: "Vincular con Gmail / Outlook" (solo iniciar sesión), cómo
+//   meter iCloud y, plegado, el ayudante de Gmail (QR o enlace).
+// - Con algo vinculado: tus cuentas, lo que tiene fecha límite (ya en las tareas) y el
+//   resto de correos resumidos, por día; "Vincular otra cuenta" plegado.
+// Llegan aquí también la vuelta del inicio de sesión en la web (?correo=ok&cuenta=…) y
+// el QR del ayudante (#ayudante=<enlace>, detrás de "#" para que no llegue a ningún
+// servidor).
 
 const diaDe = (iso: string) => claveDia(new Date(iso));
 
-export function PantallaResumenes() {
-  const { cargado, conexion, correos } = useCorreos();
-  const [actualizando, setActualizando] = useState(false);
+type Mensaje = { bien: boolean; texto: string };
 
-  // Al entrar, trae lo nuevo. Los nuevos salen marcados mientras estás aquí y pasan
-  // a vistos al salir.
+// Quita de la dirección de la web el resultado o el enlace del QR (si no, al recargar
+// saldría otra vez). Con un momento de espera: al abrir, el enrutador la reescribe.
+function limpiarDireccion() {
+  setTimeout(() => window.history.replaceState(null, '', window.location.pathname), 500);
+}
+
+// El enlace del QR del ayudante: "#ayudante=…" en la web o "?ayudante=…".
+function enlaceDelQR(parametro: string | undefined): string | null {
+  if (parametro) return parametro;
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  const m = window.location.hash.match(/ayudante=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+export function PantallaResumenes() {
+  const { cargado, conexion, cuentas, proveedores, correos } = useCorreos();
+  const params = useLocalSearchParams<{ correo?: string; cuenta?: string; motivo?: string; ayudante?: string }>();
+  const [actualizando, setActualizando] = useState(false);
+  // El QR del ayudante de Gmail (se conecta solo, abajo).
+  const [ayudante] = useState(() => enlaceDelQR(params.ayudante));
+  // Al abrir: qué pasó al iniciar sesión en la web, o que se está conectando el ayudante.
+  const [mensaje, setMensaje] = useState<Mensaje | null>(
+    () =>
+      textoVuelta({ correo: params.correo, cuenta: params.cuenta, motivo: params.motivo }) ??
+      (ayudante ? { bien: true, texto: 'Conectando el ayudante de Gmail…' } : null),
+  );
+
+  // Al entrar, trae lo nuevo (y pregunta al servidor qué botones están activados). Los
+  // nuevos salen marcados mientras estás aquí y pasan a vistos al salir.
   useFocusEffect(
     useCallback(() => {
       let vigente = true;
       setActualizando(true);
-      actualizarCorreos()
+      actualizarCorreos({ servidor: true })
         .catch(() => {})
         .finally(() => vigente && setActualizando(false));
       return () => {
@@ -45,19 +77,64 @@ export function PantallaResumenes() {
     }, []),
   );
 
+  // Vuelta de iniciar sesión en la web: el mensaje ya está puesto; se limpia la dirección.
+  const hayVuelta = params.correo !== undefined;
+  useEffect(() => {
+    if (!hayVuelta) return;
+    if (Platform.OS === 'web') limpiarDireccion();
+    else router.setParams({ correo: undefined, cuenta: undefined, motivo: undefined });
+  }, [hayVuelta]);
+
+  // QR del ayudante de Gmail: se conecta solo.
+  useEffect(() => {
+    if (!ayudante) return;
+    if (Platform.OS === 'web') limpiarDireccion();
+    conectarCorreo(ayudante)
+      .catch(() => ({ ok: false as const }))
+      .then((r) =>
+        setMensaje(
+          r.ok
+            ? { bien: true, texto: 'Listo: el ayudante de Gmail ya está conectado.' }
+            : { bien: false, texto: 'No he podido conectar el ayudante. Abre otra vez su enlace o pégalo más abajo.' },
+        ),
+      );
+  }, [ayudante]);
+
   const hoy = claveDia(new Date());
   const { plazos, grupos } = ordenarCorreos(correos, hoy, diaDe);
+  const vinculado = conexion !== null || cuentas.length > 0;
 
   return (
     <Pantalla>
       <BotonVolver />
       <Titulo>Resúmenes</Titulo>
 
-      {!cargado ? null : !conexion ? (
-        <Conectar />
+      {mensaje ? (
+        <Tarjeta style={estilos.mensaje}>
+          <Texto fuerte style={mensaje.bien ? undefined : estilos.aviso} accessibilityLiveRegion="polite">
+            {mensaje.texto}
+          </Texto>
+        </Tarjeta>
+      ) : null}
+
+      {!cargado ? null : !vinculado ? (
+        <>
+          <View style={estilos.intro}>
+            <View style={estilos.icono}>
+              <Ionicons name="mail-outline" size={28} color={colores.texto} />
+            </View>
+            <Titulo nivel={2}>Vincula tu correo</Titulo>
+            <Texto secundario>
+              Te aviso de cada correo nuevo con un resumen, y lo que tenga fecha límite te lo apunto en las tareas. Solo
+              tienes que iniciar sesión.
+            </Texto>
+          </View>
+          <VincularCorreo proveedores={proveedores} alTerminar={setMensaje} />
+          <VincularAyudante alTerminar={setMensaje} />
+        </>
       ) : (
         <>
-          <EstadoConexion conexion={conexion} actualizando={actualizando} />
+          <CuentasCorreo cuentas={cuentas} conexion={conexion} actualizando={actualizando} alTerminar={setMensaje} />
 
           {correos.length === 0 ? (
             <View style={estilos.vacio}>
@@ -89,20 +166,9 @@ export function PantallaResumenes() {
             </View>
           ))}
 
-          <Plegable titulo="Más ajustes" resumen="Otras cuentas y desconectar">
-            <Texto pequeno secundario>
-              Para ver aquí los correos de iCloud, Outlook o el trabajo, haz que se reenvíen solos a este Gmail. Los
-              pasos están en tu guía «Fase 11 - Correo».
-            </Texto>
-            <Boton
-              variante="secundario"
-              titulo="Desconectar Gmail"
-              onPress={() => desconectarCorreo().catch(() => {})}
-            />
-            <Texto pequeno secundario>
-              Borra los resúmenes de este móvil (las tareas se quedan). Para que el ayudante deje de mirar tu correo,
-              ejecuta «desinstalar» en script.google.com.
-            </Texto>
+          <Plegable titulo="Vincular otra cuenta" resumen="Gmail, Outlook, iCloud…">
+            <VincularCorreo proveedores={proveedores} alTerminar={setMensaje} />
+            {conexion ? null : <VincularAyudante alTerminar={setMensaje} />}
           </Plegable>
         </>
       )}
@@ -123,157 +189,6 @@ function BotonVolver() {
   );
 }
 
-function hace(iso: string | null): string | null {
-  if (!iso) return null;
-  const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
-  if (min < 1) return 'ahora mismo';
-  if (min < 60) return `hace ${min} min`;
-  const fecha = new Date(iso);
-  return claveDia(fecha) === claveDia(new Date()) ? `a las ${formatearHora(fecha)}` : 'hace más de un día';
-}
-
-function EstadoConexion({ conexion, actualizando }: { conexion: ConexionCorreo; actualizando: boolean }) {
-  const revisado = hace(conexion.ultimaRevision);
-  let texto = revisado ? `Tu Gmail se revisó ${revisado}. Cada 10 min mira si hay algo nuevo.` : 'Conectado a tu Gmail.';
-  if (actualizando) texto = 'Mirando si hay algo nuevo…';
-  else if (conexion.error === 'sin-conexion') texto = 'Sin conexión: te enseño lo último que traje.';
-  else if (conexion.error === 'no-responde') texto = 'El ayudante de Gmail no responde. Si sigue así, revisa en script.google.com que está implementado.';
-  return (
-    <View style={estilos.estado} accessibilityLiveRegion="polite">
-      <Texto pequeno secundario style={conexion.error && !actualizando ? estilos.aviso : undefined}>
-        {texto}
-      </Texto>
-      {Platform.OS === 'web' ? (
-        <Texto pequeno secundario>
-          En la web no llegan avisos: los correos nuevos salen marcados aquí.
-        </Texto>
-      ) : null}
-    </View>
-  );
-}
-
-function FilaCorreo({ correo, hoy, nuevo }: { correo: CorreoResumido; hoy: string; nuevo: boolean }) {
-  const [abierta, setAbierta] = useState(false);
-  const plazo = esPlazo(correo) ? correo.fechaLimite : null;
-  const hora = formatearHora(new Date(correo.recibido));
-  return (
-    <View style={[estilos.fila, plazo && estilos.filaPlazo]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: abierta }}
-        accessibilityLabel={[
-          nuevo ? 'Nuevo.' : '',
-          `${correo.titulo}.`,
-          `De ${correo.de}, a las ${hora}.`,
-          plazo ? `${textoVence(plazo, hoy)}.` : '',
-          abierta ? '' : correo.resumen,
-        ].join(' ')}
-        onPress={() => setAbierta((a) => !a)}
-        style={({ pressed }) => [estilos.cabeceraFila, pressed && estilos.pulsado]}>
-        <View style={estilos.lineaDe}>
-          <Texto pequeno secundario numberOfLines={1} style={estilos.de}>
-            {correo.de}
-          </Texto>
-          {nuevo ? (
-            <View style={estilos.nuevo}>
-              <Texto pequeno fuerte style={estilos.textoNuevo}>
-                Nuevo
-              </Texto>
-            </View>
-          ) : null}
-          <Texto pequeno secundario style={estilos.hora}>
-            {hora}
-          </Texto>
-        </View>
-        <Texto fuerte numberOfLines={abierta ? undefined : 2}>
-          {correo.titulo}
-        </Texto>
-        {plazo ? (
-          <Texto pequeno fuerte style={plazo <= hoy ? estilos.aviso : undefined}>
-            {textoVence(plazo, hoy)}
-            {correo.tarea && correo.tarea !== correo.titulo ? ` · ${correo.tarea}` : ''}
-          </Texto>
-        ) : null}
-        {correo.resumen ? (
-          <Texto pequeno secundario numberOfLines={abierta ? undefined : 3}>
-            {correo.resumen}
-          </Texto>
-        ) : null}
-      </Pressable>
-      {abierta ? (
-        <View style={estilos.acciones}>
-          {correo.enlace ? (
-            <Boton
-              variante="secundario"
-              titulo="Abrir en Gmail"
-              onPress={() => Linking.openURL(correo.enlace).catch(() => {})}
-            />
-          ) : null}
-          {plazo && correo.eventoId ? (
-            <Boton
-              variante="secundario"
-              titulo="Ver la tarea"
-              onPress={() => router.push({ pathname: '/evento', params: { id: correo.eventoId ?? '' } })}
-            />
-          ) : null}
-          {plazo ? (
-            <Boton variante="secundario" titulo="No es un plazo" onPress={() => quitarPlazo(correo.id).catch(() => {})} />
-          ) : null}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function Conectar() {
-  const [texto, setTexto] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [conectando, setConectando] = useState(false);
-
-  const conectar = async () => {
-    setConectando(true);
-    setError(null);
-    const resultado = await conectarCorreo(texto).catch(() => ({ ok: false as const, motivo: 'no-responde' as const }));
-    setConectando(false);
-    if (resultado.ok) return;
-    setError(
-      resultado.motivo === 'enlace'
-        ? 'Eso no parece el enlace del ayudante. Empieza por https://script.google.com/macros/s/ y acaba en /exec.'
-        : resultado.motivo === 'sin-conexion'
-          ? 'Sin conexión. Prueba otra vez cuando tengas internet.'
-          : 'El ayudante no responde. Revisa que lo implementaste como «Aplicación web» con acceso para «Cualquier usuario».',
-    );
-  };
-
-  return (
-    <Tarjeta style={estilos.conectar}>
-      <View style={estilos.icono}>
-        <Ionicons name="mail-outline" size={28} color={colores.texto} />
-      </View>
-      <Titulo nivel={2}>Conecta tu Gmail</Titulo>
-      <Texto secundario>
-        Te aviso de cada correo nuevo con un resumen, y lo que tenga fecha límite te lo apunto en las tareas.
-      </Texto>
-      <Texto pequeno secundario>
-        Lo hace un ayudante que vive en tu propia cuenta de Google: tus correos no pasan por Organizy. Se monta una vez,
-        en unos 15 minutos, con la guía «Fase 11 - Correo».
-      </Texto>
-      <CampoTexto
-        etiqueta="Enlace del ayudante"
-        ayuda="La URL de la «Aplicación web» que te da Google al implementarlo."
-        placeholder="https://script.google.com/macros/s/…/exec"
-        value={texto}
-        onChangeText={setTexto}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        error={error}
-      />
-      <Boton titulo={conectando ? 'Conectando…' : 'Conectar'} onPress={conectar} disabled={conectando || !texto.trim()} />
-    </Tarjeta>
-  );
-}
-
 const estilos = StyleSheet.create({
   volver: {
     flexDirection: 'row',
@@ -283,33 +198,18 @@ const estilos = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   pulsado: { opacity: 0.8 },
-  vacio: { alignItems: 'center', gap: espacio.m, paddingVertical: espacio.xl, paddingHorizontal: espacio.l },
-  centrado: { textAlign: 'center' },
-  estado: { gap: espacio.xs },
+  mensaje: { gap: espacio.xs },
   aviso: { color: colores.aviso },
-  seccion: { gap: espacio.s, marginTop: espacio.s },
-  fila: { backgroundColor: colores.tarjeta },
-  // Los plazos son tareas tuyas: barra del color de "Yo".
-  filaPlazo: { borderLeftWidth: 4, borderLeftColor: colorTipo.yo },
-  cabeceraFila: { gap: 2, minHeight: alturaTactil, paddingHorizontal: espacio.m, paddingVertical: espacio.s },
-  lineaDe: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
-  de: { flexShrink: 1 },
-  hora: { marginLeft: 'auto', fontFamily: fuentes.hora },
-  nuevo: {
-    paddingHorizontal: espacio.s,
-    paddingVertical: 1,
-    borderRadius: radio.chip,
-    backgroundColor: colores.principal,
-  },
-  textoNuevo: { color: colores.textoSobrePrincipal },
-  acciones: { gap: espacio.s, paddingHorizontal: espacio.m, paddingBottom: espacio.m },
-  conectar: { gap: espacio.m },
+  intro: { gap: espacio.s },
   icono: {
     width: 48,
     height: 48,
     borderRadius: radio.normal,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colores.fondo,
+    backgroundColor: colores.tarjeta,
   },
+  vacio: { alignItems: 'center', gap: espacio.m, paddingVertical: espacio.xl, paddingHorizontal: espacio.l },
+  centrado: { textAlign: 'center' },
+  seccion: { gap: espacio.s, marginTop: espacio.s },
 });
