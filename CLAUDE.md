@@ -235,6 +235,11 @@ sesión que fuera**:
   (revisar que la captura y el correo también la lleven); hará falta una pantalla de permiso
   formal (una vez, con "Ahora no") y mencionarlo en la política de privacidad. Alternativa futura, solo para la app propia: la
   IA del propio móvil (Apple Intelligence o la de Android), gratis y sin salir del teléfono.
+- 28/09/2026 — **Dejar la app preparada para subirla a la App Store y a Google Play.**
+  Identificador de la app en las dos tiendas: `com.mangelcreator.organizy` (en
+  `app.json`; no se cambia después de publicar). Lo que pide cada tienda está en "Fase 7"
+  > "Al subir a las tiendas". Las cuentas (Apple 99 €/año, Google Play 25 $ una vez) las
+  crea él cuando decida publicar.
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -1004,8 +1009,17 @@ borran solos a los 7 días.
     para crearlo están plegados en la pestaña y en la guía). Los días de repetición no se
     pueden pasar al Atajo. **El Atajo no está probado** desde aquí.
 - **La librería no se importa directamente**: `requireOptionalNativeModule('AlarmScheduler')`
-  (de `expo`) devuelve null en Expo Go, así el túnel sigue funcionando. Su plugin está en
-  `app.json` con la frase del permiso de AlarmKit.
+  (de `expo`) devuelve null en Expo Go, así el túnel sigue funcionando.
+- **Plugin propio `plugins/alarmas.js`** (28/09/2026), no el de la librería: el de
+  `react-native-alarm-scheduler` 1.0.1 **rompe `expo prebuild` de Android** (pasa
+  `modResults.manifest` a `addPermission`: "Cannot read properties of undefined (reading
+  'uses-permission')"), así que la app de Android no se podía construir. El nuestro hace
+  lo mismo bien: permisos `SCHEDULE_EXACT_ALARM`, `POST_NOTIFICATIONS` y `SET_ALARM`; en
+  iPhone, `NSAlarmKitUsageDescription`, `NSSupportsLiveActivities` y el sonido silencioso
+  de la librería (para "Solo vibrar"). Comprobado con `expo prebuild --platform android`
+  y `expo config --type introspect` (el proyecto de iPhone no se puede generar desde
+  Windows; lo hace EAS). Si sale una versión de la librería que lo arregle, se puede
+  volver a su plugin.
 - **Tipos** (`Alarma`): despertador e inteligente (hora, días —vacío = una vez, con
   `unaVezEl`; se apaga sola al pasar—, nombre, sonido "alarma" o "vibrar", encendida,
   y en la inteligente `adelantoMaxMin` 10/20/30/45). **Hora de dormir**: aviso suave (no
@@ -1046,18 +1060,45 @@ borran solos a los 7 días.
   blanco), salidas y hora de dormir; "+" abre `/alarma`. Formulario corto: tipo con
   casillas de icono, hora de 5 en 5 min y días; en "Más ajustes", nombre, sonido y
   adelanto máximo. Tras "Posponer" se abre `/alarmas?pospuesta=HH:MM`.
+- **Preparado para las tiendas** (28/09/2026, lo pidió el usuario): en `app.json`,
+  `ios.bundleIdentifier` y `android.package` = **`com.mangelcreator.organizy`** (no se
+  puede cambiar después de publicar la primera versión) e
+  `ITSAppUsesNonExemptEncryption: false` (solo HTTPS: así App Store Connect no pregunta
+  por el cifrado en cada subida). En `eas.json`, el perfil `preview` saca un APK en
+  Android (se instala directamente) y `production` saca el paquete (.aab) de Google Play
+  y la versión de App Store. La app **no puede crear alarmas en el Reloj del iPhone**:
+  Apple no lo deja a ninguna app; solo el Atajo (web) o las alarmas de Organizy con
+  AlarmKit.
 - **Probar las alarmas de verdad** (lo hace el usuario; nunca le pidas contraseñas):
   - **iPhone**: solo con la cuenta de desarrollador de Apple (99 €/año). Cuando la tenga:
-    `bundleIdentifier` en `app.json`, `npx eas-cli@latest device:create` (registra su
-    iPhone) y `npx eas-cli@latest build --profile preview --platform ios`; instala desde
-    el enlace de EAS. Necesita iOS 26 o más. Prueba: alarma para dentro de 2 min, móvil
-    bloqueado y en silencio.
+    `npx eas-cli@latest device:create` (registra su iPhone) y `npx eas-cli@latest build
+    --profile preview --platform ios`; instala desde el enlace de EAS. Necesita iOS 26 o
+    más. Prueba: alarma para dentro de 2 min, móvil bloqueado y en silencio.
   - **Android, sin cuenta de pago**: se puede ya con un APK de EAS (cuenta de Expo
-    gratis): `android.package` en `app.json`, `"android": { "buildType": "apk" }` en el
-    perfil `preview` de `eas.json` y `npx eas-cli@latest build --profile preview --platform
-    android`; se instala desde el enlace. Hay que dar "Alarmas y recordatorios" y
-    "Pantalla completa" en Ajustes. El mapa en Android necesitará la clave de Google Maps
-    (ver "Fase 6"). El usuario no tiene Android (26/09/2026).
+    gratis): `npx eas-cli@latest build --profile preview --platform android`; se instala
+    desde el enlace. Hay que dar "Alarmas y recordatorios" y "Pantalla completa" en
+    Ajustes. El mapa en Android necesitará la clave de Google Maps (ver "Fase 6"). El
+    usuario no tiene Android (26/09/2026).
+- **Al subir a las tiendas, lo que piden las alarmas** (lo rellena el usuario en las
+  consolas; explícaselo paso a paso cuando llegue):
+  - **Google Play** (cuenta de desarrollador de Google, 25 $ una vez): `npx eas-cli@latest
+    build --profile production --platform android` y subir el .aab. En Play Console >
+    "Contenido de la aplicación": declarar **intención de pantalla completa**
+    (`USE_FULL_SCREEN_INTENT`, la usa la alarma: categoría "reloj despertador"), el
+    **servicio en primer plano** de uso especial (`FOREGROUND_SERVICE_SPECIAL_USE`, el
+    que hace sonar la alarma con la app cerrada; hay que explicar para qué y a veces un
+    vídeo corto) y el de ubicación de la navegación (fase 6). Las alarmas exactas usan
+    `SCHEDULE_EXACT_ALARM` (el usuario da el permiso en Ajustes; la pestaña lo pide con
+    "Dar permiso"), no `USE_EXACT_ALARM`, que Google solo acepta en apps de despertador o
+    calendario puros y podría rechazar.
+  - **App Store** (cuenta de Apple): `npx eas-cli@latest build --profile production
+    --platform ios` y `npx eas-cli@latest submit --platform ios` (pide entrar con su
+    cuenta de Apple en su terminal). AlarmKit no necesita permiso especial de Apple: basta
+    la frase de `NSAlarmKitUsageDescription`. En la ficha de revisión, explicar que las
+    alarmas se crean en la pestaña Alarmas.
+  - Antes de publicar convendrá repasar permisos que Expo añade por defecto y la app no
+    usa (`SYSTEM_ALERT_WINDOW`, `READ/WRITE_EXTERNAL_STORAGE`, `WRITE_CONTACTS`) con
+    `android.blockedPermissions`, comprobando que no los necesita ninguna fase.
 
 ## Fase 8: planes con WhatsApp y votación (decisiones)
 

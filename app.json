@@ -8,9 +8,14 @@
     "scheme": "organizy",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.mangelcreator.organizy",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.mangelcreator.organizy",
       "adaptiveIcon": {
         "backgroundColor": "#F3EFE6",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -57,7 +62,7 @@
         }
       ],
       [
-        "react-native-alarm-scheduler",
+        "./plugins/alarmas.js",
         {
           "alarmKitUsageDescription": "Organizy usa alarmas para despertarte y avisarte de cuándo salir, aunque el móvil esté en silencio."
         }
