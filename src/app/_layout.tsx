@@ -152,6 +152,7 @@ export default function LayoutRaiz() {
           <Stack.Screen name="plan" />
           <Stack.Screen name="plan-nuevo" />
           <Stack.Screen name="resumenes" />
+          <Stack.Screen name="servicios" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />
