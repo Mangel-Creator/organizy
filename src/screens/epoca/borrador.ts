@@ -10,6 +10,7 @@ import { nuevoIdEpoca } from '@/data/epocas';
 import type { LugarEvento } from '@/data/eventos';
 import type { DiaSemana, MomentoDelDia, Perfil } from '@/data/perfil';
 import { fechaDesdeClave, minutosDesdeHora, nombreMes, sumarDias, type ClaveDia } from '@/services/fechas';
+import type { PropuestaEpoca } from '@/services/epoca';
 import { buscarCoordenadas } from '@/services/lugares';
 
 import { MENSAJE_NO_ENCONTRADO } from '../formulario-perfil/borrador';
@@ -128,6 +129,41 @@ export function borradorDesdeEpoca(epoca: Epoca | null, perfil: Perfil | null, h
 export function nombrePorDefecto(b: Pick<BorradorEpoca, 'tipo' | 'fin'>): string {
   const tipo = b.tipo ? NOMBRE_TIPO[b.tipo] : 'Época';
   return `${tipo} de ${nombreMes(fechaDesdeClave(b.fin)).toLocaleLowerCase('es-ES')}`;
+}
+
+// Vuelca en el borrador lo que ha entendido la IA ("Cuéntamelo y lo preparo").
+// Solo cambia lo que ha dicho: lo demás se queda como estaba. Los hitos y las
+// cosas que no quiere dejar se añaden a los que ya hubiera.
+export function borradorConPropuesta(b: BorradorEpoca, p: PropuestaEpoca): BorradorEpoca {
+  const nuevo: BorradorEpoca = { ...b };
+  if (p.nombre) nuevo.nombre = p.nombre;
+  if (p.tipo) nuevo.tipo = p.tipo;
+  if (p.inicio) nuevo.inicio = p.inicio;
+  if (p.fin) nuevo.fin = p.fin;
+  if (p.levantarse) nuevo.levantarse = p.levantarse;
+  if (p.acostarse) nuevo.acostarse = p.acostarse;
+  if (p.horasDia !== null) nuevo.horasDia = p.horasDia;
+  if (p.rindeMas) nuevo.rindeMas = p.rindeMas;
+  if (p.descanso) nuevo.descanso = p.descanso;
+  if (p.diasVas) nuevo.diasVas = p.diasVas;
+  if (p.diaLibre !== null) nuevo.diaLibre = p.diaLibre === 'ninguno' ? null : p.diaLibre;
+  if (p.lugar) {
+    nuevo.lugar = p.lugar.tipo === 'casa' ? 'casa' : p.lugar.tipo === 'sitio' ? `sitio:${p.lugar.sitioId}` : 'otro';
+    nuevo.direccion = p.lugar.tipo === 'otro' ? p.lugar.direccion : '';
+    nuevo.lugarGuardado = null;
+  }
+  nuevo.imprescindibles = [
+    ...b.imprescindibles,
+    ...p.imprescindibles.map((i) => ({ ...i, id: nuevoIdEpoca() })),
+  ];
+  nuevo.hitos = [
+    ...b.hitos,
+    ...p.hitos.map((h) => ({ ...h, id: nuevoIdEpoca(), lugar: null, temas: [] })),
+  ];
+  // Si la época empezaba más tarde que algún hito, empieza antes (sin pasar de hoy).
+  const primero = nuevo.hitos.map((h) => h.fecha).sort()[0];
+  if (primero && primero < nuevo.inicio) nuevo.inicio = primero;
+  return nuevo;
 }
 
 export function comprobarPaso1(b: BorradorEpoca, hoy: ClaveDia): Errores {

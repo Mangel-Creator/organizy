@@ -4,3 +4,5 @@
 export * from './estado';
 export * from './plan';
 export * from './progreso';
+export * from './temas';
+export * from './validarIA';

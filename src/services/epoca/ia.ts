@@ -1,0 +1,126 @@
+import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
+
+import { nuevoIdEpoca, type Epoca, type Hito, type RegistroBloque } from '@/data/epocas';
+import type { Perfil } from '@/data/perfil';
+import { asegurarSesion, obtenerSupabase } from '@/data/supabase';
+import { claveDia, type ClaveDia } from '@/services/fechas';
+
+import { diasEntre } from './estado';
+import type { PlanEpoca } from './plan';
+import {
+  datosRepaso,
+  MAX_TEXTO_EPOCA,
+  MAX_TEXTO_TEMARIO,
+  propuestaUtil,
+  validarPreparacion,
+  validarRepaso,
+  validarTemas,
+  type PropuestaEpoca,
+  type PropuestaTemas,
+  type Repaso,
+} from './validarIA';
+
+// La IA ayuda a planificar la Época dorada: manda lo necesario a la función
+// "epoca" del servidor propio (supabase/functions/epoca), que pregunta a Claude.
+// Aquí nunca se guarda nada: la pantalla enseña la propuesta y el usuario decide.
+// No se exporta desde services/epoca/index.ts para que la lógica pura (y sus
+// pruebas) no carguen la conexión con el servidor.
+
+const ESPERA_MAX_MS = 30000;
+
+export type MotivoFalloIA = 'sin-configurar' | 'sin-clave' | 'sin-conexion' | 'limite' | 'no-entendido' | 'error';
+
+export type ResultadoIA<T> = { estado: 'ok'; datos: T } | { estado: 'fallo'; motivo: MotivoFalloIA; mensaje: string };
+
+const MENSAJES: Record<MotivoFalloIA, string> = {
+  'sin-configurar': 'La ayuda de la IA no está activada en esta versión. Puedes rellenarlo a mano.',
+  'sin-clave': 'La ayuda de la IA aún no está encendida. Mientras tanto, puedes rellenarlo a mano.',
+  'sin-conexion': 'Sin conexión. Prueba otra vez en un rato o rellénalo a mano.',
+  limite: 'Has usado la IA muchas veces hoy. Mañana vuelve a funcionar.',
+  'no-entendido': 'No lo he pillado del todo. Cuéntamelo con otras palabras o rellénalo a mano.',
+  error: 'No he podido hacerlo ahora. Prueba otra vez en un rato.',
+};
+
+function fallo<T>(motivo: MotivoFalloIA): ResultadoIA<T> {
+  return { estado: 'fallo', motivo, mensaje: MENSAJES[motivo] };
+}
+
+async function llamar(cuerpo: Record<string, unknown>): Promise<ResultadoIA<unknown>> {
+  const supabase = obtenerSupabase();
+  if (!supabase) return fallo('sin-configurar');
+  try {
+    await asegurarSesion(supabase);
+    const { data, error } = await supabase.functions.invoke('epoca', { body: cuerpo, timeout: ESPERA_MAX_MS });
+    if (error) return fallo(await motivoDelError(error));
+    const resultado = (data as { resultado?: unknown } | null)?.resultado;
+    return resultado ? { estado: 'ok', datos: resultado } : fallo('error');
+  } catch (error) {
+    return fallo(await motivoDelError(error));
+  }
+}
+
+async function motivoDelError(error: unknown): Promise<MotivoFalloIA> {
+  if (error instanceof FunctionsHttpError) {
+    const respuesta = error.context as Response | undefined;
+    if (respuesta?.status === 429) return 'limite';
+    if (respuesta?.status === 503) {
+      const cuerpo = await respuesta.clone().json().catch(() => null);
+      if ((cuerpo as { error?: string } | null)?.error === 'sin-clave') return 'sin-clave';
+    }
+    return 'error';
+  }
+  if (error instanceof FunctionsFetchError || error instanceof TypeError) return 'sin-conexion';
+  const mensaje = error instanceof Error ? error.message.toLowerCase() : '';
+  if (mensaje.includes('network') || mensaje.includes('fetch') || mensaje.includes('timeout')) return 'sin-conexion';
+  return 'error';
+}
+
+// 1. "Cuéntamelo y lo preparo": manda el texto, el día, el horario normal y los
+//    nombres de los sitios habituales (sin direcciones).
+export async function prepararEpocaConIA(texto: string, perfil: Perfil | null): Promise<ResultadoIA<PropuestaEpoca>> {
+  const hoy = claveDia(new Date());
+  const sitios = (perfil?.sitios ?? []).map((s) => ({ id: s.id, nombre: s.nombre }));
+  const r = await llamar({
+    accion: 'preparar',
+    hoy,
+    texto: texto.trim().slice(0, MAX_TEXTO_EPOCA),
+    sitios,
+    horario: perfil ? { levantarse: perfil.horario.levantarse, acostarse: perfil.horario.acostarse } : null,
+  });
+  if (r.estado === 'fallo') return r;
+  const propuesta = validarPreparacion(r.datos, { hoy, sitiosIds: sitios.map((s) => s.id) });
+  return propuesta && propuestaUtil(propuesta) ? { estado: 'ok', datos: propuesta } : fallo('no-entendido');
+}
+
+// 2. "Temario por temas": el hito (nombre, fecha, dificultad y horas) y el temario.
+export async function temasConIA(hito: Hito, temario: string): Promise<ResultadoIA<PropuestaTemas>> {
+  const hoy: ClaveDia = claveDia(new Date());
+  const r = await llamar({
+    accion: 'temario',
+    hoy,
+    temario: temario.trim().slice(0, MAX_TEXTO_TEMARIO),
+    hito: {
+      nombre: hito.nombre,
+      fecha: hito.fecha,
+      diasHasta: Math.max(0, diasEntre(hoy, hito.fecha)),
+      dificultad: hito.dificultad,
+      horasPreparacion: hito.horasPreparacion,
+    },
+  });
+  if (r.estado === 'fallo') return r;
+  const propuesta = validarTemas(r.datos, nuevoIdEpoca);
+  return propuesta ? { estado: 'ok', datos: propuesta } : fallo('no-entendido');
+}
+
+// 3. "Repaso de cómo vas": solo números y los nombres de los hitos que quedan.
+export async function repasoConIA(
+  epoca: Epoca,
+  registro: RegistroBloque[],
+  plan: PlanEpoca,
+): Promise<ResultadoIA<Repaso>> {
+  const hoy = claveDia(new Date());
+  const r = await llamar({ accion: 'repaso', hoy, estado: datosRepaso(epoca, registro, plan, hoy) });
+  if (r.estado === 'fallo') return r;
+  const repaso = validarRepaso(r.datos, epoca, hoy);
+  return repaso ? { estado: 'ok', datos: repaso } : fallo('error');
+}

@@ -226,6 +226,16 @@ sesión que fuera**:
   (`expo-calendar`, que no viene en Expo Go) **queda para la app propia, en el futuro**: no
   se programa todavía.
 
+- 28/09/2026 — **La IA de Organizy es Claude (Anthropic) a través del servidor propio**
+  (Supabase), también cuando la app salga en App Store, Google Play o Microsoft Store: la
+  clave nunca va en la app y el modelo se cambia en el servidor sin publicar otra versión.
+  Se lo explicó al usuario la sesión de la Época dorada. **Pendiente antes de subir a las
+  tiendas**: Apple pide avisar y pedir permiso antes de mandar datos personales a una IA de
+  otra empresa. La Época dorada ya lleva una frase corta de qué se envía donde se usa la IA
+  (revisar que la captura y el correo también la lleven); hará falta una pantalla de permiso
+  formal (una vez, con "Ahora no") y mencionarlo en la política de privacidad. Alternativa futura, solo para la app propia: la
+  IA del propio móvil (Apple Intelligence o la de Android), gratis y sin salir del teléfono.
+
 ## Cómo prueba el usuario en el iPhone
 
 - **Al terminar cada parte del proyecto** (una fase, un bloque de trabajo, un arreglo),
@@ -515,7 +525,8 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   `PRAGMA user_version`). Migración 1: tabla `eventos`; 2: columnas
   `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`; 4: tablas `epocas`, `hitos` y
   `bloques_epoca` (fase 4b); 5: columna `cliente` (fase 10); 6: columna `origen` (otros
-  calendarios); 7: columna `cuadrante` (matriz de Eisenhower). Solo se usa en Android e iOS.
+  calendarios); 7: columna `cuadrante` (matriz de Eisenhower); 8: columna `temas` de `hitos`
+  (temario de la Época dorada). Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -756,6 +767,34 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   primera vez (`organizy:epocaEjemploCreada`); en Perfil hay botones para crearla y borrarla.
 - Rutas nuevas: si `tsc` se queja de `/epoca` en otra carpeta, es que `.expo/types` está
   anticuado; se regenera al arrancar `expo start`.
+- **La IA ayuda a planificar** (28/09/2026, lo pidió el usuario; eligió las tres formas).
+  Función `epoca` de Supabase (desplegada; Claude Haiku 4.5, `EPOCA_MODELO` para cambiarlo sin
+  tocar la app; límites `EPOCA_LIMITE_USUARIO` 30 y `EPOCA_LIMITE_GLOBAL` 1000 al día). Sin
+  `ANTHROPIC_API_KEY` contesta 503 `sin-clave` sin gastar y la app dice "aún no está
+  encendida"; se enciende sola al poner la clave. No guarda nada. Cliente en
+  `services/epoca/ia.ts` (no se exporta desde el `index` para que las pruebas no carguen
+  Supabase); comprobaciones puras con pruebas en `services/epoca/validarIA.ts`.
+  1. **"Cuéntamelo y lo preparo"** (`screens/epoca/CuentameloIA.tsx`, plegado en el paso 1
+     del formulario, solo al crear): texto libre (o dictado con el micro del teclado) → la IA
+     devuelve tipo, fechas, sitio (Casa, un sitio habitual por id u "otro" con su texto),
+     días, horas, momento, descanso, día libre, horario, imprescindibles, hitos con dificultad
+     y horas estimadas, y `notas` con lo que ha supuesto. `borradorConPropuesta` solo cambia
+     lo que ha dicho y añade hitos e imprescindibles. Se envían el texto, el día, el horario
+     normal y los nombres de los sitios (sin direcciones).
+  2. **Temario por temas** (`screens/epoca/PanelTemario.tsx`, icono de lista en cada hito del
+     paso 3): pegas el temario → temas con horas (el último, de repaso) y un consejo. Al
+     usarlos, `Hito.temas` (`TemaHito[]`) y las horas de preparación pasan a ser su suma. Los
+     bloques van recorriendo los temas en orden según los minutos hechos (`temasDelPlan`: cada
+     bloque, el tema donde cae su mitad; pasado el final, el último): "Plan de hoy" enseña el
+     tema debajo del examen y la sección, "Toca: Tema 3 (3 de 6)" (`temaActual`).
+  3. **Repaso de cómo vas** (`screens/epoca/RepasoIA.tsx`, sección "¿Cómo lo llevas?" con la
+     época activa): se mandan solo números y nombres de hitos (`datosRepaso`); vuelve un
+     resumen y como mucho 3 propuestas (`horas-dia`, `horas-hito`, `dificultad`, `descanso`)
+     con "Aplicar" o "Aplicar todo" (`aplicarPropuesta` + `guardarEpoca`; el plan se recalcula
+     solo). Se descartan las que no cambian nada o de hitos pasados.
+  Probado el 28/09 en la web a tamaño móvil: la función real sin clave ("aún no está
+  encendida") y, con respuestas simuladas, rellenar el formulario, repartir el temario,
+  guardarlo, el tema en "Plan de hoy" y aplicar propuestas. **Falta** probarlo con la clave.
 
 ## Servidor propio: Supabase (desde la fase 5)
 

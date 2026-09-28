@@ -30,6 +30,7 @@ import { claveDia, fechaDesdeClave, formatearDiaCorto } from '@/services/fechas'
 import { alturaTactil, colores, espacio } from '@/theme';
 
 import {
+  borradorConPropuesta,
   borradorDesdeEpoca,
   comprobarPaso1,
   comprobarPaso2,
@@ -42,6 +43,7 @@ import {
   type Errores,
   type Trayecto,
 } from './epoca/borrador';
+import { CuentameloIA } from './epoca/CuentameloIA';
 import { EditorHitos } from './epoca/EditorHitos';
 import { EditorImprescindibles } from './epoca/EditorImprescindibles';
 import { SelectorLugarEpoca } from './epoca/SelectorLugarEpoca';
@@ -186,6 +188,16 @@ function Formulario({ epoca, epocas, perfil, pasoInicial }: Props) {
       {paso === 1 ? (
         <>
           <Titulo>¿Qué se viene?</Titulo>
+          {!epoca ? (
+            <CuentameloIA
+              perfil={perfil}
+              alPreparar={(propuesta) => {
+                setBorrador((actual) => borradorConPropuesta(actual, propuesta));
+                setErrores({});
+                setSolapes([]);
+              }}
+            />
+          ) : null}
           <View>
             <SelectorVisual opciones={OPCIONES_TIPO_VISUAL} valor={b.tipo} alCambiar={(tipo) => cambiar({ tipo })} />
             <MensajeError texto={errores.tipo} />

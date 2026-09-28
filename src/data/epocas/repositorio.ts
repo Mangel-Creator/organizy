@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { obtenerBD } from '@/data/db';
 import { normalizarLugar } from '@/data/eventos/tipos';
 
-import type { Epoca, Hito, RegistroBloque, RepositorioEpocas } from './tipos';
+import { normalizarTemas, type Epoca, type Hito, type RegistroBloque, type RepositorioEpocas } from './tipos';
 
 // Guardado de las épocas doradas en el móvil (Android e iOS) con SQLite.
 // En la web se usa repositorio.web.ts, que tiene las mismas funciones.
@@ -29,6 +29,7 @@ type FilaHito = {
   lugar: string | null;
   dificultad: Hito['dificultad'];
   horas_preparacion: number;
+  temas: string | null; // migración 8
 };
 
 type FilaBloque = {
@@ -60,8 +61,8 @@ async function insertarEpoca(bd: SQLiteDatabase, e: Epoca) {
   await bd.runAsync('DELETE FROM hitos WHERE epoca_id = ?', e.id);
   for (const h of e.hitos) {
     await bd.runAsync(
-      `INSERT INTO hitos (id, epoca_id, nombre, fecha, hora, lugar, dificultad, horas_preparacion)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO hitos (id, epoca_id, nombre, fecha, hora, lugar, dificultad, horas_preparacion, temas)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       h.id,
       e.id,
       h.nombre,
@@ -70,6 +71,7 @@ async function insertarEpoca(bd: SQLiteDatabase, e: Epoca) {
       h.lugar ? JSON.stringify(h.lugar) : null,
       h.dificultad,
       h.horasPreparacion,
+      h.temas?.length ? JSON.stringify(h.temas) : null,
     );
   }
 }
@@ -115,6 +117,7 @@ export const repositorio: RepositorioEpocas = {
           lugar: h.lugar ? normalizarLugar(JSON.parse(h.lugar)) : null,
           dificultad: h.dificultad,
           horasPreparacion: h.horas_preparacion,
+          temas: h.temas ? normalizarTemas(JSON.parse(h.temas)) : [],
         })),
     }));
   },

@@ -38,6 +38,15 @@ export type RitmoEpoca = {
   imprescindibles: Imprescindible[];
 };
 
+// Una parte del temario de un hito ("Tema 3: Regresión"), con las horas que
+// se le dedican. Los bloques del plan van pasando por los temas en orden
+// (services/epoca/temas.ts). Los propone la IA a partir del temario.
+export type TemaHito = {
+  id: string;
+  nombre: string;
+  horas: number;
+};
+
 // Un examen o una entrega.
 export type Hito = {
   id: string;
@@ -47,7 +56,23 @@ export type Hito = {
   lugar: LugarEvento | null;
   dificultad: Dificultad;
   horasPreparacion: number;
+  temas?: TemaHito[]; // sin temas (o vacío): los bloques solo dicen el hito
 };
+
+// Lee los temas guardados (SQLite, navegador o copia de seguridad) y descarta
+// lo que no tenga forma de tema.
+export function normalizarTemas(valor: unknown): TemaHito[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.filter(
+    (t): t is TemaHito =>
+      !!t &&
+      typeof t === 'object' &&
+      typeof (t as TemaHito).id === 'string' &&
+      typeof (t as TemaHito).nombre === 'string' &&
+      typeof (t as TemaHito).horas === 'number' &&
+      (t as TemaHito).horas > 0,
+  );
+}
 
 // Qué avisos de la época quiere (solo llegan en la app del móvil).
 export type AvisosEpoca = {

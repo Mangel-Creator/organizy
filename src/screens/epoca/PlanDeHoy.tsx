@@ -11,6 +11,7 @@ import {
   lugarDelDia,
   progresoHitos,
   progresoSemana,
+  temasDelPlan,
   textoHoras,
   type BloquePlan,
   type PlanEpoca,
@@ -48,6 +49,7 @@ export function PlanDeHoy({ epoca, plan, registro, perfil, ahora, energia }: Pro
   const hitos = progresoHitos(epoca, registro, plan).filter((p) => p.hito.fecha >= hoy);
   const noCaben = hitos.filter((p) => p.faltanMin > 0);
   const nombreHito = (id: string) => epoca.hitos.find((h) => h.id === id)?.nombre ?? 'Estudio';
+  const temas = temasDelPlan(epoca, registro, plan, hoy);
   const libre = esDiaLibre(epoca, hoy);
   const subtitulo = [nombreLugar ? `En ${nombreLugar}` : null, DESCANSO_TEXTO[epoca.ritmo.descanso]]
     .filter(Boolean)
@@ -93,6 +95,7 @@ export function PlanDeHoy({ epoca, plan, registro, perfil, ahora, energia }: Pro
                   key={bloque.id}
                   bloque={bloque}
                   titulo={nombreHito(bloque.hitoId)}
+                  tema={temas.get(bloque.id) ?? null}
                   pasado={bloque.fin <= minuto}
                   primera={i === 0}
                 />
@@ -129,10 +132,10 @@ export function PlanDeHoy({ epoca, plan, registro, perfil, ahora, energia }: Pro
   );
 }
 
-type PropsFila = { bloque: BloquePlan; titulo: string; pasado: boolean; primera: boolean };
+type PropsFila = { bloque: BloquePlan; titulo: string; tema: string | null; pasado: boolean; primera: boolean };
 
 // Un bloque en una línea: casilla, "08:30 – 09:20" y el examen. "Saltar" a la derecha.
-function FilaBloque({ bloque, titulo, pasado, primera }: PropsFila) {
+function FilaBloque({ bloque, titulo, tema, pasado, primera }: PropsFila) {
   const saltado = bloque.estado === 'saltado';
   const apagado = saltado || (pasado && bloque.estado === 'pendiente');
   const marcar = (estado: 'hecho' | 'saltado' | null) => marcarBloque(bloque, estado);
@@ -152,6 +155,11 @@ function FilaBloque({ bloque, titulo, pasado, primera }: PropsFila) {
         <Texto fuerte numberOfLines={1} style={[apagado && estilos.secundario, saltado && estilos.tachado]}>
           {titulo}
         </Texto>
+        {tema ? (
+          <Texto pequeno secundario numberOfLines={1}>
+            {tema}
+          </Texto>
+        ) : null}
       </View>
       {bloque.estado === 'pendiente' ? (
         <BotonTexto texto="Saltar" etiqueta={`Saltar el bloque de ${titulo}`} alPulsar={() => marcar('saltado')} />

@@ -119,7 +119,7 @@ export function EditorImprescindibles({ lista, alCambiar }: Props) {
 }
 
 type PropsIcono = {
-  icono: 'create-outline' | 'close';
+  icono: 'create-outline' | 'close' | 'list-outline' | 'chevron-up';
   etiqueta: string;
   alPulsar: () => void;
 };

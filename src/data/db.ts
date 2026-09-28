@@ -102,6 +102,10 @@ const MIGRACIONES: Migracion[] = [
   async (bd) => {
     await bd.execAsync('ALTER TABLE eventos ADD COLUMN cuadrante TEXT;');
   },
+  // 8. Temas de cada hito de la Época dorada (TemaHito[] como JSON). NULL = sin temas.
+  async (bd) => {
+    await bd.execAsync('ALTER TABLE hitos ADD COLUMN temas TEXT;');
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;

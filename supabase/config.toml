@@ -438,3 +438,8 @@ verify_jwt = false
 # sin guardarlo. Comprueba la sesión anónima por dentro, como las demás.
 [functions.calendario]
 verify_jwt = false
+
+# La IA ayuda a planificar la Época dorada (preparar, temario y repaso). Comprueba
+# la sesión anónima por dentro, como la captura.
+[functions.epoca]
+verify_jwt = false

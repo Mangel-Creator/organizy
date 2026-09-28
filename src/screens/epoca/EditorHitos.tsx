@@ -21,6 +21,7 @@ import { espacio } from '@/theme';
 import { MensajeError } from '../formulario-perfil/MensajeError';
 import { eleccionDesdeLugar, lugarDesdeEleccion, type EleccionLugar } from './borrador';
 import { BotonIcono } from './EditorImprescindibles';
+import { PanelTemario } from './PanelTemario';
 import { SelectorLugarEpoca } from './SelectorLugarEpoca';
 import { formatoHoras, NOMBRE_DIFICULTAD, OPCIONES_DIFICULTAD_VISUAL } from './textos';
 
@@ -46,6 +47,7 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
   const [horas, setHoras] = useState(6);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [temarioDe, setTemarioDe] = useState<string | null>(null); // hito con el temario abierto
 
   const limpiar = () => {
     setEditando(null);
@@ -87,6 +89,7 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
       lugar: resuelto,
       dificultad,
       horasPreparacion: horas,
+      temas: editando?.temas ?? [],
     };
     alCambiar(editando ? hitos.map((h) => (h.id === editando.id ? nuevo : h)) : [...hitos, nuevo]);
     limpiar();
@@ -101,30 +104,48 @@ export function EditorHitos({ hitos, alCambiar, perfil, inicio, fin }: Props) {
       ) : null}
       {ordenados.map((h) => {
         const sitio = resolverLugar(h.lugar, perfil);
+        const nTemas = h.temas?.length ?? 0;
         return (
-          <Tarjeta key={h.id} style={estilos.fila}>
-            <View style={estilos.textos}>
-              <Texto fuerte>{h.nombre}</Texto>
-              <Texto pequeno secundario>
-                {formatearDiaCorto(fechaDesdeClave(h.fecha))} · {h.hora}
-                {sitio ? ` · ${sitio.nombre ?? sitio.direccion}` : ''}
-              </Texto>
-              <Texto pequeno secundario>
-                {NOMBRE_DIFICULTAD[h.dificultad]} · {formatoHoras(h.horasPreparacion)}
-              </Texto>
+          <Tarjeta key={h.id}>
+            <View style={estilos.fila}>
+              <View style={estilos.textos}>
+                <Texto fuerte>{h.nombre}</Texto>
+                <Texto pequeno secundario>
+                  {formatearDiaCorto(fechaDesdeClave(h.fecha))} · {h.hora}
+                  {sitio ? ` · ${sitio.nombre ?? sitio.direccion}` : ''}
+                </Texto>
+                <Texto pequeno secundario>
+                  {NOMBRE_DIFICULTAD[h.dificultad]} · {formatoHoras(h.horasPreparacion)}
+                  {nTemas > 0 ? ` · ${nTemas} ${nTemas === 1 ? 'tema' : 'temas'}` : ''}
+                </Texto>
+              </View>
+              <BotonIcono
+                icono={temarioDe === h.id ? 'chevron-up' : 'list-outline'}
+                etiqueta={temarioDe === h.id ? `Cerrar el temario de ${h.nombre}` : `Temario de ${h.nombre}`}
+                alPulsar={() => setTemarioDe(temarioDe === h.id ? null : h.id)}
+              />
+              <BotonIcono icono="create-outline" etiqueta={`Editar ${h.nombre}`} alPulsar={() => editar(h)} />
+              <BotonIcono
+                icono="close"
+                etiqueta={`Quitar ${h.nombre}`}
+                alPulsar={() => {
+                  if (editando?.id === h.id) limpiar();
+                  alCambiar(hitos.filter((x) => x.id !== h.id));
+                }}
+              />
             </View>
-            <BotonIcono icono="create-outline" etiqueta={`Editar ${h.nombre}`} alPulsar={() => editar(h)} />
-            <BotonIcono
-              icono="close"
-              etiqueta={`Quitar ${h.nombre}`}
-              alPulsar={() => {
-                if (editando?.id === h.id) limpiar();
-                alCambiar(hitos.filter((x) => x.id !== h.id));
-              }}
-            />
+            {temarioDe === h.id ? (
+              <PanelTemario hito={h} alCambiar={(nuevo) => alCambiar(hitos.map((x) => (x.id === h.id ? nuevo : x)))} />
+            ) : null}
           </Tarjeta>
         );
       })}
+      {ordenados.length > 0 && !temarioDe ? (
+        <Texto pequeno secundario>
+          Toca el icono de la lista en un examen para pegar su temario: la IA lo reparte en temas y cada bloque te dice
+          qué toca.
+        </Texto>
+      ) : null}
 
       <Tarjeta style={estilos.formulario}>
         {editando ? <Texto fuerte>Cambiando «{editando.nombre}»</Texto> : <Texto fuerte>Añadir un examen o entrega</Texto>}

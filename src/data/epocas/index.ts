@@ -18,8 +18,10 @@ export type {
   Imprescindible,
   RegistroBloque,
   RitmoEpoca,
+  TemaHito,
   TipoEpoca,
 } from './tipos';
+export { normalizarTemas } from './tipos';
 
 // Épocas doradas y el registro de bloques hechos o saltados. Se leen una vez
 // y se guardan en memoria para que todas las pantallas vean lo mismo.

@@ -28,6 +28,7 @@ import {
   progresoHitos,
   progresoSemana,
   resumenEpoca,
+  temaActual,
   textoHoras,
   textoQuedan,
   type PlanEpoca,
@@ -36,6 +37,7 @@ import { claveDia, DIAS_SEMANA_LETRA, fechaDesdeClave, formatearDiaCorto, sumarD
 import { alturaTactil, colores, espacio, radio } from '@/theme';
 
 import { BarraHoras } from './epoca/BarraHoras';
+import { RepasoIA } from './epoca/RepasoIA';
 import { DESCANSO_TEXTO, formatoHoras, NOMBRE_TIPO, NOMBRES_DIAS } from './epoca/textos';
 
 // Sección de la Época dorada (/epoca o /epoca?id=...). Sin id enseña la activa;
@@ -223,6 +225,17 @@ function DetalleEpoca({ epoca, plan, registro, perfil, hoy }: PropsDetalle) {
               hechoMin={p.hechoMin}
               totalMin={p.totalMin}
             />
+            {(() => {
+              const actual = temaActual(p.hito, p.hechoMin);
+              if (!actual) return null;
+              return (
+                <Texto pequeno secundario>
+                  {actual.terminado
+                    ? 'Temas terminados: ahora, repasar.'
+                    : `Toca: ${actual.tema.nombre} (${actual.numero} de ${actual.total})`}
+                </Texto>
+              );
+            })()}
             {p.faltanMin > 0 && estado !== 'pasada' ? (
               <Texto pequeno fuerte style={estilos.aviso}>
                 No caben {textoHoras(p.faltanMin)} antes de la fecha. Sube las horas al día o libera algo del
@@ -234,9 +247,18 @@ function DetalleEpoca({ epoca, plan, registro, perfil, hoy }: PropsDetalle) {
       </Tarjeta>
       <Boton
         variante="secundario"
-        titulo="Añadir o cambiar hitos"
+        titulo="Hitos y temarios"
         onPress={() => router.push({ pathname: '/epoca-editar', params: { id: epoca.id, paso: '3' } })}
       />
+
+      {estado === 'activa' && hitos.some((p) => p.hito.fecha >= hoy) ? (
+        <>
+          <Titulo nivel={2} style={estilos.seccion}>
+            ¿Cómo lo llevas?
+          </Titulo>
+          <RepasoIA epoca={epoca} registro={registro} plan={plan} />
+        </>
+      ) : null}
 
       <Titulo nivel={2} style={estilos.seccion}>
         Tu ritmo

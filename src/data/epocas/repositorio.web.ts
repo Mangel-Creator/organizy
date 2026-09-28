@@ -1,6 +1,6 @@
 import { guardarAjuste, leerAjuste } from '@/data/ajustes';
 
-import type { Epoca, RegistroBloque, RepositorioEpocas } from './tipos';
+import { normalizarTemas, type Epoca, type RegistroBloque, type RepositorioEpocas } from './tipos';
 
 // Guardado de las épocas doradas en la versión web: igual que los eventos
 // (data/eventos/repositorio.web.ts), en el almacenamiento del navegador, porque
@@ -9,7 +9,12 @@ import type { Epoca, RegistroBloque, RepositorioEpocas } from './tipos';
 const CLAVE_EPOCAS = 'epocas';
 const CLAVE_REGISTRO = 'bloquesEpoca';
 
-const leerEpocas = () => leerAjuste<Epoca[]>(CLAVE_EPOCAS, []);
+// Los hitos guardados antes de tener temas no traen el campo: se leen sin temas.
+const leerEpocas = async () =>
+  (await leerAjuste<Epoca[]>(CLAVE_EPOCAS, [])).map((e) => ({
+    ...e,
+    hitos: e.hitos.map((h) => ({ ...h, temas: normalizarTemas(h.temas) })),
+  }));
 const leerRegistro = () => leerAjuste<RegistroBloque[]>(CLAVE_REGISTRO, []);
 
 export const repositorio: RepositorioEpocas = {
