@@ -267,6 +267,10 @@ sesión que fuera**:
   empresa se guarda en Supabase: será una **excepción más** a "datos solo en el
   dispositivo" (la apunta la sesión 15 con el detalle). Prompt en
   `C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-15-organizy-grupal.md`.
+- 28/09/2026 — **Sin "Reservar servicios"** (peluquería, barbería... con Booksy). Se hizo y el
+  usuario lo quitó el mismo día al saber que Organizy no puede reservar ni cancelar por él:
+  Booksy solo deja reservar desde fuera a empresas socias, y un "robot" con su contraseña va
+  contra sus normas. No lo vuelvas a proponer salvo que lo pida.
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -394,8 +398,7 @@ src/
                        recordatorios.ts (recordatorios a clientes: ajustes y envíos),
                        copia.ts (reunir y recuperar la copia de seguridad),
                        correos.ts (resúmenes de correo y enlace del ayudante de Gmail),
-                       calendarios.ts (enlaces de otros calendarios),
-                       servicios.ts (tiendas de "Reservar servicios").
+                       calendarios.ts (enlaces de otros calendarios).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        copia/ (formato de la copia de seguridad y su archivo; con pruebas),
                        calendarios/ (traer Google, iCloud u Outlook por su enlace iCal;
@@ -417,8 +420,7 @@ src/
                        clientes/ (recordatorios a clientes: teléfono, mensaje, estado;
                        con pruebas),
                        correo/ (resúmenes de correo: traerlos del servidor y del ayudante,
-                       vincular y quitar cuentas, plazos como tareas; con pruebas),
-                       servicios/ (Reservar servicios: enlaces de Booksy; con pruebas).
+                       vincular y quitar cuentas, plazos como tareas; con pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 gmail/                 Ayudante de Gmail (Google Apps Script): ayudante.js (lo de Google) y
                        organizy-correo.js, que se GENERA con `npm run ayudante-gmail` juntando
@@ -1514,26 +1516,6 @@ borran solos a los 7 días.
   naranja ni verde.
 - **Pendiente (idea)**: que la captura con IA proponga el cuadrante al apuntar y que los plazos
   del correo entren como "Hazlo ya"; cuando el usuario ponga la clave de Anthropic.
-
-## Reservar servicios (28/09/2026)
-
-- Lo pidió el usuario: un apartado "Reservar servicios" (peluquería y parecidos) que lleve a
-  Booksy, a la tienda que cada uno ponga. **Booksy no deja reservar desde otras apps** (su
-  API es solo para negocios socios): Organizy guarda el enlace de cada tienda y la abre en
-  Booksy (en el iPhone, en su app si está instalada); la reserva se hace allí. Vale también
-  la web de reservas de cualquier tienda.
-- Casilla "Reservar servicios" en Hoy (la octava, junto a Resúmenes) → `/servicios`
-  (`PantallaServicios`): filas planas con icono, nombre, "En Booksy" y "Reservar"; lápiz para
-  cambiarla o quitarla; "Añadir una tienda" (sin tiendas, el formulario sale abierto).
-  Formulario: "¿Qué es?" (`SelectorVisual`: peluquería, barbería, uñas, estética, masajes,
-  otro), enlace (acepta el texto que se copia al compartir desde Booksy, sin `https://`…),
-  "Buscar peluquería en Booksy" (`booksy.com/es-es/s/<categoría>`) y nombre (se rellena solo
-  con el de la dirección de Booksy).
-- Tras tocar "Reservar", la fila pregunta "¿Ya tienes cita?" y "Apuntarla" abre la ficha de
-  evento con el nombre y tipo Yo (`dejarBorrador`); Booksy no avisa a Organizy de la reserva.
-- Datos: `data/servicios.ts` (`organizy:servicios`, solo en el dispositivo; viajan en la copia
-  de seguridad). Lógica pura con pruebas en `services/servicios/` (`extraerEnlace`, `esBooksy`,
-  `nombreDesdeEnlace`, `enlaceBusquedaBooksy`). No manda nada a ningún servidor.
 
 ## Hoja de ruta
 

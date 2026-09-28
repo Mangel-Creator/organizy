@@ -7,15 +7,15 @@ import { colores, espacio, fuentes, radio } from '@/theme';
 
 // Panel de Hoy (lo pidió el usuario: "mucho más visual"): casillas grandes con
 // icono y número. Al tocar una, Hoy enseña su lista debajo; al tocarla otra vez, se
-// cierra. "Época dorada", "Resúmenes" (de correo, fase 11) y "Reservar servicios" no
-// abren lista: llevan a su sección.
+// cierra. "Época dorada" y "Resúmenes" (de correo, fase 11) no abren lista: llevan a
+// su sección.
 
 export type Vista = 'cliente' | 'amigos' | 'yo' | 'tareas' | 'estudio' | 'dia';
 
 type NombreIcono = ComponentProps<typeof Ionicons>['name'];
 
 export type DatosBaldosa = {
-  clave: Vista | 'epoca' | 'resumenes' | 'servicios';
+  clave: Vista | 'epoca' | 'resumenes';
   icono: NombreIcono;
   colores: { fondo: string; icono: string };
   numero?: string; // "2", "0/5"; sin número, la etiqueta va más grande

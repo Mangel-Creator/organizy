@@ -257,7 +257,7 @@ export function PantallaHoy() {
       etiqueta: epoca ? `Época dorada · ${textoQuedan(epoca, hoy)}` : 'Época dorada',
       lectura: epoca ? `Época dorada, ${textoQuedan(epoca, hoy)}. Abrir` : 'Época dorada. Abrir',
     },
-    // Resúmenes de correo (fase 11) y Reservar servicios (peluquería, Booksy...).
+    // Resúmenes de correo (fase 11). Va la última y ocupa toda la fila.
     correo.conexion || correo.cuentas.length > 0
       ? {
           clave: 'resumenes',
@@ -274,13 +274,6 @@ export function PantallaHoy() {
           etiqueta: 'Resúmenes de tu correo',
           lectura: 'Resúmenes de tu correo. Conectar Gmail',
         },
-    {
-      clave: 'servicios',
-      icono: 'cut-outline',
-      colores: colorBaldosa.neutro,
-      etiqueta: 'Reservar servicios',
-      lectura: 'Reservar servicios: peluquería, barbería y más. Abrir',
-    },
   ];
 
   const pulsarBaldosa = (clave: DatosBaldosa['clave']) => {
@@ -290,10 +283,6 @@ export function PantallaHoy() {
     }
     if (clave === 'resumenes') {
       router.push('/resumenes');
-      return;
-    }
-    if (clave === 'servicios') {
-      router.push('/servicios');
       return;
     }
     setVista((actual) => (actual === clave ? null : clave));
