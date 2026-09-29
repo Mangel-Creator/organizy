@@ -99,7 +99,49 @@ export type TareaEmpresa = {
 export type BloqueOcupado = { d: ClaveDia; i: number; f: number };
 export type OcupadoDe = { usuario: string; bloques: BloqueOcupado[]; actualizado: string };
 
-export type AvisosEmpresa = { turnos: boolean; tareas: boolean; eventos: boolean; cambios: boolean; altas: boolean };
+// Chat de empresa (fase 15b, como Teams): General, un canal por equipo y chats privados.
+export type TipoCanal = 'general' | 'equipo' | 'privado';
+
+export type CanalChat = {
+  id: string;
+  tipo: TipoCanal;
+  equipoId: string | null;
+  personas: [string, string] | null; // solo en los privados
+  sinLeer: number;
+  ultimo: { texto: string; autor: string | null; el: string } | null;
+};
+
+export type MensajeChat = {
+  id: string;
+  canalId: string;
+  autor: string | null; // null = alguien que ya no está
+  texto: string;
+  borrado: boolean;
+  creado: string; // ISO
+};
+
+// Avisos que publican el administrador y los responsables (los "anuncios" de Teams).
+export type Anuncio = {
+  id: string;
+  equipoId: string | null; // null = toda la empresa
+  autor: string | null;
+  titulo: string;
+  texto: string;
+  importante: boolean;
+  creado: string;
+};
+
+export type LeidoAnuncio = { anuncioId: string; usuario: string; el: string };
+
+export type AvisosEmpresa = {
+  turnos: boolean;
+  tareas: boolean;
+  eventos: boolean;
+  cambios: boolean;
+  altas: boolean;
+  chat: boolean;
+  anuncios: boolean;
+};
 
 export const AVISOS_EMPRESA_POR_DEFECTO: AvisosEmpresa = {
   turnos: true,
@@ -107,6 +149,8 @@ export const AVISOS_EMPRESA_POR_DEFECTO: AvisosEmpresa = {
   eventos: true,
   cambios: true,
   altas: true,
+  chat: true,
+  anuncios: true,
 };
 
 // Todo lo de la empresa que ve esta persona (lo que dejan las reglas del servidor).
@@ -125,6 +169,9 @@ export type DatosEmpresa = {
   tareas: TareaEmpresa[];
   ocupados: OcupadoDe[]; // solo quien lleva a esas personas
   avisos: AvisosEmpresa;
+  canales: CanalChat[]; // los que veo, con lo último y los sin leer
+  anuncios: Anuncio[];
+  anunciosLeidos: LeidoAnuncio[];
 };
 
 // En qué punto está esta persona.

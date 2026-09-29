@@ -19,6 +19,7 @@ import {
   terminarEntrada,
 } from '@/services/empresa';
 import { esTareaMia, paraQuien, voyAlEvento } from '@/services/empresa/calendario';
+import { anunciosSinLeer, totalSinLeer } from '@/services/empresa/chat';
 import { planEmpresaVisible } from '@/services/empresa/plan';
 import { NOMBRE_PAPEL, gestionoAlgo, nombreEquipo, papelDe, soyAdmin } from '@/services/empresa/roles';
 import { marcarTarea, misDatos } from '@/services/empresa/servidor';
@@ -35,7 +36,7 @@ import { Baldosas, BotonVolver, Confirmar, FilaEmpresa, Mensaje, type Baldosa } 
 // (#invitacion=…) y, en la web, la vuelta del inicio de sesión (?code=…).
 
 type Vista = 'calendario' | 'tareas';
-type Clave = Vista | 'turnos' | 'equipo' | 'disponibilidad';
+type Clave = Vista | 'chat' | 'avisos' | 'turnos' | 'equipo' | 'disponibilidad';
 
 // El código del enlace de invitación, detrás de "#" en la web.
 function invitacionDeLaDireccion(): string | null {
@@ -135,7 +136,23 @@ function Dentro({ datos, verAlAbrir }: { datos: DatosEmpresa; verAlAbrir: Vista 
   const cambiosPorResolver = datos.cambios.filter((c) => c.estado === 'pendiente' && c.usuario !== datos.yo).length;
   const activos = datos.miembros.filter((m) => m.estado === 'activo').length;
 
+  const sinLeer = totalSinLeer(datos);
+  const avisosSinLeer = anunciosSinLeer(datos).length;
   const baldosas: Baldosa<Clave>[] = [
+    {
+      clave: 'chat',
+      icono: 'chatbubbles-outline',
+      numero: String(sinLeer),
+      etiqueta: sinLeer === 1 ? 'mensaje sin leer' : 'mensajes sin leer',
+      lectura: `Chat, ${sinLeer} mensajes sin leer. Abrir`,
+    },
+    {
+      clave: 'avisos',
+      icono: 'megaphone-outline',
+      numero: String(avisosSinLeer),
+      etiqueta: avisosSinLeer === 1 ? 'aviso sin leer' : 'avisos sin leer',
+      lectura: `Avisos, ${avisosSinLeer} sin leer. Abrir`,
+    },
     {
       clave: 'calendario',
       icono: 'calendar-outline',
@@ -182,7 +199,9 @@ function Dentro({ datos, verAlAbrir }: { datos: DatosEmpresa; verAlAbrir: Vista 
   ];
 
   const pulsar = (clave: Clave) => {
-    if (clave === 'turnos') router.push('/empresa-turnos');
+    if (clave === 'chat') router.push('/empresa-chat');
+    else if (clave === 'avisos') router.push('/empresa-avisos');
+    else if (clave === 'turnos') router.push('/empresa-turnos');
     else if (clave === 'equipo') router.push('/empresa-equipo');
     else if (clave === 'disponibilidad') router.push('/empresa-disponibilidad');
     else setVista((v) => (v === clave ? null : clave));

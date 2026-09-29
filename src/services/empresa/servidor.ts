@@ -1,7 +1,10 @@
 import {
   AVISOS_EMPRESA_POR_DEFECTO,
+  type Anuncio,
   type AvisosEmpresa,
   type BloqueOcupado,
+  type CanalChat,
+  type MensajeChat,
   type CambioTurno,
   type DatosEmpresa,
   type EventoEmpresa,
@@ -115,6 +118,43 @@ function aAvisos(f: Fila | undefined): AvisosEmpresa {
     eventos: f.eventos !== false,
     cambios: f.cambios !== false,
     altas: f.altas !== false,
+    chat: f.chat !== false,
+    anuncios: f.anuncios !== false,
+  };
+}
+
+function aCanal(c: Fila, r: Fila | undefined): CanalChat {
+  const tipo = (['general', 'equipo', 'privado'].includes(texto(c.tipo)) ? c.tipo : 'general') as CanalChat['tipo'];
+  return {
+    id: texto(c.id),
+    tipo,
+    equipoId: textoONulo(c.equipo_id),
+    personas: tipo === 'privado' ? [texto(c.persona_a), texto(c.persona_b)] : null,
+    sinLeer: typeof r?.sin_leer === 'number' ? r.sin_leer : 0,
+    ultimo: r?.ultimo_el ? { texto: texto(r.ultimo_texto), autor: textoONulo(r.ultimo_autor), el: texto(r.ultimo_el) } : null,
+  };
+}
+
+function aAnuncio(f: Fila): Anuncio {
+  return {
+    id: texto(f.id),
+    equipoId: textoONulo(f.equipo_id),
+    autor: textoONulo(f.autor),
+    titulo: texto(f.titulo),
+    texto: texto(f.texto),
+    importante: f.importante === true,
+    creado: texto(f.creado),
+  };
+}
+
+function aMensaje(f: Fila): MensajeChat {
+  return {
+    id: texto(f.id),
+    canalId: texto(f.canal_id),
+    autor: textoONulo(f.autor),
+    texto: texto(f.texto),
+    borrado: f.borrado === true,
+    creado: texto(f.creado),
   };
 }
 
@@ -130,7 +170,7 @@ export async function traerSituacion(ahora = new Date()): Promise<Situacion> {
 
   const desde = sumarDias(claveDia(ahora), -7 * SEMANAS_ATRAS);
   const admin = yo.rol === 'admin';
-  const [miembros, equipos, enEquipos, invitaciones, enlaces, eventos, respuestas, turnos, cambios, tareas, ocupados, avisos] =
+  const [miembros, equipos, enEquipos, invitaciones, enlaces, eventos, respuestas, turnos, cambios, tareas, ocupados, avisos, canales, resumen, anuncios, leidos] =
     await Promise.all([
       b.leer('empresa_miembros'),
       b.leer('equipos'),
@@ -144,6 +184,10 @@ export async function traerSituacion(ahora = new Date()): Promise<Situacion> {
       b.leer('tareas_empresa'),
       b.leer('ocupado_compartido'),
       b.leer('empresa_avisos', [{ columna: 'usuario', es: 'igual', valor: u.id }]),
+      b.leer('chat_canales'),
+      b.rpc<Fila[]>('chat_resumen', {}).then((r) => r ?? []),
+      b.leer('anuncios'),
+      b.leer('anuncios_leidos'),
     ]);
   const datos: DatosEmpresa = {
     yo: u.id,
@@ -178,6 +222,9 @@ export async function traerSituacion(ahora = new Date()): Promise<Situacion> {
     tareas: tareas.map(aTarea).filter((t) => !t.hecha || (t.hechaEl ?? '') >= sumarDias(claveDia(ahora), -30)),
     ocupados: ocupados.map((o) => ({ usuario: texto(o.usuario), bloques: aBloques(o.bloques), actualizado: texto(o.actualizado) })),
     avisos: aAvisos(avisos[0]),
+    canales: canales.map((c) => aCanal(c, resumen.find((r) => r.canal_id === c.id))),
+    anuncios: anuncios.map(aAnuncio).sort((a, b) => b.creado.localeCompare(a.creado)),
+    anunciosLeidos: leidos.map((l) => ({ anuncioId: texto(l.anuncio_id), usuario: texto(l.usuario), el: texto(l.el) })),
   };
   return { fase: 'dentro', correo: u.correo, datos };
 }
@@ -366,4 +413,51 @@ export async function guardarAvisos(yo: string, avisos: AvisosEmpresa, token: st
   const tokens = Array.isArray(actual?.tokens) ? (actual.tokens as string[]) : [];
   const nuevos = token ? [token, ...tokens.filter((t) => t !== token)].slice(0, 5) : tokens;
   await base().guardarFila('empresa_avisos', { usuario: yo, tokens: nuevos, ...avisos }, 'usuario');
+}
+
+// --- Chat (fase 15b) ---
+
+// Los últimos mensajes de un canal, del más antiguo al más nuevo.
+export async function leerMensajes(canalId: string, cuantos = 150): Promise<MensajeChat[]> {
+  const filas = await base().leer('chat_mensajes', [{ columna: 'canal_id', es: 'igual', valor: canalId }]);
+  return filas
+    .map(aMensaje)
+    .sort((a, b) => a.creado.localeCompare(b.creado))
+    .slice(-cuantos);
+}
+
+export async function enviarMensaje(empresaId: string, canalId: string, textoMensaje: string) {
+  await base().insertar('chat_mensajes', [{ empresa_id: empresaId, canal_id: canalId, texto: textoMensaje }]);
+}
+
+export const borrarMensaje = (id: string) => base().rpc('chat_borrar_mensaje', { p_id: id });
+
+export async function marcarCanalLeido(canalId: string, yo: string) {
+  await base().guardarFila('chat_leidos', { canal_id: canalId, usuario: yo, leido_hasta: new Date().toISOString() }, 'canal_id,usuario');
+}
+
+// El chat privado con alguien (lo crea si no existe). Devuelve el id del canal.
+export const abrirPrivado = (persona: string) => base().rpc<string>('chat_privado', { p_persona: persona });
+
+// Avisa cuando llega algo nuevo a ese canal (al momento con Supabase Realtime).
+export const escucharCanal = (canalId: string, alLlegar: () => void) => base().escuchar('chat_mensajes', 'canal_id', canalId, alLlegar);
+
+// --- Avisos de los superiores (fase 15b) ---
+
+export type AnuncioNuevo = Pick<Anuncio, 'equipoId' | 'titulo' | 'texto' | 'importante'>;
+
+export async function publicarAnuncio(empresaId: string, a: AnuncioNuevo) {
+  await base().insertar('anuncios', [
+    { empresa_id: empresaId, equipo_id: a.equipoId, titulo: a.titulo, texto: a.texto, importante: a.importante },
+  ]);
+}
+export const borrarAnuncio = (id: string) => base().borrar('anuncios', { id });
+
+// Una sola vez por aviso (si ya estaba, no pasa nada).
+export async function marcarAnuncioLeido(anuncioId: string, yo: string) {
+  try {
+    await base().insertar('anuncios_leidos', [{ anuncio_id: anuncioId, usuario: yo }]);
+  } catch (error) {
+    if (!/duplicate|23505|ya/i.test(String((error as Error)?.message ?? ''))) throw error;
+  }
 }

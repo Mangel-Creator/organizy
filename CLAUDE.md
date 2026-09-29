@@ -277,6 +277,12 @@ sesión que fuera**:
   "Fase 15". **Pendiente del usuario** (cuando quiera; no se lo vuelvas a pedir): activar los
   proveedores Google y Azure en Supabase (guía "Fase 15 - Organizy grupal.md", parte A);
   mientras tanto los botones dicen "Aún no está activado".
+- 29/09/2026 — **Chat de empresa y avisos de los superiores, al estilo de Teams** (plan
+  empresa, ver "Fase 15" > "Chat y avisos"): canales (General para toda la empresa y uno por
+  equipo) y chats privados entre dos personas, y un apartado de **Avisos** que solo publican el
+  administrador y los responsables, con "Importante", "Leído" y quién lo ha leído. **Los chats
+  privados solo los leen esas dos personas, tampoco el jefe.** Los mensajes están en Supabase
+  (no cifrados de extremo a extremo) y se borran a los 180 días. Sin fotos ni archivos por ahora.
 - 29/09/2026 — **Límites de IA como los de Claude** (ver "Límites de IA"): cada persona tiene
   un límite cada 5 horas y otro por semana, que ve **en porcentaje** en Perfil > "Tu IA". Al
   llegar, la app sigue sin IA hasta que se libere; **el correo también cuenta** y al agotarse
@@ -1665,6 +1671,30 @@ borran solos a los 7 días.
   copiar semana, tarea marcada desde Hoy, pedir y aprobar cambio, Ocupado, disponibilidad,
   "Buscar hueco" y volver al plan personal. Ojo: en un worktree con `node_modules` enlazado, la web
   enseña las rutas de la carpeta principal hasta arrancar con `--clear`.
+- **Chat y avisos** (29/09, a petición del usuario, "como Teams"; `supabase/migrations/20260929020000_empresa_chat.sql`,
+  ya aplicada; pruebas en `supabase/tests/empresa_chat_rls.sql`, acaban en "todo bien"):
+  - **Canales**: `chat_canales` "general" (se crea solo con la empresa), "equipo" (solo con cada
+    equipo) y "privado" (`chat_privado(persona)`, uno por pareja). Ven General todos; el de un
+    equipo, sus miembros, su responsable y el administrador; un privado, **solo esas dos personas**
+    (`emp_ve_canal`). `chat_mensajes` (texto hasta 2000; autor y hora los pone el servidor; 30 por
+    minuto como mucho; "Mensaje borrado" con `chat_borrar_mensaje`, solo lo tuyo), `chat_leidos`
+    (hasta dónde has leído) y `chat_resumen()` (sin leer y último de cada canal, va en la copia).
+    Al momento con **Supabase Realtime** (`chat_mensajes` en la publicación; `base().escuchar`) y
+    cada 15 s por si acaso. Push a los del canal (menos a quien escribe), con el canal en el
+    destino (`seccion: "chat", id`). Se borran a los 180 días (`emp_limpiar_chat`).
+  - **Avisos** (`anuncios` y `anuncios_leidos`): los publica el administrador (a todos o a un
+    equipo) o el responsable (a su equipo). "Importante" = barra y etiqueta granate y arriba hasta
+    leerlo. Cada uno pulsa "Leído"; quien lo publica o gestiona ve "Leído por N de M" y quién falta
+    (`lecturas`). Push "Aviso: …" o "Importante: …". Se borran al año.
+  - **App**: casillas "Chat" y "Avisos" en `/empresa` (con los sin leer), `/empresa-chat` (canales
+    y chats, "Nuevo chat"), `/empresa-canal?id=` (burbujas: lo mío a la derecha en tinta; lo de los
+    demás con la barra de empresa; se juntan los seguidos de la misma persona, como en Teams) y
+    `/empresa-avisos`. En Hoy, dentro de la casilla de la empresa, "N avisos sin leer" y "N mensajes
+    sin leer". Interruptores "Mensajes del chat" y "Avisos de la empresa" en Perfil > Avisos
+    (`empresa_avisos.chat` y `.anuncios`). Funciones puras con pruebas en `services/empresa/chat.ts`.
+  - **Ojo con las reglas de "ver"**: que miren las columnas de la fila, no la busquen por su id (al
+    crearla con `insert(...).select()` aún no se ve y la regla falla).
+  - Sin fotos ni archivos (harían falta Supabase Storage y sus reglas).
 - **Falta**: que el usuario active Google y Microsoft (parte A de la guía) y lo pruebe con cuentas
   de verdad y los avisos en el iPhone.
 

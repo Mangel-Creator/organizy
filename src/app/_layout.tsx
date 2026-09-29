@@ -106,7 +106,9 @@ export default function LayoutRaiz() {
         router.push('/resumenes');
       } else if (destino.pantalla === 'empresa') {
         // Aviso de la empresa: turnos, tareas, calendario o la gente.
-        if (destino.seccion === 'turnos') router.push('/empresa-turnos');
+        if (destino.seccion === 'chat' && destino.id) router.push({ pathname: '/empresa-canal', params: { id: destino.id } });
+        else if (destino.seccion === 'avisos') router.push('/empresa-avisos');
+        else if (destino.seccion === 'turnos') router.push('/empresa-turnos');
         else if (destino.seccion === 'equipo') router.push('/empresa-equipo');
         else if (destino.seccion === 'calendario' || destino.seccion === 'tareas') {
           router.push({ pathname: '/empresa', params: { ver: destino.seccion } });
@@ -170,6 +172,9 @@ export default function LayoutRaiz() {
           <Stack.Screen name="empresa-turno" />
           <Stack.Screen name="empresa-tarea" />
           <Stack.Screen name="empresa-disponibilidad" />
+          <Stack.Screen name="empresa-chat" />
+          <Stack.Screen name="empresa-canal" />
+          <Stack.Screen name="empresa-avisos" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />

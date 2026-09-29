@@ -114,6 +114,10 @@ export function textoFallo(motivo: string): string {
       return 'Tiene que quedar al menos un administrador.';
     case 'no-comparte':
       return 'Activa antes "Compartir mis huecos como Ocupado".';
+    case 'demasiados-mensajes':
+      return 'Vas muy rápido. Espera un momento antes de mandar más mensajes.';
+    case 'mensaje-vacio':
+      return 'Escribe algo antes de enviarlo.';
     case 'sin-permiso':
       return 'Eso solo lo puede hacer quien gestiona ese equipo.';
     default:

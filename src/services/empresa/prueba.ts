@@ -77,7 +77,18 @@ function visible(bd: Bd, t: string, f: Fila): boolean {
   if (t === 'empresas') return tabla(bd, 'empresa_miembros').some((m) => m.usuario === bd.yo && m.empresa_id === f.id);
   if (t === 'empresa_miembros') return f.usuario === bd.yo || (f.empresa_id === empresa && (f.estado === 'activo' || soyAdmin(bd)));
   if (t === 'invitaciones_correo' || t === 'invitaciones_enlace') return f.empresa_id === empresa && soyAdmin(bd);
+  if (t === 'chat_canales') return veCanal(bd, f);
+  if (t === 'chat_mensajes') return veCanal(bd, tabla(bd, 'chat_canales').find((c) => c.id === f.canal_id));
+  if (t === 'chat_leidos') return f.usuario === bd.yo;
+  if (t === 'anuncios_leidos') return tabla(bd, 'anuncios').some((a) => a.id === f.anuncio_id && a.empresa_id === empresa);
   return f.empresa_id === empresa;
+}
+
+function veCanal(bd: Bd, c: Fila | undefined): boolean {
+  if (!c || c.empresa_id !== miEmpresa(bd)) return false;
+  if (c.tipo === 'privado') return c.persona_a === bd.yo || c.persona_b === bd.yo;
+  if (c.tipo === 'equipo') return soyAdmin(bd) || tabla(bd, 'equipo_miembros').some((m) => m.equipo_id === c.equipo_id && m.usuario === bd.yo);
+  return true;
 }
 
 function sacar(bd: Bd, t: string, quitar: (f: Fila) => boolean) {
@@ -104,6 +115,7 @@ const FUNCIONES: Record<string, (bd: Bd, a: Fila) => unknown> = {
     if (yoMiembro(bd)) throw new FalloEmpresa('ya-en-empresa');
     const empresa = id();
     tabla(bd, 'empresas').push({ id: empresa, nombre: a.p_nombre, dominio: null, aprobar_solo: false, creada_por: p.id, creada: ahora() });
+    tabla(bd, 'chat_canales').push({ id: id(), empresa_id: empresa, tipo: 'general', equipo_id: null, persona_a: null, persona_b: null });
     tabla(bd, 'empresa_miembros').push({
       empresa_id: empresa, usuario: p.id, nombre: a.p_mi_nombre, email: p.correo, rol: 'admin', estado: 'activo',
       via: 'creador', comparte_ocupado: false, alta: ahora(),
@@ -219,6 +231,39 @@ const FUNCIONES: Record<string, (bd: Bd, a: Fila) => unknown> = {
     t.hecha_el = a.p_hecha ? ahora() : null;
     return null;
   },
+  chat_privado(bd, a) {
+    const empresa = miEmpresa(bd);
+    const [x, y] = [bd.yo as string, a.p_persona as string].sort();
+    let c = tabla(bd, 'chat_canales').find((k) => k.tipo === 'privado' && k.empresa_id === empresa && k.persona_a === x && k.persona_b === y);
+    if (!c) {
+      c = { id: id(), empresa_id: empresa, tipo: 'privado', equipo_id: null, persona_a: x, persona_b: y };
+      tabla(bd, 'chat_canales').push(c);
+    }
+    return c.id;
+  },
+  chat_resumen(bd) {
+    return tabla(bd, 'chat_canales')
+      .filter((c) => veCanal(bd, c))
+      .map((c) => {
+        const leido = (tabla(bd, 'chat_leidos').find((l) => l.canal_id === c.id && l.usuario === bd.yo)?.leido_hasta as string) ?? '';
+        const mensajes = tabla(bd, 'chat_mensajes').filter((m) => m.canal_id === c.id && !m.borrado);
+        const ultimo = mensajes[mensajes.length - 1];
+        return {
+          canal_id: c.id,
+          sin_leer: mensajes.filter((m) => m.autor !== bd.yo && (m.creado as string) > leido).length,
+          ultimo_texto: ultimo?.texto ?? null,
+          ultimo_autor: ultimo?.autor ?? null,
+          ultimo_el: ultimo?.creado ?? null,
+        };
+      });
+  },
+  chat_borrar_mensaje(bd, a) {
+    const m = tabla(bd, 'chat_mensajes').find((x) => x.id === a.p_id && x.autor === bd.yo);
+    if (!m) throw new FalloEmpresa('sin-permiso');
+    m.borrado = true;
+    m.texto = '';
+    return null;
+  },
   empresa_resolver_cambio(bd, a) {
     const c = tabla(bd, 'cambios_turno').find((x) => x.id === a.p_id && x.estado === 'pendiente');
     if (!c) throw new FalloEmpresa('no-existe');
@@ -249,6 +294,15 @@ function completar(t: string, f: Fila, bd: Bd): Fila {
   if (t === 'cambios_turno') comun.creado = ahora();
   if (['eventos_empresa', 'turnos', 'tareas_empresa'].includes(t)) comun.creado_por = bd.yo;
   if (t === 'tareas_empresa') Object.assign(comun, { hecha: false, hecha_por: null, hecha_el: null });
+  if (t === 'chat_mensajes') {
+    if (!String(comun.texto ?? '').trim()) throw new FalloEmpresa('mensaje-vacio');
+    Object.assign(comun, { autor: bd.yo, creado: ahora(), borrado: false, texto: String(comun.texto).trim() });
+  }
+  if (t === 'anuncios') Object.assign(comun, { autor: bd.yo, creado: ahora() });
+  if (t === 'anuncios_leidos') {
+    comun.el = ahora();
+    if (tabla(bd, t).some((l) => l.anuncio_id === comun.anuncio_id && l.usuario === comun.usuario)) throw new FalloEmpresa('duplicate');
+  }
   return comun;
 }
 
@@ -287,6 +341,12 @@ export const basePrueba: Base & { entrarComo(persona: UsuarioEmpresa): void } = 
       if (!miEmpresa(bd) && t !== 'empresa_avisos') throw new FalloEmpresa('sin-permiso');
       const nuevas = filas.map((f) => completar(t, f, bd));
       tabla(bd, t).push(...nuevas);
+      // Cada equipo nuevo, su canal (como el disparador del servidor).
+      if (t === 'equipos') {
+        for (const e of nuevas) {
+          tabla(bd, 'chat_canales').push({ id: id(), empresa_id: e.empresa_id, tipo: 'equipo', equipo_id: e.id, persona_a: null, persona_b: null });
+        }
+      }
       return nuevas;
     });
   },
@@ -305,6 +365,18 @@ export const basePrueba: Base & { entrarComo(persona: UsuarioEmpresa): void } = 
       if (ya) Object.assign(ya, fila);
       else tabla(bd, t).push(completar(t, fila, bd));
     });
+  },
+  // Sin servidor de verdad: se mira cada 2 segundos si ha cambiado algo (vale para varias pestañas).
+  escuchar(_tabla, _columna, _valor, alLlegar) {
+    let antes = window.localStorage.getItem(CLAVE);
+    const vigilar = setInterval(() => {
+      const ahoraBd = window.localStorage.getItem(CLAVE);
+      if (ahoraBd !== antes) {
+        antes = ahoraBd;
+        alLlegar();
+      }
+    }, 2000);
+    return () => clearInterval(vigilar);
   },
   async cerrarSesion() {
     conBd((bd) => {

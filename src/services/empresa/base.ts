@@ -25,13 +25,15 @@ export type Base = {
   cambiar(tabla: string, donde: Fila, cambios: Fila): Promise<void>;
   borrar(tabla: string, donde: Fila): Promise<void>;
   guardarFila(tabla: string, fila: Fila, conflicto: string): Promise<void>;
+  // Avisa cuando se añade una fila con columna = valor (el chat al momento). Devuelve cómo parar.
+  escuchar(tabla: string, columna: string, valor: string, alLlegar: () => void): () => void;
   cerrarSesion(): Promise<void>;
 };
 
 const MOTIVOS = [
   'sin-cuenta', 'sin-correo', 'sin-invitacion', 'enlace-caducado', 'ya-en-empresa', 'empresa-llena',
   'demasiadas', 'dominio-publico', 'dominio-ajeno', 'dominio-en-uso', 'unico-admin', 'sin-admin',
-  'no-comparte', 'sin-permiso', 'no-existe', 'usa-salir',
+  'no-comparte', 'sin-permiso', 'no-existe', 'usa-salir', 'mensaje-vacio', 'demasiados-mensajes',
 ];
 
 export function motivoDe(error: unknown): string {
@@ -85,6 +87,17 @@ export const baseSupabase: Base = {
   },
   async guardarFila(tabla, fila, conflicto) {
     comprobar(await clienteOFallo().from(tabla).upsert(fila, { onConflict: conflicto }));
+  },
+  escuchar(tabla, columna, valor, alLlegar) {
+    const supabase = obtenerSupabaseEmpresa();
+    if (!supabase) return () => {};
+    const canal = supabase
+      .channel(`${tabla}:${valor}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: tabla, filter: `${columna}=eq.${valor}` }, () => alLlegar())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(canal);
+    };
   },
   async cerrarSesion() {
     // Solo en este dispositivo: la cuenta de empresa ya se borró en el servidor al salir.

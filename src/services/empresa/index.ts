@@ -24,6 +24,7 @@ import {
   borrarEmpresaEnServidor,
   crearEmpresa,
   guardarAvisos,
+  marcarCanalLeido,
   marcarTarea,
   salirEnServidor,
   subirOcupado,
@@ -99,6 +100,19 @@ export async function hacerEnEmpresa(accion: () => Promise<unknown>): Promise<Re
 export function datosActuales(): DatosEmpresa | null {
   const { modo, situacion } = estadoEmpresaActual();
   return modo && situacion.fase === 'dentro' ? situacion.datos : null;
+}
+
+// He abierto un canal del chat: leído en el servidor y, al momento, en la copia del móvil.
+export async function marcarCanalLeidoAqui(canalId: string): Promise<void> {
+  const datos = datosActuales();
+  if (!datos) return;
+  await marcarCanalLeido(canalId, datos.yo).catch(() => {});
+  const actual = estadoEmpresaActual().situacion;
+  if (actual.fase !== 'dentro' || !actual.datos.canales.some((c) => c.id === canalId && c.sinLeer > 0)) return;
+  await guardarSituacion(
+    { ...actual, datos: { ...actual.datos, canales: actual.datos.canales.map((c) => (c.id === canalId ? { ...c, sinLeer: 0 } : c)) } },
+    estadoEmpresaActual().traidoEl,
+  );
 }
 
 // Marcar una tarea de la agenda (Hoy): si es de la empresa, en el servidor.

@@ -4,7 +4,7 @@ import { borrarAjuste, guardarAjuste, leerAjuste } from '@/data/ajustes';
 
 // En el móvil carga repositorio.ts (SQLite) y en la web repositorio.web.ts.
 import { repositorio } from './repositorio';
-import type { EstadoEmpresa, Situacion } from './tipos';
+import { AVISOS_EMPRESA_POR_DEFECTO, type EstadoEmpresa, type Situacion } from './tipos';
 
 export * from './tipos';
 
@@ -33,7 +33,16 @@ function leerCopia(texto: string | null): Copia | null {
   if (!texto) return null;
   try {
     const copia = JSON.parse(texto) as Copia;
-    return copia?.situacion?.fase ? copia : null;
+    if (!copia?.situacion?.fase) return null;
+    // Copias de antes del chat (fase 15b): sin canales ni avisos.
+    if (copia.situacion.fase === 'dentro') {
+      const d = copia.situacion.datos;
+      d.canales ??= [];
+      d.anuncios ??= [];
+      d.anunciosLeidos ??= [];
+      d.avisos = { ...AVISOS_EMPRESA_POR_DEFECTO, ...d.avisos };
+    }
+    return copia;
   } catch {
     return null;
   }

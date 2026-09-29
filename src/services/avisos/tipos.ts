@@ -34,7 +34,7 @@ export type Destino =
   | { pantalla: 'mapa'; id: string; dia: ClaveDia } // la ruta hasta ese evento (fase 6)
   | { pantalla: 'plan'; id: string } // un plan con votación (fase 8)
   | { pantalla: 'resumenes' } // resúmenes de correo (fase 11)
-  | { pantalla: 'empresa'; seccion?: string }; // plan empresa (fase 15): turnos, tareas...
+  | { pantalla: 'empresa'; seccion?: string; id?: string }; // plan empresa (fase 15): turnos, chat...
 
 // Botones dentro de la notificación. Cada categoría se registra una vez al
 // arrancar (services/avisos/programar.ts).

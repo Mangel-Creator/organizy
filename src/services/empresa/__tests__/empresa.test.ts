@@ -38,6 +38,9 @@ function datos(yo: string, cambios: Partial<DatosEmpresa> = {}): DatosEmpresa {
     tareas: [],
     ocupados: [],
     avisos: AVISOS_EMPRESA_POR_DEFECTO,
+    canales: [],
+    anuncios: [],
+    anunciosLeidos: [],
     ...cambios,
   };
 }

@@ -184,7 +184,7 @@ export type DestinoApp =
   | { pantalla: 'mapa'; id: string; dia: string }
   | { pantalla: 'plan'; id: string } // un plan con votación (fase 8)
   | { pantalla: 'resumenes' } // resúmenes de correo (fase 11)
-  | { pantalla: 'empresa'; seccion?: string } // plan empresa (fase 15)
+  | { pantalla: 'empresa'; seccion?: string; id?: string } // plan empresa (fase 15)
   | { pantalla: 'ninguna' }; // "Parar": no hace falta abrir nada
 
 // Hace lo que pide la respuesta y dice a qué pantalla ir.

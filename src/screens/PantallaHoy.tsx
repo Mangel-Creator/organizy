@@ -41,6 +41,7 @@ import {
 import { contarNuevos } from '@/services/correo/correos';
 import { marcarHechaDeAgenda } from '@/services/empresa';
 import { todoElDiaDeEmpresa } from '@/services/empresa/calendario';
+import { anunciosSinLeer, totalSinLeer } from '@/services/empresa/chat';
 import { NOMBRE_CLASE } from '@/services/empresa/textos';
 import { imprescindiblesDelDia, textoQuedan, ventanaEpoca } from '@/services/epoca';
 import {
@@ -419,6 +420,20 @@ export function PantallaHoy() {
                           <FilaTarea key={fila.tarea.id} {...fila} />
                         ))}
                       </View>
+                    ) : null}
+                    {anunciosSinLeer(datosEmpresa).length > 0 ? (
+                      <Boton
+                        variante="secundario"
+                        titulo={`${anunciosSinLeer(datosEmpresa).length} ${contar(anunciosSinLeer(datosEmpresa).length, 'aviso', 'avisos')} sin leer`}
+                        onPress={() => router.push('/empresa-avisos')}
+                      />
+                    ) : null}
+                    {totalSinLeer(datosEmpresa) > 0 ? (
+                      <Boton
+                        variante="secundario"
+                        titulo={`${totalSinLeer(datosEmpresa)} ${contar(totalSinLeer(datosEmpresa), 'mensaje', 'mensajes')} sin leer en el chat`}
+                        onPress={() => router.push('/empresa-chat')}
+                      />
                     ) : null}
                     <Boton variante="secundario" titulo={`Abrir ${datosEmpresa.empresa.nombre}`} onPress={() => router.push('/empresa')} />
                   </>

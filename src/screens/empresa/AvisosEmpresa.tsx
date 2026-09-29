@@ -25,6 +25,8 @@ export function AvisosEmpresa() {
       <Texto pequeno secundario>
         Te llegan al momento, aunque tengas Organizy cerrado (en la web no hay avisos).
       </Texto>
+      <Interruptor etiqueta="Mensajes del chat" valor={a.chat} alCambiar={(v) => cambiar({ chat: v })} />
+      <Interruptor etiqueta="Avisos de la empresa" ayuda="Los que publican el jefe y los responsables." valor={a.anuncios} alCambiar={(v) => cambiar({ anuncios: v })} />
       <Interruptor etiqueta="Turno nuevo o cambiado" valor={a.turnos} alCambiar={(v) => cambiar({ turnos: v })} />
       <Interruptor etiqueta="Tarea asignada" valor={a.tareas} alCambiar={(v) => cambiar({ tareas: v })} />
       <Interruptor etiqueta="Evento de empresa nuevo" valor={a.eventos} alCambiar={(v) => cambiar({ eventos: v })} />
