@@ -290,6 +290,18 @@ sesión que fuera**:
   saldo extra ya existe en el servidor, pero cobrar necesita la cuenta de Apple o Stripe
   (autónomo); el botón explica que aún no se puede. No lo actives sin que el usuario tenga
   esas cuentas y lo pida.
+- 29/09/2026 (ajusta la anterior en el correo) — **El correo, aparte del límite general, y la
+  persona elige qué correos resume la IA.** Con muchos correos, un límite común dejaría sin IA
+  para lo demás. Plan: el correo **no gasta** del límite de 5 h ni del semanal; tiene su propio
+  cupo de correos al día con IA (propuesta: 20 en el Completo) y en Resúmenes se elige cuáles:
+  todos los de Principal, solo los de remitentes o dominios marcados, o solo los que parezcan
+  tener fecha límite. Los demás se resumen con las reglas, sin límite ni coste. **Pendiente de
+  programar** (servidor: `_shared/limiteIA.ts` y las funciones `correo` y `correo-cuentas`).
+- 29/09/2026 — **Precios: propuesta, sin decidir.** Está en el Word del usuario
+  `OneDrive\PERSONAL\Organizy yo\PLAN DE PRECIOS TEMPORAL.docx` (sesión "Monetización y
+  planes"): Base gratis, Pro, Completo, De por vida Pro y Completo (con mejora pagando la
+  diferencia), Familia, recargas de IA y tres planes de empresa. No lo programes ni lo des por
+  bueno hasta que el usuario lo confirme.
 - 28/09/2026 — **Sin "Reservar servicios"** (peluquería, barbería... con Booksy). Se hizo y el
   usuario lo quitó el mismo día al saber que Organizy no puede reservar ni cancelar por él:
   Booksy solo deja reservar desde fuera a empresas socias, y un "robot" con su contraseña va
@@ -1583,7 +1595,11 @@ borran solos a los 7 días.
   devuelva `compra: true` (la tarjeta de "Conseguir más IA" tendrá entonces los paquetes).
   Propuesta de paquetes en el Word "RESUMEN IA" del usuario. Para regalar saldo a mano:
   `select public.ia_recargar('<usuario>', 500000, 'regalo', '<referencia única>')`.
+- **Correo aparte** (decisión del 29/09, pendiente de programar): el correo dejará de contar
+  para el límite general y tendrá su propio cupo diario, con la persona eligiendo qué correos
+  resume la IA (ver "Decisiones del usuario", 29/09).
 - **Planes de pago** (pendiente): cada plan tendrá sus números; hoy son los mismos para todos.
+  Propuesta por plan en el Word "PLAN DE PRECIOS TEMPORAL" del usuario (sin decidir).
   Con usuarios anónimos, borrar los datos del navegador da un usuario nuevo con los límites a
   cero: para límites por persona de verdad hará falta iniciar sesión (lo mismo que para cobrar).
 
