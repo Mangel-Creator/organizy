@@ -34,6 +34,7 @@ import { SeccionAvisos } from './perfil/SeccionAvisos';
 import { SeccionCalendarios } from './perfil/SeccionCalendarios';
 import { SeccionCopia } from './perfil/SeccionCopia';
 import { SeccionEpocas } from './perfil/SeccionEpocas';
+import { SeccionIA } from './perfil/SeccionIA';
 import { SeccionPlan } from './perfil/SeccionPlan';
 import { SeccionRecordatorios } from './perfil/SeccionRecordatorios';
 
@@ -179,6 +180,11 @@ export function PantallaPerfil() {
           alActivar={() => activar(permiso)}
         />
       ))}
+
+      <Titulo nivel={2} style={estilos.seccion}>
+        Tu IA
+      </Titulo>
+      <SeccionIA />
 
       <Titulo nivel={2} style={estilos.seccion}>
         Avisos

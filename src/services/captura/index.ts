@@ -3,6 +3,7 @@ import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import type { Perfil } from '@/data/perfil';
 import { asegurarSesion, obtenerSupabase } from '@/data/supabase';
 import { claveDia, formatearHora } from '@/services/fechas';
+import { limiteDelError, mensajeLimite } from '@/services/ia';
 
 import { ID_CASA, validarPropuesta, type Propuesta } from './validar';
 
@@ -16,7 +17,7 @@ export { validarPropuesta, type Confianza, type Propuesta } from './validar';
 export const MAX_FRASE = 300;
 const ESPERA_MAX_MS = 20000;
 
-export type MotivoFallo = 'sin-configurar' | 'sin-conexion' | 'limite' | 'no-entendido' | 'error';
+export type MotivoFallo = 'sin-configurar' | 'sin-conexion' | 'limite' | 'limite-ia' | 'no-entendido' | 'error';
 
 export type ResultadoCaptura =
   | { estado: 'ok'; propuesta: Propuesta }
@@ -27,6 +28,7 @@ const MENSAJES: Record<MotivoFallo, string> = {
   'sin-configurar': 'La captura con IA aún no está activada. Rellénalo tú, ya te he puesto la frase.',
   'sin-conexion': 'Sin conexión. Rellénalo tú, ya te he puesto la frase.',
   limite: 'Has llegado al límite de capturas de hoy. Rellénalo tú, ya te he puesto la frase.',
+  'limite-ia': 'Has gastado la IA por ahora. Rellénalo tú, ya te he puesto la frase.',
   'no-entendido': 'No lo he pillado del todo. Revisa los datos, ya te he puesto la frase.',
   error: 'No he podido entenderlo ahora. Rellénalo tú, ya te he puesto la frase.',
 };
@@ -63,7 +65,15 @@ export async function interpretarFrase(frase: string, perfil: Perfil | null): Pr
       body: peticion,
       timeout: ESPERA_MAX_MS,
     });
-    if (error) return fallo(await motivoDelError(error));
+    if (error) {
+      // Se ha acabado la IA de las 5 horas o de la semana: se dice cuándo vuelve.
+      const limite = await limiteDelError(error);
+      if (limite) {
+        const mensaje = `${mensajeLimite(limite, new Date())} Rellénalo tú, ya te he puesto la frase.`;
+        return { estado: 'fallo', motivo: 'limite-ia', mensaje };
+      }
+      return fallo(await motivoDelError(error));
+    }
 
     const propuesta = validarPropuesta((data as { propuesta?: unknown } | null)?.propuesta, {
       hoy: peticion.hoy,

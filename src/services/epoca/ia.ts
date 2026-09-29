@@ -4,6 +4,7 @@ import { nuevoIdEpoca, type Epoca, type Hito, type RegistroBloque } from '@/data
 import type { Perfil } from '@/data/perfil';
 import { asegurarSesion, obtenerSupabase } from '@/data/supabase';
 import { claveDia, type ClaveDia } from '@/services/fechas';
+import { limiteDelError, mensajeLimite } from '@/services/ia';
 
 import { diasEntre } from './estado';
 import type { PlanEpoca } from './plan';
@@ -28,7 +29,14 @@ import {
 
 const ESPERA_MAX_MS = 30000;
 
-export type MotivoFalloIA = 'sin-configurar' | 'sin-clave' | 'sin-conexion' | 'limite' | 'no-entendido' | 'error';
+export type MotivoFalloIA =
+  | 'sin-configurar'
+  | 'sin-clave'
+  | 'sin-conexion'
+  | 'limite'
+  | 'limite-ia'
+  | 'no-entendido'
+  | 'error';
 
 export type ResultadoIA<T> = { estado: 'ok'; datos: T } | { estado: 'fallo'; motivo: MotivoFalloIA; mensaje: string };
 
@@ -37,6 +45,7 @@ const MENSAJES: Record<MotivoFalloIA, string> = {
   'sin-clave': 'La ayuda de la IA aún no está encendida. Mientras tanto, puedes rellenarlo a mano.',
   'sin-conexion': 'Sin conexión. Prueba otra vez en un rato o rellénalo a mano.',
   limite: 'Has usado la IA muchas veces hoy. Mañana vuelve a funcionar.',
+  'limite-ia': 'Has gastado la IA por ahora. Mientras, puedes rellenarlo a mano.',
   'no-entendido': 'No lo he pillado del todo. Cuéntamelo con otras palabras o rellénalo a mano.',
   error: 'No he podido hacerlo ahora. Prueba otra vez en un rato.',
 };
@@ -51,7 +60,15 @@ async function llamar(cuerpo: Record<string, unknown>): Promise<ResultadoIA<unkn
   try {
     await asegurarSesion(supabase);
     const { data, error } = await supabase.functions.invoke('epoca', { body: cuerpo, timeout: ESPERA_MAX_MS });
-    if (error) return fallo(await motivoDelError(error));
+    if (error) {
+      // Se ha acabado la IA de las 5 horas o de la semana: se dice cuándo vuelve.
+      const limite = await limiteDelError(error);
+      if (limite) {
+        const mensaje = `${mensajeLimite(limite, new Date())} Mientras, puedes rellenarlo a mano.`;
+        return { estado: 'fallo', motivo: 'limite-ia', mensaje };
+      }
+      return fallo(await motivoDelError(error));
+    }
     const resultado = (data as { resultado?: unknown } | null)?.resultado;
     return resultado ? { estado: 'ok', datos: resultado } : fallo('error');
   } catch (error) {

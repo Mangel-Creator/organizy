@@ -1,5 +1,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.128.0';
 
+import { apuntarIA } from './limiteIA.ts';
+
 // IA de los correos (fase 11): título, resumen y fecha límite con Claude Haiku. La usan
 // la función "correo" (para el ayudante de Gmail) y "correo-cuentas" (para las cuentas
 // vinculadas). Sin ANTHROPIC_API_KEY no hace nada y se usan las reglas.
@@ -73,8 +75,10 @@ ${limpio(p.cuerpo)}
 </correo>`;
 }
 
-// Pregunta a Claude. Devuelve null si falla (y quien llama usa las reglas).
-export async function analizarConClaude(p: PeticionIA): Promise<AnalisisIA | null> {
+// Pregunta a Claude y apunta lo gastado a esa persona (límites de 5 horas y semana:
+// quien llama comprueba antes con permitirIA). Devuelve null si falla (y quien llama
+// usa las reglas).
+export async function analizarConClaude(p: PeticionIA, usuario: string): Promise<AnalisisIA | null> {
   if (!iaDisponible) return null;
   try {
     const respuesta = await anthropic.messages.create({
@@ -84,6 +88,7 @@ export async function analizarConClaude(p: PeticionIA): Promise<AnalisisIA | nul
       messages: [{ role: 'user', content: mensajeUsuario(p) }],
       output_config: { format: { type: 'json_schema', schema: ESQUEMA } },
     });
+    await apuntarIA(usuario, 'correo', MODELO, respuesta.usage);
     if (respuesta.stop_reason !== 'end_turn') {
       console.error('Respuesta cortada:', respuesta.stop_reason);
       return null;

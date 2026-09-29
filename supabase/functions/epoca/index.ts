@@ -17,6 +17,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@0.128.0';
 
 import { respuestaJson, respuestaPrevia } from '../_shared/cors.ts';
 import { numeroDeEntorno, sumarUso } from '../_shared/limite.ts';
+import { apuntarIA, cuerpoLimiteIA, permitirIA } from '../_shared/limiteIA.ts';
 import { usuarioDeLaPeticion } from '../_shared/usuario.ts';
 
 // El mismo modelo que la captura y el correo (barato y rápido). Se puede cambiar
@@ -297,6 +298,10 @@ Deno.serve(async (req) => {
   const peticion = leerPeticion(await req.json().catch(() => null));
   if (!peticion) return respuestaJson(req, { error: 'peticion' }, 400);
 
+  // Límites de 5 horas y de la semana (como Claude): al llegar, la app lo explica.
+  const permiso = await permitirIA(usuario);
+  if (!permiso.permitido) return respuestaJson(req, cuerpoLimiteIA(permiso), 429);
+
   try {
     const uso = await sumarUso(usuario, 'epoca', LIMITE_POR_USUARIO, LIMITE_GLOBAL);
     if (!uso.permitido) return respuestaJson(req, { error: uso.motivo }, 429);
@@ -314,6 +319,7 @@ Deno.serve(async (req) => {
       messages: [{ role: 'user', content: mensaje }],
       output_config: { format: { type: 'json_schema', schema: ESQUEMAS[accion] } },
     });
+    await apuntarIA(usuario, 'epoca', MODELO, respuesta.usage);
     if (respuesta.stop_reason !== 'end_turn') {
       console.error(`epoca ${accion}: respuesta cortada (${respuesta.stop_reason})`);
       return respuestaJson(req, { error: 'ia' }, 502);
