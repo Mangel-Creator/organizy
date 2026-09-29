@@ -267,6 +267,16 @@ sesión que fuera**:
   empresa se guarda en Supabase: será una **excepción más** a "datos solo en el
   dispositivo" (la apunta la sesión 15 con el detalle). Prompt en
   `C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-15-organizy-grupal.md`.
+- 29/09/2026 (ajusta la anterior) — **Organizy grupal es un PLAN EXTRA, el "Plan empresa"**, no
+  parte de la app de siempre: se elige en Perfil > "Tu plan" > **"Cambiar de plan"** (Plan
+  personal / Plan empresa), con un momento de **"Cambiando de plan…"**. **Por ahora solo se
+  ve en Expo Go** (el dueño lo prueba ahí) y en desarrollo; en la web pública no sale "Cambiar
+  de plan" (solo entra quien llega con un enlace de invitación). No se cobra nada: cobrar un
+  plan necesitará las compras de Apple/Google o Stripe cuando él lo decida. Es la **quinta
+  excepción** a "los datos solo en el dispositivo" (lo de la empresa, en Supabase). Ver
+  "Fase 15". **Pendiente del usuario** (cuando quiera; no se lo vuelvas a pedir): activar los
+  proveedores Google y Azure en Supabase (guía "Fase 15 - Organizy grupal.md", parte A);
+  mientras tanto los botones dicen "Aún no está activado".
 - 29/09/2026 — **Límites de IA como los de Claude** (ver "Límites de IA"): cada persona tiene
   un límite cada 5 horas y otro por semana, que ve **en porcentaje** en Perfil > "Tu IA". Al
   llegar, la app sigue sin IA hasta que se libere; **el correo también cuenta** y al agotarse
@@ -392,6 +402,7 @@ src/
     clientes/          Datos del cliente en la ficha y su recordatorio por WhatsApp.
     tareas/            Matriz de Eisenhower: selector de cuadrante y vista "Matriz" de Hoy.
     correo/            Piezas de Resúmenes (fila de correo, "Vincular con…", tus cuentas).
+    empresa/           Piezas del plan empresa (entrar, casillas, filas, QR, avisos).
   components/          Piezas reutilizables. Se importan desde '@/components'.
   theme/               Colores, letras, tamaños, espacios y radios.
   data/                Guardado local: ajustes.ts (AsyncStorage), db.ts (SQLite),
@@ -405,7 +416,9 @@ src/
                        recordatorios.ts (recordatorios a clientes: ajustes y envíos),
                        copia.ts (reunir y recuperar la copia de seguridad),
                        correos.ts (resúmenes de correo y enlace del ayudante de Gmail),
-                       calendarios.ts (enlaces de otros calendarios).
+                       calendarios.ts (enlaces de otros calendarios),
+                       empresa/ (plan empresa: copia y modo), supabaseEmpresa.ts (su sesión),
+                       agenda.ts (tus eventos + lo de la empresa: úsalo para calcular el día).
   services/            Lógica sin pantalla: fechas.ts (formatos en español),
                        copia/ (formato de la copia de seguridad y su archivo; con pruebas),
                        calendarios/ (traer Google, iCloud u Outlook por su enlace iCal;
@@ -429,8 +442,11 @@ src/
                        correo/ (resúmenes de correo: traerlos del servidor y del ayudante,
                        vincular y quitar cuentas, plazos como tareas; con pruebas),
                        ia/ (límites de IA de 5 horas y semana: porcentajes y mensajes;
-                       con pruebas).
+                       con pruebas),
+                       empresa/ (plan empresa: servidor, entrar, calendario, disponibilidad,
+                       papeles, QR; con pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
+                       tests/: pruebas SQL de las reglas (se deshacen solas al acabar).
 gmail/                 Ayudante de Gmail (Google Apps Script): ayudante.js (lo de Google) y
                        organizy-correo.js, que se GENERA con `npm run ayudante-gmail` juntando
                        ayudante.js y las reglas del servidor. Ver "Fase 11".
@@ -464,6 +480,7 @@ no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de
 | Barrita de carga normal y borde de huecos | `cargaNormal` | `#8A8374` (gris) |
 | Solo la Época dorada (franja, bloques de estudio, días con hito) | `dorado` | `#B7892B` (texto oscuro encima) |
 | Solo los botones de WhatsApp (excepción del 26/09) | `whatsapp` | `#25D366` (texto oscuro encima) |
+| Solo lo de la empresa (plan empresa, fase 15): turnos, eventos de empresa, tareas asignadas | `empresa` | `#44576B` (azul pizarra; casillas `colorBaldosa.empresa`) |
 
 Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
@@ -573,7 +590,8 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
   `lugar_tipo` y `lugar_sitio_id`; 3: `aviso_min`; 4: tablas `epocas`, `hitos` y
   `bloques_epoca` (fase 4b); 5: columna `cliente` (fase 10); 6: columna `origen` (otros
   calendarios); 7: columna `cuadrante` (matriz de Eisenhower); 8: columna `temas` de `hitos`
-  (temario de la Época dorada). Solo se usa en Android e iOS.
+  (temario de la Época dorada); 9: tabla `empresa_copia` (copia del plan empresa, fase 15).
+  Solo se usa en Android e iOS.
 - `src/data/perfil.ts`: tipo `Perfil` (nombre, vivienda con coordenadas, sitios
   habituales, transporte, uso, horario, días de trabajo, cuándo rinde más y
   antelación de avisos). Se guarda en AsyncStorage (`organizy:perfil` y
@@ -1563,6 +1581,93 @@ borran solos a los 7 días.
   Con usuarios anónimos, borrar los datos del navegador da un usuario nuevo con los límites a
   cero: para límites por persona de verdad hará falta iniciar sesión (lo mismo que para cobrar).
 
+## Fase 15: plan empresa, Organizy grupal (29/09/2026)
+
+- **Es un plan extra** (decisión del 29/09): Perfil > "Tu plan" (`screens/perfil/SeccionPlan.tsx`)
+  > "Cambiar de plan" (`/cambiar-plan`, `PantallaCambiarPlan`: tarjetas Plan personal / Plan
+  empresa y "Cambiando de plan…"). Dónde se ve: `planEmpresaVisible` (`services/empresa/plan.ts`):
+  Expo Go, desarrollo o si ya tiene el plan (llegó con un enlace de invitación). **Con el plan
+  personal no cambia nada**: ni pantallas, ni sesión, ni llamadas al servidor
+  (`iniciarEmpresa()` solo lee `organizy:empresaModo`), y la agenda es el mismo array de eventos.
+  Volver al personal estando en una empresa = salir de ella (se pregunta antes).
+- **Privacidad** (no negociable): la empresa solo ve lo de trabajo. Frase en pantalla: "Tu
+  empresa solo ve lo de trabajo. Lo personal no sale de tu móvil." El "Ocupado" compartido va
+  apagado por defecto y lo decide el empleado (Empresa > "Tus ajustes en la empresa"): se suben
+  solo día y minutos de SUS eventos con hora de los próximos 28 días (`bloquesOcupados`), sin
+  título, lugar ni tipo; al apagarlo se borra del servidor.
+- **Quinta excepción a "los datos solo en el dispositivo"**: en Supabase va SOLO lo de la
+  empresa (tablas en `supabase/migrations/20260929010000_empresa.sql`, ya aplicada): empresas,
+  empresa_miembros (nombre y correo del trabajo), equipos y equipo_miembros, invitaciones_correo
+  e invitaciones_enlace, eventos_empresa y respuestas_evento, turnos y cambios_turno,
+  tareas_empresa, ocupado_compartido (si lo activa) y empresa_avisos (direcciones de avisos, solo
+  las ve su dueño). Salir = `empresa_salir` borra la cuenta de empresa de esa persona y todo lo
+  suyo; borrar la empresa, todo. Cada noche `emp_limpiar` (pg_cron) quita lo viejo (turnos y
+  eventos de hace más de 400 días, tareas hechas hace 180, pendientes de 60 días) y las cuentas de
+  Google/Microsoft sin empresa y sin entrar en 30 días (las anónimas no se tocan).
+- **Reglas (RLS)**: cada uno solo lee su empresa y solo cuando le han aceptado; los pendientes
+  solo ven su fila y el nombre de la empresa. Escribe el administrador o el responsable del equipo
+  (turnos y tareas solo a gente de su equipo). Lo delicado va por funciones `empresa_*` (security
+  definer): crear, unirme, aprobar, cambiar_rol (siempre queda un admin), quitar, salir, borrar,
+  ajustes (el dominio tiene que ser el del correo del admin y no gratuito), mis_datos,
+  marcar_tarea y resolver_cambio. **Pruebas**: `supabase/tests/empresa_rls.sql` (jefe, responsable,
+  empleado, pendiente, sin invitación, otra empresa y la sesión anónima); se ejecuta con
+  `npx supabase db query --linked --project-ref hwemrpexabisyueyizjz --file supabase/tests/empresa_rls.sql`
+  y acaba en "todo bien"; se deshace sola (rollback). Si cambias el SQL, vuelve a pasarla.
+- **Papeles**: administrador (quien crea; puede nombrar a otros), responsable (lleva uno o varios
+  equipos: `equipo_miembros.responsable`) y empleado. Una persona, una empresa.
+- **Entrar**: Supabase Auth con Google y Azure (Microsoft), en **una sesión aparte**
+  (`data/supabaseEmpresa.ts`, guardada en `sb-organizy-empresa`), NO con `linkIdentity`: la
+  anónima (planes, correo, IA) sigue igual en todos los dispositivos (vincularla solo valdría para
+  el primero). Móvil: `openAuthSessionAsync` a `organizy://empresa-entrada` y canje del código
+  (PKCE); web: vuelve a `/empresa?code=`. Qué proveedores están activos lo dice
+  `/auth/v1/settings` (sin sesión). **Parte del dueño** (guía, parte A): cliente de Google aparte
+  solo con `openid email profile` publicado "En producción" (no necesita la verificación de pago),
+  app de Microsoft Entra aparte (multiempresa y cuentas personales, solo User.Read, reclamos
+  opcionales `email` y `xms_edov`), activar los dos en Supabase y añadir en URL Configuration
+  `organizy://**`, `https://mangel-creator.github.io/organizy/**` y `http://localhost:8081/**`.
+- **Dar de alta sin lío** (lo pidió el usuario): dominio propio ("Que entre cualquiera con un
+  correo @suempresa.com": salen en "Esperan que les aceptes" y se aceptan con un toque; o
+  "Aprobar solo"), lista de correos (entran directamente) o enlace de invitación con QR
+  (`/empresa#invitacion=<32 letras>`, caduca en 1, 7 o 30 días, se anula; quien entra queda
+  pendiente). El QR se dibuja sin librerías (`services/empresa/qr.ts`, comprobado contra "toqr").
+  Empresas con Microsoft restringido: ayuda plegada con los pasos y "Mandar el texto al
+  informático" (aprueba Organizy una vez en Entra). `/empresa` está fuera de las rutas protegidas:
+  el enlace funciona aunque no se haya hecho la bienvenida.
+- **Pantallas**: `/empresa` (entrar, crear o unirse, esperando, y dentro casillas Calendario,
+  Turnos, Tareas, Equipo y, si gestionas, Disponibilidad; "Tus ajustes": Ocupado, salir, borrar),
+  `/empresa-equipo`, `/empresa-evento` (Voy / No voy y respuestas; quien gestiona, formulario;
+  festivos y cierres de todo el día), `/empresa-turnos` (semana, repartir, "Copiar la semana
+  anterior", cambios por mirar), `/empresa-turno` (varios días de una vez; el del turno "Pedir un
+  cambio": otro día u horas u otra persona), `/empresa-tarea` (a una persona o a un equipo, fecha
+  límite, matriz de Eisenhower) y `/empresa-disponibilidad` (rejilla T/O/libre y "Buscar hueco":
+  horas en las que nadie está ocupado o "cuando están todos de turno", sin festivos ni cierres).
+- **En el calendario de cada uno** (`data/agenda.ts`: `useAgenda()` / `leerAgenda()`; úsalos en
+  vez de `useEventos()` para calcular el día): sus turnos (sin sitio, en su sitio "Trabajo"; los que
+  cruzan la medianoche, en dos trozos), los eventos de empresa a los que no ha dicho "No voy" y sus
+  tareas asignadas (salen hoy hasta hacerlas) son eventos con `Evento.empresa` e id `emp-…`
+  (`services/empresa/calendario.ts`). No se guardan ni se editan desde el calendario: `abrirEvento`
+  abre su ficha. Cuentan en Hoy (casilla "Empresa"), Semana (leyenda "Empresa" y festivos arriba),
+  la carga, los avisos, la hora de salida y la alarma inteligente (un turno es ir al trabajo). Las
+  tareas de la empresa no van al cierre del día ni a "Pasar a mañana". A `combinar` se le pasa
+  todo lo que usa (no lo lee de fuera): si no, el compilador de React se queda con lo viejo.
+- **Avisos push** desde el servidor (triggers + pg_net al servicio de Expo, como el correo): turno
+  nuevo, cambiado o quitado (uno por persona aunque sean varios), tarea asignada, evento de
+  empresa nuevo o cambiado, cambio de turno pedido/aprobado/rechazado y altas pendientes. Se
+  apagan en Perfil > Avisos > "De la empresa" (se guardan en `empresa_avisos`). Al tocarlos,
+  destino `{ pantalla: 'empresa', seccion }`. En la web no hay avisos.
+- **Sin conexión**: copia en SQLite (migración 9, `empresa_copia`) o en la web en
+  `organizy:empresaCopia`; `empresaModo`, `empresaCopia`, `empresaInvitacion` y `empresaOcupado`
+  están en `NO_VIAJAN` de la copia de seguridad.
+- **Probar sin cuentas**: en desarrollo y en la web, `http://localhost:8081/?prueba-empresa=1`
+  enciende un servidor de prueba en el navegador (`services/empresa/prueba.ts`) con Pepe, Laura y
+  Javi ("Entrar como…"); `=0` lo apaga. Probado así el 29/09 a tamaño móvil: crear, dominio,
+  enlace con QR, lista, aceptar, equipos y responsable, evento con Voy, turnos de varios días,
+  copiar semana, tarea marcada desde Hoy, pedir y aprobar cambio, Ocupado, disponibilidad,
+  "Buscar hueco" y volver al plan personal. Ojo: en un worktree con `node_modules` enlazado, la web
+  enseña las rutas de la carpeta principal hasta arrancar con `--clear`.
+- **Falta**: que el usuario active Google y Microsoft (parte A de la guía) y lo pruebe con cuentas
+  de verdad y los avisos en el iPhone.
+
 ## Hoja de ruta
 
 - [x] 1. Base: proyecto, pestañas y diseño.
@@ -1577,4 +1682,4 @@ borran solos a los 7 días.
 - [ ] 9. Voz sin abrir la app y widget.
 - [x] 10. Recordatorios a clientes por WhatsApp (parte A, gratis y sin servidor, hecha el 27/09/2026; la parte B, envío automático con WhatsApp Business, espera a que el usuario cree las cuentas de Meta: ver "Fase 10").
 - [x] 11. Correo: plazos al calendario y resúmenes con aviso (27/09/2026; "Vincular con Gmail / Outlook" y QR del ayudante el 28/09; falta que el usuario registre Organizy en Google y Microsoft y lo pruebe: ver "Fase 11").
-- [ ] 15. Organizy grupal: modo empresa activable (prompt en C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-15-organizy-grupal.md).
+- [x] 15. Organizy grupal como plan extra ("Plan empresa", 29/09/2026; servidor aplicado y probado; por ahora solo visible en Expo Go; falta que el usuario active Google y Microsoft en Supabase y lo pruebe con cuentas de verdad: ver "Fase 15").
