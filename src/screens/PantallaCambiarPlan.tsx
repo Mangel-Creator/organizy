@@ -22,8 +22,10 @@ type Plan = 'personal' | 'empresa';
 const QUE_TRAE: Record<Plan, string[]> = {
   personal: ['Tu calendario, avisos, mapa, alarmas y planes con amigos', 'Todo se queda en tu móvil'],
   empresa: [
-    'Todo lo del plan personal, igual que ahora',
+    'Tu calendario, avisos, mapa y alarmas, como siempre',
+    'Pestaña Empresa en lugar de los planes con amigos',
     'Calendario de la empresa, turnos y tareas asignadas',
+    'Chat del equipo y avisos de los superiores',
     'Disponibilidad del equipo y "Buscar hueco" para reuniones',
     'Entras con la cuenta de Google o Microsoft del trabajo',
   ],
@@ -43,7 +45,7 @@ export function PantallaCambiarPlan() {
     const espera = new Promise((r) => setTimeout(r, 900));
     if (plan === 'empresa') {
       await Promise.all([activarModoEmpresa(), espera]);
-      router.replace('/empresa');
+      router.replace('/trabajo');
       return;
     }
     const dentro = situacion.fase === 'dentro' || situacion.fase === 'pendiente';

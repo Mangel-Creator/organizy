@@ -28,6 +28,7 @@ import {
   type Repeticion,
   type TipoEvento,
 } from '@/data/eventos';
+import { useEmpresa } from '@/data/empresa';
 import { guardarPerfil, usePerfil, type Perfil, type SitioHabitual } from '@/data/perfil';
 import {
   NOMBRE_CASA,
@@ -52,7 +53,7 @@ import {
   OPCIONES_AVISO,
   OPCIONES_DURACION,
   OPCIONES_REPETICION,
-  OPCIONES_TIPO,
+  opcionesTipo,
   rangoHoras,
 } from './calendario/textos';
 import { OrigenEvento } from './calendario/OrigenEvento';
@@ -220,6 +221,7 @@ type Props = {
 
 function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) {
   const [b, setBorrador] = useState<Borrador>(() => borradorInicial(evento, fechaInicial, perfil, rellenar));
+  const { modo: modoEmpresa } = useEmpresa();
   const antelacionPerfil = antelacionDelPerfil(perfil);
   const [errores, setErrores] = useState<Errores>({});
   const [ocupado, setOcupado] = useState(false);
@@ -407,7 +409,12 @@ function Formulario({ evento, rellenar, fechaInicial, perfil, eventos }: Props) 
         error={errores.titulo}
       />
 
-      <Selector etiqueta="Tipo" opciones={OPCIONES_TIPO} valor={b.tipo} alCambiar={(tipo) => cambiar({ tipo })} />
+      <Selector
+        etiqueta="Tipo"
+        opciones={opcionesTipo(modoEmpresa, evento?.tipo ?? null)}
+        valor={b.tipo}
+        alCambiar={(tipo) => cambiar({ tipo })}
+      />
 
       {conCliente ? (
         <CamposCliente

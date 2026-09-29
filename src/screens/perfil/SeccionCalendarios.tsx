@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Boton, CampoTexto, Plegable, SelectorVisual, Tarjeta, Texto, type OpcionVisual } from '@/components';
 import { useCalendarios, type Calendario } from '@/data/calendarios';
+import { useEmpresa } from '@/data/empresa';
 import { useEventos } from '@/data/eventos';
 import type { TipoEvento } from '@/data/eventos/tipos';
 import {
@@ -44,6 +45,9 @@ export function SeccionCalendarios() {
   const { eventos } = useEventos();
   const [enlace, setEnlace] = useState('');
   const [tipo, setTipo] = useState<TipoEvento>('yo');
+  // Con el plan empresa no hay planes con amigos.
+  const { modo: modoEmpresa } = useEmpresa();
+  const tipos = modoEmpresa ? TIPOS.filter((t) => t.valor !== 'amigos') : TIPOS;
   const [ocupado, setOcupado] = useState<string | null>(null); // id del calendario, o "nuevo"
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +157,7 @@ export function SeccionCalendarios() {
         keyboardType="url"
         ayuda="El enlace iCal de tu calendario. Abajo te explico dónde está."
       />
-      <SelectorVisual etiqueta="¿Qué son sus eventos?" opciones={TIPOS} valor={tipo} alCambiar={setTipo} />
+      <SelectorVisual etiqueta="¿Qué son sus eventos?" opciones={tipos} valor={tipo} alCambiar={setTipo} />
       <Boton
         titulo={ocupado === 'nuevo' ? 'Trayendo…' : 'Traer eventos'}
         disabled={ocupado !== null || !enlace.trim()}

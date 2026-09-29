@@ -45,9 +45,14 @@ function combinar(propios: Evento[], empresa: EstadoEmpresa, perfil: Perfil | nu
 
 // Las tareas de la empresa no van a los avisos del cierre del día ("¿Las paso a
 // mañana?"): no se pueden mover desde aquí. Para eso, { tareas: false }.
+//
+// La empresa de ejemplo solo se ve en las pantallas: no programa avisos ni cambia la hora
+// de salida ni las alarmas (leerAgenda es lo que usan).
 export async function leerAgenda(opciones: Opciones = {}): Promise<Evento[]> {
   const [propios] = await Promise.all([leerEventos(), leerEmpresa()]);
-  return combinar(propios, estadoEmpresaActual(), estadoPerfilActual().perfil, opciones);
+  const empresa = estadoEmpresaActual();
+  if (empresa.situacion.fase === 'dentro' && empresa.situacion.datos.ejemplo) return propios;
+  return combinar(propios, empresa, estadoPerfilActual().perfil, opciones);
 }
 
 export function suscribirseAgenda(avisar: () => void): () => void {

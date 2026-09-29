@@ -30,7 +30,7 @@ export function SeccionPlan() {
         accessibilityRole="button"
         accessibilityLabel={`${modo ? NOMBRE_PLAN.empresa : NOMBRE_PLAN.personal}. ${detalle}`}
         disabled={!modo}
-        onPress={() => router.push('/empresa')}
+        onPress={() => router.navigate('/trabajo')}
         style={({ pressed }) => [estilos.fila, pressed && estilos.pulsado]}>
         <View style={[estilos.icono, { backgroundColor: modo ? colorBaldosa.empresa.fondo : colorBaldosa.yo.fondo }]}>
           <Ionicons

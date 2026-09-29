@@ -18,7 +18,16 @@ import { motivoDe } from './base';
 import { leerIdVirtual } from './calendario';
 import { bloquesOcupados, huellaOcupado } from './disponibilidad';
 import { entrarConProveedor, terminarEntradaWeb } from './entrar';
-import { basePrueba, modoPruebaEmpresa, PERSONAS_PRUEBA } from './prueba';
+import {
+  basePrueba,
+  cargarPrueba,
+  ejemploPosible,
+  esEjemplo,
+  modoPruebaEmpresa,
+  PERSONAS_PRUEBA,
+  ponerEjemplo,
+  quitarEjemplo,
+} from './prueba';
 import type { ProveedorEmpresa, ResultadoEntrar } from './proveedores';
 import {
   borrarEmpresaEnServidor,
@@ -38,7 +47,7 @@ import { leerCodigoInvitacion } from './textos';
 // lo de la empresa y salir. Con el modo apagado no se hace NADA: ni pantallas nuevas, ni
 // inicio de sesión, ni llamadas al servidor.
 
-export { modoPruebaEmpresa, PERSONAS_PRUEBA };
+export { ejemploPosible, esEjemplo, modoPruebaEmpresa, PERSONAS_PRUEBA };
 export type { ProveedorEmpresa, ResultadoEntrar };
 
 export type Resultado = { ok: true } | { ok: false; motivo: string };
@@ -50,7 +59,8 @@ export async function activarModoEmpresa(): Promise<void> {
 // Apagar el modo (sin estar en ninguna empresa): se cierra la sesión de empresa y se
 // olvida todo lo de la empresa del dispositivo.
 export async function apagarModoEmpresa(): Promise<void> {
-  await base().cerrarSesion();
+  if (esEjemplo()) quitarEjemplo();
+  else await base().cerrarSesion();
   await olvidarEmpresa();
 }
 
@@ -64,7 +74,7 @@ let ultimaVez = 0;
 export function actualizarEmpresa(): Promise<boolean> {
   if (!trayendo) {
     trayendo = (async () => {
-      const { modo } = await leerEmpresa();
+      const [{ modo }] = await Promise.all([leerEmpresa(), cargarPrueba()]);
       if (!modo) return false;
       try {
         const situacion = await traerSituacion();
@@ -130,7 +140,21 @@ export async function entrarEnEmpresa(proveedor: ProveedorEmpresa): Promise<Resu
   return resultado;
 }
 
-// En desarrollo (web): entrar como una de las personas de prueba.
+// La empresa de ejemplo (Expo Go y desarrollo): un bar ya montado, sin cuentas y sin
+// servidor. Se entra como Pepe (el jefe); luego se puede ver como Laura o Javi.
+export async function verEmpresaDeEjemplo(): Promise<void> {
+  ponerEjemplo();
+  await activarModoEmpresa();
+  await actualizarEmpresa();
+}
+
+// Dejar el ejemplo: se borra y se vuelve a la pantalla de entrar (sigue el plan empresa).
+export async function dejarEmpresaDeEjemplo(): Promise<void> {
+  quitarEjemplo();
+  await guardarSituacion({ fase: 'sin-sesion' });
+}
+
+// En desarrollo (web) y en el ejemplo: entrar como una de las personas de prueba.
 export async function entrarDePrueba(usuario: string): Promise<void> {
   const persona = PERSONAS_PRUEBA.find((p) => p.id === usuario);
   if (persona) basePrueba.entrarComo(persona);
@@ -172,6 +196,11 @@ export async function unirmeAMiEmpresa(miNombre: string, enlace: string | null):
 // Sale de la empresa: en el servidor se borra la cuenta de empresa de esta persona y
 // todo lo suyo; en el dispositivo, todo lo de la empresa. Lo personal se queda.
 export async function salirDeLaEmpresa(): Promise<Resultado> {
+  if (esEjemplo()) {
+    quitarEjemplo();
+    await olvidarEmpresa();
+    return { ok: true };
+  }
   try {
     await salirEnServidor();
   } catch (error) {
@@ -193,6 +222,7 @@ export async function cambiarDeCuenta(): Promise<void> {
 }
 
 export async function borrarLaEmpresa(): Promise<Resultado> {
+  if (esEjemplo()) return salirDeLaEmpresa();
   try {
     await borrarEmpresaEnServidor();
   } catch (error) {
@@ -209,7 +239,7 @@ let movilApuntado = false;
 
 // La dirección de avisos de este móvil, una vez por sesión de la app.
 async function apuntarEsteMovil(datos: DatosEmpresa) {
-  if (movilApuntado) return;
+  if (movilApuntado || datos.ejemplo) return;
   const token = await tokenDeAvisos().catch(() => null);
   if (!token) return;
   await guardarAvisos(datos.yo, datos.avisos, token).catch(() => {});
@@ -228,7 +258,7 @@ const CLAVE_OCUPADO = 'empresaOcupado';
 // Si la persona comparte sus huecos como "Ocupado", sube los de los próximos 28 días
 // (solo día y horas de SUS eventos) cuando cambian o una vez al día.
 export async function sincronizarOcupado(datos: DatosEmpresa | null = datosActuales()): Promise<void> {
-  if (!datos) return;
+  if (!datos || datos.ejemplo) return;
   const yo = datos.miembros.find((m) => m.usuario === datos.yo);
   if (!yo?.comparteOcupado) return;
   const hoy = claveDia(new Date());
@@ -254,7 +284,7 @@ export function iniciarEmpresa(): () => void {
   let esperaOcupado: ReturnType<typeof setTimeout> | null = null;
   let vivo = true;
   const quitar: (() => void)[] = [];
-  leerEmpresa().then(({ modo }) => {
+  Promise.all([leerEmpresa(), cargarPrueba()]).then(([{ modo }]) => {
     if (!vivo) return;
     if (modo) actualizarEmpresa();
     // Al volver a la app (si hace más de un minuto) y al llegar un aviso de la empresa.

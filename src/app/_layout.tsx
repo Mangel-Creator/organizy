@@ -111,8 +111,8 @@ export default function LayoutRaiz() {
         else if (destino.seccion === 'turnos') router.push('/empresa-turnos');
         else if (destino.seccion === 'equipo') router.push('/empresa-equipo');
         else if (destino.seccion === 'calendario' || destino.seccion === 'tareas') {
-          router.push({ pathname: '/empresa', params: { ver: destino.seccion } });
-        } else router.push('/empresa');
+          router.navigate({ pathname: '/trabajo', params: { ver: destino.seccion } });
+        } else router.navigate('/trabajo');
       } else if (destino.pantalla === 'mapa') {
         router.navigate({ pathname: '/mapa', params: { evento: destino.id, dia: destino.dia } });
       } else if (destino.pantalla === 'alarmas') {

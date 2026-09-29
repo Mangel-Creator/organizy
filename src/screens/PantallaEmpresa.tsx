@@ -3,17 +3,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { Boton, Casilla, Interruptor, Pantalla, Plegable, Texto, Titulo } from '@/components';
+import { Boton, Casilla, Interruptor, Pantalla, Plegable, Tarjeta, Texto, Titulo } from '@/components';
 import { useEmpresa, type DatosEmpresa } from '@/data/empresa';
 import { usePerfil } from '@/data/perfil';
 import {
   activarModoEmpresa,
   actualizarEmpresa,
   borrarLaEmpresa,
+  dejarEmpresaDeEjemplo,
+  entrarDePrueba,
   guardarInvitacion,
   hacerEnEmpresa,
   invitacionGuardada,
   olvidarOcupadoSubido,
+  PERSONAS_PRUEBA,
   salirDeLaEmpresa,
   sincronizarOcupado,
   terminarEntrada,
@@ -28,12 +31,13 @@ import { claveDia, fechaDesdeClave, formatearDiaCorto, inicioDeSemana, sumarDias
 import { espacio } from '@/theme';
 
 import { CrearOUnirme, Entrar, FRASE_PRIVACIDAD, Pendiente } from './empresa/Entrar';
-import { Baldosas, BotonVolver, Confirmar, FilaEmpresa, Mensaje, type Baldosa } from './empresa/piezas';
+import { Baldosas, BotonVolver, Chip, Chips, Confirmar, FilaEmpresa, Mensaje, type Baldosa } from './empresa/piezas';
 
 // Plan empresa (Organizy grupal, fase 15): /empresa. Según en qué punto estés: entrar
 // con Google o Microsoft, crear o unirte a la empresa, esperar a que te acepten o, ya
 // dentro, las casillas de la empresa. Llegan aquí también el enlace de invitación
-// (#invitacion=…) y, en la web, la vuelta del inicio de sesión (?code=…).
+// (#invitacion=…) y, en la web, la vuelta del inicio de sesión (?code=…). Con el plan
+// puesto es también la pestaña "Empresa" ((tabs)/trabajo, enPestana: sin "Volver").
 
 type Vista = 'calendario' | 'tareas';
 type Clave = Vista | 'chat' | 'avisos' | 'turnos' | 'equipo' | 'disponibilidad';
@@ -44,7 +48,7 @@ function invitacionDeLaDireccion(): string | null {
   return window.location.hash.includes('invitacion=') ? window.location.hash : null;
 }
 
-export function PantallaEmpresa() {
+export function PantallaEmpresa({ enPestana = false }: { enPestana?: boolean }) {
   const { cargado, modo, situacion } = useEmpresa();
   const { bienvenidaCompletada } = usePerfil();
   const { ver, invitacion } = useLocalSearchParams<{ ver?: string; invitacion?: string }>();
@@ -77,7 +81,7 @@ export function PantallaEmpresa() {
     }, []),
   );
 
-  const volver = bienvenidaCompletada ? <BotonVolver texto="Hoy" destino="/" /> : null;
+  const volver = bienvenidaCompletada && !enPestana ? <BotonVolver texto="Hoy" destino="/" /> : null;
 
   if (!cargado) return <Pantalla>{volver}</Pantalla>;
 
@@ -213,6 +217,7 @@ function Dentro({ datos, verAlAbrir }: { datos: DatosEmpresa; verAlAbrir: Vista 
         <Titulo>{datos.empresa.nombre}</Titulo>
         <Texto secundario>Plan empresa · {NOMBRE_PAPEL[papel]}</Texto>
       </View>
+      {datos.ejemplo ? <Ejemplo datos={datos} /> : null}
       <Baldosas baldosas={baldosas} elegida={vista} alPulsar={pulsar} />
 
       {vista ? (
@@ -223,6 +228,33 @@ function Dentro({ datos, verAlAbrir }: { datos: DatosEmpresa; verAlAbrir: Vista 
 
       <MisAjustes datos={datos} />
     </>
+  );
+}
+
+const PAPEL_EJEMPLO = ['el jefe', 'responsable de Cocina', 'empleado'];
+
+// La empresa de ejemplo: de quién la ves y "Dejar el ejemplo".
+function Ejemplo({ datos }: { datos: DatosEmpresa }) {
+  const [cambiando, setCambiando] = useState(false);
+  const verComo = async (usuario: string) => {
+    if (usuario === datos.yo || cambiando) return;
+    setCambiando(true);
+    await entrarDePrueba(usuario);
+    setCambiando(false);
+  };
+  return (
+    <Tarjeta style={estilos.ejemplo}>
+      <Texto fuerte>Empresa de ejemplo</Texto>
+      <Texto pequeno secundario>
+        No es de verdad: no hay cuentas y nada sale de tu móvil. Cambia de persona para ver qué ve cada uno.
+      </Texto>
+      <Chips>
+        {PERSONAS_PRUEBA.map((p, i) => (
+          <Chip key={p.id} texto={`${p.nombre} · ${PAPEL_EJEMPLO[i]}`} elegido={p.id === datos.yo} onPress={() => verComo(p.id)} />
+        ))}
+      </Chips>
+      <Boton variante="secundario" titulo="Dejar el ejemplo" onPress={() => dejarEmpresaDeEjemplo()} />
+    </Tarjeta>
   );
 }
 
@@ -356,8 +388,11 @@ function MisAjustes({ datos }: { datos: DatosEmpresa }) {
         valor={yo?.comparteOcupado === true}
         alCambiar={compartir}
       />
-      <Boton variante="secundario" titulo="Salir de la empresa" onPress={() => setPreguntar('salir')} />
-      {soyAdmin(datos) ? <Boton variante="secundario" titulo="Borrar la empresa" onPress={() => setPreguntar('borrar')} /> : null}
+      {/* En el ejemplo, "Dejar el ejemplo" (arriba) hace de salir. */}
+      {!datos.ejemplo ? <Boton variante="secundario" titulo="Salir de la empresa" onPress={() => setPreguntar('salir')} /> : null}
+      {soyAdmin(datos) && !datos.ejemplo ? (
+        <Boton variante="secundario" titulo="Borrar la empresa" onPress={() => setPreguntar('borrar')} />
+      ) : null}
       {preguntar === 'salir' ? (
         <Confirmar
           texto="Al salir se borra todo lo de la empresa de tu móvil y del servidor, y vuelves al plan personal. Lo tuyo se queda."
@@ -381,4 +416,5 @@ function MisAjustes({ datos }: { datos: DatosEmpresa }) {
 
 const estilos = StyleSheet.create({
   vista: { gap: espacio.m },
+  ejemplo: { gap: espacio.s },
 });

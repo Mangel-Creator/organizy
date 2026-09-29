@@ -123,7 +123,8 @@ export function PantallaSemana() {
   // Festivos, cierres... de la empresa (todo el día).
   const todoElDiaEmpresa = datosEmpresa ? todoElDiaDeEmpresa(datosEmpresa, elegido) : [];
   const tareas = eventos.filter((e) => e.flexible && e.fecha === elegido);
-  const huecosPlan = huecosParaPlan(delDia.map(intervaloDe), diaElegido.ventana, elegido, ahora);
+  // "Proponer plan" (con amigos) no sale con el plan empresa.
+  const huecosPlan = empresa.modo ? [] : huecosParaPlan(delDia.map(intervaloDe), diaElegido.ventana, elegido, ahora);
 
   return (
     <View style={estilos.contenedor}>
@@ -140,7 +141,7 @@ export function PantallaSemana() {
         <View style={estilos.leyendaFila}>
           <View style={estilos.leyenda}>
             <Leyenda color={colorTipo.cliente} texto="Clientes" />
-            <Leyenda color={colorTipo.amigos} texto="Amigos" />
+            {!empresa.modo ? <Leyenda color={colorTipo.amigos} texto="Amigos" /> : null}
             <Leyenda color={colorTipo.yo} texto="Yo" />
             {datosEmpresa ? <Leyenda color={colores.empresa} texto="Empresa" /> : null}
           </View>

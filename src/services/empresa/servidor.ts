@@ -18,7 +18,7 @@ import type { Coordenadas } from '@/data/perfil';
 import { claveDia, sumarDias } from '@/services/fechas';
 
 import { baseSupabase, type Base, type Fila } from './base';
-import { basePrueba, modoPruebaEmpresa } from './prueba';
+import { basePrueba, esEjemplo, modoPruebaEmpresa } from './prueba';
 
 // Lo que la app pide al servidor de la empresa (tablas con RLS y funciones empresa_*).
 // Nada personal: solo lo de la empresa.
@@ -190,6 +190,7 @@ export async function traerSituacion(ahora = new Date()): Promise<Situacion> {
       b.leer('anuncios_leidos'),
     ]);
   const datos: DatosEmpresa = {
+    ...(esEjemplo() ? { ejemplo: true } : {}),
     yo: u.id,
     empresa: {
       id: texto(empresa?.id),

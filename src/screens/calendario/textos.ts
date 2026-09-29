@@ -15,6 +15,12 @@ export const OPCIONES_TIPO: Opcion<TipoEvento>[] = [
   { valor: 'yo', etiqueta: 'Yo' },
 ];
 
+// Con el plan empresa no hay planes con amigos: "Amigos" no se ofrece (salvo en un
+// evento que ya lo sea, para no cambiárselo).
+export function opcionesTipo(modoEmpresa: boolean, actual: TipoEvento | null = null): Opcion<TipoEvento>[] {
+  return modoEmpresa ? OPCIONES_TIPO.filter((o) => o.valor !== 'amigos' || actual === 'amigos') : OPCIONES_TIPO;
+}
+
 export const OPCIONES_REPETICION: Opcion<Repeticion>[] = [
   { valor: 'nunca', etiqueta: 'No se repite' },
   { valor: 'diaria', etiqueta: 'Cada día' },

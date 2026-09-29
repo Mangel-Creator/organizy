@@ -277,6 +277,13 @@ sesión que fuera**:
   "Fase 15". **Pendiente del usuario** (cuando quiera; no se lo vuelvas a pedir): activar los
   proveedores Google y Azure en Supabase (guía "Fase 15 - Organizy grupal.md", parte A);
   mientras tanto los botones dicen "Aún no está activado".
+- 29/09/2026 — **El plan empresa es "de empresa": sin planes con amigos** (ver "Fase 15" >
+  "Pestaña Empresa"). Con el plan puesto, la pestaña **Empresa** ocupa el sitio de Planes; no
+  salen la casilla "planes con amigos" de Hoy, "Amigos" en la leyenda de Semana ni "Proponer
+  plan" en sus huecos, ni el tipo "Amigos" al crear un evento o traer un calendario. Con el plan
+  personal todo sigue igual. Y **quiere verlo en Expo Go sin cuentas**: "Ver una empresa de
+  ejemplo" en la pantalla de entrar (un bar ya montado; se ve como el jefe, una responsable o un
+  empleado).
 - 29/09/2026 — **Chat de empresa y avisos de los superiores, al estilo de Teams** (plan
   empresa, ver "Fase 15" > "Chat y avisos"): canales (General para toda la empresa y uno por
   equipo) y chats privados entre dos personas, y un apartado de **Avisos** que solo publican el
@@ -400,7 +407,8 @@ src/
     (tabs)/_layout.tsx Barra inferior con las 5 pestañas.
     (tabs)/index.tsx   Hoy
     (tabs)/semana.tsx  Semana
-    (tabs)/planes.tsx  Planes
+    (tabs)/planes.tsx  Planes (con el plan personal)
+    (tabs)/trabajo.tsx Empresa (con el plan empresa, en el sitio de Planes)
     (tabs)/mapa.tsx    Mapa
     (tabs)/alarmas.tsx Alarmas
   screens/             Una pantalla por archivo (PantallaHoy, PantallaSemana...).
@@ -1655,7 +1663,7 @@ borran solos a los 7 días.
   Empresas con Microsoft restringido: ayuda plegada con los pasos y "Mandar el texto al
   informático" (aprueba Organizy una vez en Entra). `/empresa` está fuera de las rutas protegidas:
   el enlace funciona aunque no se haya hecho la bienvenida.
-- **Pantallas**: `/empresa` (entrar, crear o unirse, esperando, y dentro casillas Calendario,
+- **Pantallas**: `/empresa` y la pestaña Empresa (`/trabajo`) (entrar, crear o unirse, esperando, y dentro casillas Calendario,
   Turnos, Tareas, Equipo y, si gestionas, Disponibilidad; "Tus ajustes": Ocupado, salir, borrar),
   `/empresa-equipo`, `/empresa-evento` (Voy / No voy y respuestas; quien gestiona, formulario;
   festivos y cierres de todo el día), `/empresa-turnos` (semana, repartir, "Copiar la semana
@@ -1711,6 +1719,30 @@ borran solos a los 7 días.
   - **Ojo con las reglas de "ver"**: que miren las columnas de la fila, no la busquen por su id (al
     crearla con `insert(...).select()` aún no se ve y la regla falla).
   - Sin fotos ni archivos (harían falta Supabase Storage y sus reglas).
+- **Pestaña Empresa** (29/09, a petición del usuario: "que sea de empresa, quita lo de planes
+  con amigos"): `(tabs)/trabajo.tsx` (`/trabajo`) es `PantallaEmpresa` con `enPestana` (sin
+  "Volver"). En `(tabs)/_layout.tsx`, con el plan puesto, Planes lleva `href: null` y Empresa
+  sale en su sitio con los mensajes y avisos sin leer en el globo; sin el plan, al revés. Las
+  pantallas de la empresa vuelven a `/trabajo` (`volver()` y `BotonVolver`), y también "Cambiar de
+  plan", Perfil > "Tu plan", la casilla de Hoy y los avisos push sin sección. `/empresa` sigue
+  para el enlace de invitación (fuera de las pestañas). Lo que no sale con el plan: casilla
+  "planes con amigos" en Hoy (la de la empresa va en su sitio), "Amigos" en la leyenda y
+  "Proponer plan" en Semana, y el tipo "Amigos" en el formulario de evento (`opcionesTipo`,
+  salvo si el evento ya era de amigos) y en Otros calendarios. Los planes que ya hubiera se quedan
+  en el móvil y vuelven al volver al plan personal.
+- **Empresa de ejemplo** (29/09, para que el dueño lo vea en Expo Go sin cuentas):
+  `services/empresa/ejemplo.ts` (`datosDeEjemplo`, función pura con pruebas en
+  `__tests__/ejemplo.test.ts`): "Bar Pepe" con Pepe (admin), Laura (responsable de Cocina), Javi
+  (Sala), Marta (responsable de Sala), Luis y Ana (esperando), turnos de esta semana y la
+  siguiente (dos cruzan la medianoche), un cambio pedido, tareas, eventos, "Ocupado" de Laura,
+  canales con mensajes (uno privado Pepe–Laura) y tres avisos (uno importante). Se abre con "Ver
+  una empresa de ejemplo" en la pantalla de entrar (solo donde `ejemploPosible()`: Expo Go y
+  desarrollo) y va por el servidor de prueba (`prueba.ts`), que en el móvil guarda en memoria y en
+  AsyncStorage (`organizy-prueba-empresa`, fuera de la copia de seguridad; `cargarPrueba()` antes
+  de traer nada). Dentro, una tarjeta "Empresa de ejemplo" con "Verlo como" Pepe, Laura o Javi y
+  "Dejar el ejemplo". `DatosEmpresa.ejemplo` = true: **no programa avisos ni cambia la hora de
+  salida ni las alarmas** (`leerAgenda` lo salta; solo sale en las pantallas), ni sube "Ocupado"
+  ni el token de avisos. Nada va a Supabase.
 - **Falta**: que el usuario active Google y Microsoft (parte A de la guía) y lo pruebe con cuentas
   de verdad y los avisos en el iPhone.
 

@@ -7,12 +7,14 @@ import { usePerfil } from '@/data/perfil';
 import {
   cambiarDeCuenta,
   crearMiEmpresa,
+  ejemploPosible,
   entrarDePrueba,
   entrarEnEmpresa,
   invitacionGuardada,
   modoPruebaEmpresa,
   PERSONAS_PRUEBA,
   unirmeAMiEmpresa,
+  verEmpresaDeEjemplo,
   type ProveedorEmpresa,
 } from '@/services/empresa';
 import { proveedoresActivos, type ProveedoresActivos } from '@/services/empresa/proveedores';
@@ -30,7 +32,7 @@ export function Entrar({ invitado }: { invitado: boolean }) {
     prueba ? { google: true, microsoft: true } : undefined,
   );
   const [error, setError] = useState<string | null>(null);
-  const [ocupado, setOcupado] = useState<ProveedorEmpresa | null>(null);
+  const [ocupado, setOcupado] = useState<ProveedorEmpresa | 'ejemplo' | null>(null);
 
   // Qué ha activado el dueño en Supabase (en el modo de prueba, los dos).
   useEffect(() => {
@@ -49,6 +51,12 @@ export function Entrar({ invitado }: { invitado: boolean }) {
     }
   };
 
+  const verEjemplo = async () => {
+    setOcupado('ejemplo');
+    await verEmpresaDeEjemplo();
+    setOcupado(null);
+  };
+
   const nadaActivo = proveedores !== undefined && (!proveedores || (!proveedores.google && !proveedores.microsoft));
 
   return (
@@ -62,6 +70,21 @@ export function Entrar({ invitado }: { invitado: boolean }) {
         <Ionicons name="lock-closed-outline" size={18} color={colores.texto} />
         <Texto style={estilos.flex}>{FRASE_PRIVACIDAD}</Texto>
       </Tarjeta>
+
+      {ejemploPosible() && !invitado ? (
+        <Tarjeta style={estilos.caja}>
+          <Texto fuerte>¿Quieres verlo antes?</Texto>
+          <Texto pequeno secundario>
+            Abre un bar de ejemplo ya montado, con su gente, turnos, tareas, chat y avisos. Sin cuentas y sin que nada salga de tu
+            móvil. Puedes verlo como el jefe, como una responsable o como un empleado.
+          </Texto>
+          <Boton
+            titulo={ocupado === 'ejemplo' ? 'Abriendo…' : 'Ver una empresa de ejemplo'}
+            disabled={ocupado !== null}
+            onPress={verEjemplo}
+          />
+        </Tarjeta>
+      ) : null}
 
       {prueba ? (
         <Tarjeta style={estilos.caja}>

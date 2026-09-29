@@ -1,23 +1,26 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 import { dominioDe, esDominioPublico } from './textos';
 import { FalloEmpresa, type Base, type Fila, type UsuarioEmpresa } from './base';
+import { datosDeEjemplo, PERSONAS_PRUEBA } from './ejemplo';
+import { enExpoGo } from './plan';
 
-// Servidor de PRUEBA de Organizy grupal: solo en desarrollo y en la web, para probar las
-// pantallas con dos o tres personas (jefe, responsable, empleado) sin cuentas de Google
-// ni Microsoft. Guarda todo en el navegador (localStorage), así se comparte entre
-// pestañas. Imita lo que hace el servidor de verdad (las reglas de verdad se prueban
-// contra Supabase en supabase/tests/empresa_rls.sql).
+export { PERSONAS_PRUEBA };
+
+// Servidor de PRUEBA de Organizy grupal, sin cuentas de Google ni Microsoft. Imita lo que
+// hace el servidor de verdad (las reglas de verdad se prueban contra Supabase en
+// supabase/tests/empresa_rls.sql). Dos usos:
 //
-// Se enciende con ?prueba-empresa=1 en la dirección (localhost) y se apaga con =0.
+//   - En el ordenador (desarrollo, web): ?prueba-empresa=1 en la dirección lo enciende y =0
+//     lo apaga. Se guarda en el navegador (localStorage), así se comparte entre pestañas y
+//     se prueba con dos o tres personas a la vez.
+//   - La "empresa de ejemplo" (Expo Go y desarrollo): "Ver una empresa de ejemplo" en la
+//     pantalla de entrar. Pone un bar ya montado (ejemplo.ts) y se ve como Pepe, Laura o
+//     Javi. En el móvil se guarda en AsyncStorage; nada va al servidor.
 
 const CLAVE = 'organizy-prueba-empresa';
-
-export const PERSONAS_PRUEBA: UsuarioEmpresa[] = [
-  { id: '00000000-0000-4000-8000-000000000001', correo: 'pepe@bar-prueba.es', nombre: 'Pepe' },
-  { id: '00000000-0000-4000-8000-000000000002', correo: 'laura@bar-prueba.es', nombre: 'Laura' },
-  { id: '00000000-0000-4000-8000-000000000003', correo: 'javi.prueba@gmail.com', nombre: 'Javi' },
-];
+const CLAVE_EJEMPLO = `${CLAVE}-ejemplo`;
 
 type Bd = { yo: string | null; tablas: Record<string, Fila[]> };
 
@@ -25,7 +28,51 @@ function hayNavegador(): boolean {
   return Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
 
+// En el móvil no hay localStorage: se lee de memoria y se guarda también en AsyncStorage
+// (cargarPrueba() lo trae al abrir la app).
+const memoria = new Map<string, string>();
+
+function leerTexto(clave: string): string | null {
+  if (hayNavegador()) return window.localStorage.getItem(clave);
+  return memoria.get(clave) ?? null;
+}
+
+function guardarTexto(clave: string, valor: string | null) {
+  if (hayNavegador()) {
+    if (valor === null) window.localStorage.removeItem(clave);
+    else window.localStorage.setItem(clave, valor);
+    return;
+  }
+  if (valor === null) {
+    memoria.delete(clave);
+    AsyncStorage.removeItem(clave).catch(() => {});
+  } else {
+    memoria.set(clave, valor);
+    AsyncStorage.setItem(clave, valor).catch(() => {});
+  }
+}
+
+// Dónde se puede ver la empresa de ejemplo: donde se ve el plan empresa sin tenerlo.
+export const ejemploPosible = () => enExpoGo || __DEV__;
+
+let cargada: Promise<void> | null = null;
+
+export function cargarPrueba(): Promise<void> {
+  if (hayNavegador() || !ejemploPosible()) return Promise.resolve();
+  cargada ??= AsyncStorage.multiGet([CLAVE, CLAVE_EJEMPLO])
+    .then((pares) => {
+      for (const [clave, valor] of pares) if (valor !== null && !memoria.has(clave)) memoria.set(clave, valor);
+    })
+    .catch(() => {});
+  return cargada;
+}
+
+export function esEjemplo(): boolean {
+  return ejemploPosible() && leerTexto(CLAVE_EJEMPLO) === '1';
+}
+
 export function modoPruebaEmpresa(): boolean {
+  if (esEjemplo()) return true;
   if (!__DEV__ || !hayNavegador()) return false;
   const m = window.location.search.match(/prueba-empresa=([01])/);
   if (m) window.localStorage.setItem(`${CLAVE}-activa`, m[1]);
@@ -34,7 +81,7 @@ export function modoPruebaEmpresa(): boolean {
 
 function leerBd(): Bd {
   try {
-    const bd = JSON.parse(window.localStorage.getItem(CLAVE) ?? '') as Bd;
+    const bd = JSON.parse(leerTexto(CLAVE) ?? '') as Bd;
     if (bd?.tablas) return bd;
   } catch {
     // vacía
@@ -43,7 +90,18 @@ function leerBd(): Bd {
 }
 
 function guardarBd(bd: Bd) {
-  window.localStorage.setItem(CLAVE, JSON.stringify(bd));
+  guardarTexto(CLAVE, JSON.stringify(bd));
+}
+
+// Pone la empresa de ejemplo (borra lo que hubiera de prueba) y entra como Pepe, el jefe.
+export function ponerEjemplo(ahora = new Date()) {
+  guardarBd({ yo: PERSONAS_PRUEBA[0].id, tablas: datosDeEjemplo(ahora) });
+  guardarTexto(CLAVE_EJEMPLO, '1');
+}
+
+export function quitarEjemplo() {
+  guardarTexto(CLAVE_EJEMPLO, null);
+  guardarTexto(CLAVE, null);
 }
 
 const tabla = (bd: Bd, t: string) => (bd.tablas[t] ??= []);
@@ -81,6 +139,9 @@ function visible(bd: Bd, t: string, f: Fila): boolean {
   if (t === 'chat_mensajes') return veCanal(bd, tabla(bd, 'chat_canales').find((c) => c.id === f.canal_id));
   if (t === 'chat_leidos') return f.usuario === bd.yo;
   if (t === 'anuncios_leidos') return tabla(bd, 'anuncios').some((a) => a.id === f.anuncio_id && a.empresa_id === empresa);
+  if (t === 'anuncios' && f.equipo_id && !soyAdmin(bd)) {
+    return f.empresa_id === empresa && tabla(bd, 'equipo_miembros').some((m) => m.equipo_id === f.equipo_id && m.usuario === bd.yo);
+  }
   return f.empresa_id === empresa;
 }
 
@@ -368,9 +429,9 @@ export const basePrueba: Base & { entrarComo(persona: UsuarioEmpresa): void } = 
   },
   // Sin servidor de verdad: se mira cada 2 segundos si ha cambiado algo (vale para varias pestañas).
   escuchar(_tabla, _columna, _valor, alLlegar) {
-    let antes = window.localStorage.getItem(CLAVE);
+    let antes = leerTexto(CLAVE);
     const vigilar = setInterval(() => {
-      const ahoraBd = window.localStorage.getItem(CLAVE);
+      const ahoraBd = leerTexto(CLAVE);
       if (ahoraBd !== antes) {
         antes = ahoraBd;
         alLlegar();

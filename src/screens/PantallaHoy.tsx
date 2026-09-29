@@ -218,6 +218,30 @@ export function PantallaHoy() {
   const tareasEmpresa = [...filasTareas, ...filasHechas].filter((f) => f.tarea.empresa);
   const nEmpresa = deEmpresaHoy.length + todoElDiaEmpresa.length + tareasEmpresa.filter((f) => !f.tarea.hecha).length;
 
+  // Plan empresa (fase 15): su casilla ocupa el sitio de "planes con amigos", que no sale.
+  const baldosasEmpresa: DatosBaldosa[] = datosEmpresa
+    ? [
+        {
+          clave: 'empresa',
+          icono: 'business-outline',
+          colores: colorBaldosa.empresa,
+          numero: String(nEmpresa),
+          etiqueta: `hoy en ${datosEmpresa.empresa.nombre}`,
+          lectura: `${nEmpresa} ${contar(nEmpresa, 'cosa', 'cosas')} de la empresa hoy. Ver la lista`,
+        },
+      ]
+    : esperandoEmpresa
+      ? [
+          {
+            clave: 'empresa',
+            icono: 'business-outline',
+            colores: colorBaldosa.empresa,
+            etiqueta: 'Plan empresa',
+            lectura: 'Plan empresa. Abrir',
+          },
+        ]
+      : [];
+
   const baldosas: DatosBaldosa[] = [
     {
       clave: 'cliente',
@@ -227,14 +251,18 @@ export function PantallaHoy() {
       etiqueta: contar(nClientes, 'cliente', 'clientes'),
       lectura: `${nClientes} ${contar(nClientes, 'cliente', 'clientes')} hoy. Ver la lista`,
     },
-    {
-      clave: 'amigos',
-      icono: 'people-outline',
-      colores: colorBaldosa.amigos,
-      numero: String(nAmigos),
-      etiqueta: contar(nAmigos, 'plan con amigos', 'planes con amigos'),
-      lectura: `${nAmigos} ${contar(nAmigos, 'plan con amigos', 'planes con amigos')} hoy. Ver la lista`,
-    },
+    ...(empresa.modo
+      ? baldosasEmpresa
+      : [
+          {
+            clave: 'amigos' as const,
+            icono: 'people-outline' as const,
+            colores: colorBaldosa.amigos,
+            numero: String(nAmigos),
+            etiqueta: contar(nAmigos, 'plan con amigos', 'planes con amigos'),
+            lectura: `${nAmigos} ${contar(nAmigos, 'plan con amigos', 'planes con amigos')} hoy. Ver la lista`,
+          },
+        ]),
     {
       clave: 'tareas',
       icono: 'checkbox-outline',
@@ -274,29 +302,6 @@ export function PantallaHoy() {
       etiqueta: epoca ? `Época dorada · ${textoQuedan(epoca, hoy)}` : 'Época dorada',
       lectura: epoca ? `Época dorada, ${textoQuedan(epoca, hoy)}. Abrir` : 'Época dorada. Abrir',
     },
-    // Plan empresa (fase 15): solo con el plan puesto.
-    ...(datosEmpresa
-      ? [
-          {
-            clave: 'empresa' as const,
-            icono: 'business-outline' as const,
-            colores: colorBaldosa.empresa,
-            numero: String(nEmpresa),
-            etiqueta: `hoy en ${datosEmpresa.empresa.nombre}`,
-            lectura: `${nEmpresa} ${contar(nEmpresa, 'cosa', 'cosas')} de la empresa hoy. Ver la lista`,
-          },
-        ]
-      : esperandoEmpresa
-        ? [
-            {
-              clave: 'empresa' as const,
-              icono: 'business-outline' as const,
-              colores: colorBaldosa.empresa,
-              etiqueta: 'Plan empresa',
-              lectura: 'Plan empresa. Abrir',
-            },
-          ]
-        : []),
     // Resúmenes de correo (fase 11). Va la última y ocupa toda la fila.
     correo.conexion || correo.cuentas.length > 0
       ? {
@@ -326,7 +331,7 @@ export function PantallaHoy() {
       return;
     }
     if (clave === 'empresa' && !datosEmpresa) {
-      router.push('/empresa');
+      router.navigate('/trabajo');
       return;
     }
     setVista((actual) => (actual === clave ? null : clave));
@@ -435,7 +440,7 @@ export function PantallaHoy() {
                         onPress={() => router.push('/empresa-chat')}
                       />
                     ) : null}
-                    <Boton variante="secundario" titulo={`Abrir ${datosEmpresa.empresa.nombre}`} onPress={() => router.push('/empresa')} />
+                    <Boton variante="secundario" titulo={`Abrir ${datosEmpresa.empresa.nombre}`} onPress={() => router.navigate('/trabajo')} />
                   </>
                 ) : null}
 

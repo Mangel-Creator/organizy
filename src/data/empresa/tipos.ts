@@ -155,6 +155,7 @@ export const AVISOS_EMPRESA_POR_DEFECTO: AvisosEmpresa = {
 
 // Todo lo de la empresa que ve esta persona (lo que dejan las reglas del servidor).
 export type DatosEmpresa = {
+  ejemplo?: boolean; // la empresa de ejemplo (services/empresa/ejemplo.ts): no es de verdad
   yo: string; // mi usuario de empresa
   empresa: Empresa;
   miembros: Miembro[];

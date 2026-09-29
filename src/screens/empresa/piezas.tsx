@@ -16,12 +16,12 @@ export function useDatosEmpresa(): DatosEmpresa | null {
 }
 
 // Vuelve a la pantalla de antes (o, si se abrió directamente, a la que toque).
-export function volver(destino: Href = '/empresa') {
+export function volver(destino: Href = '/trabajo') {
   if (router.canGoBack()) router.back();
   else router.replace(destino);
 }
 
-export function BotonVolver({ texto = 'Empresa', destino = '/empresa' }: { texto?: string; destino?: Href }) {
+export function BotonVolver({ texto = 'Empresa', destino = '/trabajo' }: { texto?: string; destino?: Href }) {
   return (
     <Pressable
       accessibilityRole="button"
