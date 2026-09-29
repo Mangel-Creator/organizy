@@ -33,7 +33,8 @@ export type Destino =
   | { pantalla: 'evento'; id: string }
   | { pantalla: 'mapa'; id: string; dia: ClaveDia } // la ruta hasta ese evento (fase 6)
   | { pantalla: 'plan'; id: string } // un plan con votación (fase 8)
-  | { pantalla: 'resumenes' }; // resúmenes de correo (fase 11)
+  | { pantalla: 'resumenes' } // resúmenes de correo (fase 11)
+  | { pantalla: 'empresa'; seccion?: string }; // plan empresa (fase 15): turnos, tareas...
 
 // Botones dentro de la notificación. Cada categoría se registra una vez al
 // arrancar (services/avisos/programar.ts).
@@ -70,7 +71,7 @@ export type AvisoPlanificado = {
 // "plan-voto" es el push que manda el servidor cuando alguien vota (fase 8) y
 // "correo", el que manda el ayudante de Gmail del usuario (fase 11).
 export type DatosAviso = {
-  tipo: TipoAviso | 'prueba' | 'plan-voto' | 'correo';
+  tipo: TipoAviso | 'prueba' | 'plan-voto' | 'correo' | 'empresa';
   dia: ClaveDia;
   destino: Destino;
   mensaje?: string;

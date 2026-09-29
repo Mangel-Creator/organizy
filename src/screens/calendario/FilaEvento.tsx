@@ -6,7 +6,7 @@ import { useDensidad } from '@/data/densidad';
 import type { Evento } from '@/data/eventos';
 import { usePerfil } from '@/data/perfil';
 import { resolverLugar } from '@/services/agenda';
-import { colorTipo, colores, espacio, fuentes } from '@/theme';
+import { colorEvento, colores, espacio, fuentes } from '@/theme';
 
 import { abrirEvento } from './textos';
 
@@ -25,7 +25,7 @@ export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
   const negro = focoEnNegro && evento.foco;
   const apagado = pasado && !negro;
   const lugar = resolverLugar(evento.lugar, perfil);
-  const detalle = [lugar?.nombre ?? lugar?.direccion, evento.foco && !negro ? 'Bloque de foco' : null]
+  const detalle = [evento.empresa ? 'Empresa' : null, lugar?.nombre ?? lugar?.direccion, evento.foco && !negro ? 'Bloque de foco' : null]
     .filter(Boolean)
     .join(' · ');
 
@@ -37,7 +37,7 @@ export function FilaEvento({ evento, pasado, focoEnNegro }: Props) {
       style={({ pressed }) => [
         estilos.fila,
         { minHeight: medidas.altoFila, paddingVertical: medidas.rellenoFila },
-        { borderLeftColor: apagado ? colores.cargaNormal : colorTipo[evento.tipo] },
+        { borderLeftColor: apagado ? colores.cargaNormal : colorEvento(evento) },
         negro && estilos.filaNegra,
         apagado && estilos.pasado,
         pressed && estilos.pulsado,

@@ -41,6 +41,10 @@ export const colores = {
   // marca, más claro y vivo que el verde de Amigos. Encima va texto oscuro
   // (colores.texto, 8,8:1): el blanco no se lee bien sobre este verde.
   whatsapp: '#25D366',
+
+  // Azul pizarra: solo lo que viene de la empresa (plan empresa, fase 15): turnos,
+  // eventos de empresa y tareas asignadas. Apagado, no se parece al azul de pulsar.
+  empresa: '#44576B',
 } as const;
 
 // Color de cada tipo de evento (Cliente, Amigos, Yo)
@@ -77,7 +81,17 @@ export const colorBaldosa = {
   yo: { fondo: '#E4E6EC', icono: '#1A1C24' },
   estudio: { fondo: '#F3E6C7', icono: '#6B4D0E' }, // Época dorada
   neutro: { fondo: '#F4F1EA', icono: '#1A1C24' }, // tareas, todo el día
+  empresa: { fondo: '#DDE3EA', icono: '#2C3B4A' }, // plan empresa (fase 15)
 } as const;
+
+// Color de la barra de un evento: el de su tipo o, si viene de la empresa, el de empresa.
+export function colorEvento(evento: { tipo: keyof typeof colorTipo; empresa?: unknown }): string {
+  return evento.empresa ? colores.empresa : colorTipo[evento.tipo];
+}
+
+export function colorEventoSobreTinta(evento: { tipo: keyof typeof colorTipoSobreTinta; empresa?: unknown }): string {
+  return evento.empresa ? '#A9BBCD' : colorTipoSobreTinta[evento.tipo];
+}
 
 export const fuentes = {
   titulo: 'IBMPlexSans_600SemiBold',

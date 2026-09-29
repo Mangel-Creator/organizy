@@ -19,7 +19,8 @@ import {
   type Opcion,
   type OpcionVisual,
 } from '@/components';
-import { useEventos, type Evento } from '@/data/eventos';
+import { useAgenda } from '@/data/agenda';
+import type { Evento } from '@/data/eventos';
 import { usePerfil, type Perfil } from '@/data/perfil';
 import type { TipoPlan } from '@/data/planes';
 import { avisosDisponibles } from '@/services/avisos';
@@ -69,7 +70,7 @@ const deClave = (k: string): Sugerencia => {
 export function PantallaPlanNuevo() {
   const { dia, hora } = useLocalSearchParams<{ dia?: string; hora?: string }>();
   const { perfil } = usePerfil();
-  const { cargado, eventos } = useEventos();
+  const { cargado, eventos } = useAgenda();
   if (!cargado) {
     return (
       <Pantalla>

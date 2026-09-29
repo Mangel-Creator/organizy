@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Boton, CampoTexto, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
-import { useEventos } from '@/data/eventos';
+import { useAgenda } from '@/data/agenda';
 import { useHorasPunta } from '@/data/horasPunta';
 import { usePerfil } from '@/data/perfil';
 import { RADARES } from '@/data/radares';
@@ -47,7 +47,7 @@ const RADIO_RADARES_CERCA_M = 25000;
 
 export function PantallaMapa() {
   const { perfil } = usePerfil();
-  const { eventos } = useEventos();
+  const { eventos } = useAgenda();
   const salidas = useSalidas();
   const horasPunta = useHorasPunta();
   const ahora = useAhora();

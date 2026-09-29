@@ -48,6 +48,12 @@ const NO_VIAJAN = new Set([
   'cuentasCorreo',
   // Enlaces de otros calendarios: también son una llave. Los eventos traídos sí viajan.
   'calendarios',
+  // Plan empresa (fase 15): lo de la empresa es de la sesión de empresa de cada
+  // dispositivo (y está en el servidor). En otro móvil se vuelve a entrar.
+  'empresaModo',
+  'empresaCopia',
+  'empresaInvitacion',
+  'empresaOcupado',
 ]);
 
 // Cachés que se borran al recuperar una copia (se vuelven a calcular solas).

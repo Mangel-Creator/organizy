@@ -6,7 +6,9 @@ import Animated, { FadeIn, LayoutAnimationConfig } from 'react-native-reanimated
 
 import { BotonFlotante, Pantalla, Tarjeta, Texto, Titulo } from '@/components';
 import { useDensidad } from '@/data/densidad';
-import { useEventos, type Evento } from '@/data/eventos';
+import { useAgenda } from '@/data/agenda';
+import { useEmpresa } from '@/data/empresa';
+import type { Evento } from '@/data/eventos';
 import { useEnergia } from '@/data/energia';
 import { useEpocas, type Epoca } from '@/data/epocas';
 import { usePerfil } from '@/data/perfil';
@@ -43,7 +45,9 @@ import {
   sumarDias,
   type ClaveDia,
 } from '@/services/fechas';
-import { alturaTactil, colorTipo, colores, espacio, fuentes, radio, tamanos } from '@/theme';
+import { todoElDiaDeEmpresa } from '@/services/empresa/calendario';
+import { NOMBRE_CLASE } from '@/services/empresa/textos';
+import { alturaTactil, colorEvento, colorTipo, colores, espacio, fuentes, radio, tamanos } from '@/theme';
 
 import { DURACION_POR_DEFECTO, horaParaHueco, huecosParaPlan } from '@/services/planes/sugerencias';
 
@@ -61,7 +65,10 @@ export function PantallaSemana() {
   const hoy = claveDia(ahora);
   const [elegido, setElegido] = useState<ClaveDia>(hoy);
   const { perfil } = usePerfil();
-  const { eventos } = useEventos();
+  // Tus eventos y, con el plan empresa, tus turnos, sus eventos y tus tareas asignadas.
+  const { eventos } = useAgenda();
+  const empresa = useEmpresa();
+  const datosEmpresa = empresa.modo && empresa.situacion.fase === 'dentro' ? empresa.situacion.datos : null;
   const { epocas, registro } = useEpocas();
   const [energiaHoy] = useEnergia(hoy);
 
@@ -113,6 +120,8 @@ export function PantallaSemana() {
   const diaElegido = delDiaConEpoca(elegido);
   const delDia = diaElegido.eventos;
   const hitosElegido = diaElegido.epoca?.hitos.filter((h) => h.fecha === elegido) ?? [];
+  // Festivos, cierres... de la empresa (todo el día).
+  const todoElDiaEmpresa = datosEmpresa ? todoElDiaDeEmpresa(datosEmpresa, elegido) : [];
   const tareas = eventos.filter((e) => e.flexible && e.fecha === elegido);
   const huecosPlan = huecosParaPlan(delDia.map(intervaloDe), diaElegido.ventana, elegido, ahora);
 
@@ -133,6 +142,7 @@ export function PantallaSemana() {
             <Leyenda color={colorTipo.cliente} texto="Clientes" />
             <Leyenda color={colorTipo.amigos} texto="Amigos" />
             <Leyenda color={colorTipo.yo} texto="Yo" />
+            {datosEmpresa ? <Leyenda color={colores.empresa} texto="Empresa" /> : null}
           </View>
           {elegido !== hoy ? (
             <Pressable
@@ -202,6 +212,11 @@ export function PantallaSemana() {
                 ★ {h.nombre} a las {h.hora}
               </Texto>
             ))}
+            {todoElDiaEmpresa.map((e) => (
+              <Texto key={e.id} fuerte style={estilos.hito}>
+                {NOMBRE_CLASE[e.clase]} (empresa): {e.titulo}
+              </Texto>
+            ))}
             {delDia.length === 0 && tareas.length === 0 ? (
               <Texto secundario>Este día lo tienes libre.</Texto>
             ) : null}
@@ -242,7 +257,7 @@ export function PantallaSemana() {
                     onPress={() => abrirEvento(tarea.id)}
                     style={({ pressed }) => [
                     estilos.tarea,
-                    { borderLeftColor: colorTipo[tarea.tipo] },
+                    { borderLeftColor: colorEvento(tarea) },
                     pressed && estilos.pulsado,
                   ]}>
                     <Ionicons
@@ -304,7 +319,7 @@ function LineaDeHoras({ eventos, ventana, minutoAhora }: PropsLinea) {
               onPress={() => abrirEvento(evento.id)}
               style={({ pressed }) => [
                 estilos.bloque,
-                evento.foco ? estilos.bloqueFoco : { borderLeftColor: colorTipo[evento.tipo] },
+                evento.foco ? estilos.bloqueFoco : { borderLeftColor: colorEvento(evento) },
                 evento.id.startsWith(`${PREFIJO_EPOCA}bloque:`) && estilos.bloqueEpoca,
                 {
                   top: y(inicio) + 1,

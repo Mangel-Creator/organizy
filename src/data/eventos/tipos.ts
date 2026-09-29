@@ -83,7 +83,13 @@ export type Evento = {
   origen?: OrigenEvento | null;
   // Solo en tareas flexibles: su sitio en la matriz de Eisenhower. Opcional, como "cliente".
   cuadrante?: Cuadrante | null;
+  // Solo en lo que viene de la empresa (Organizy grupal, fase 15): turnos, eventos de
+  // empresa y tareas asignadas. Nunca se guardan en el dispositivo como eventos: salen de
+  // la copia de la empresa (services/empresa/calendario.ts) y no se editan desde aquí.
+  empresa?: MarcaEmpresa | null;
 };
+
+export type MarcaEmpresa = { clase: 'evento' | 'turno' | 'tarea'; id: string };
 
 // De dónde viene un evento traído de otro calendario (services/calendarios).
 // "huella" resume cómo llegó: si el evento ya no coincide con ella, se ha cambiado

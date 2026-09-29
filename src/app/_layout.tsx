@@ -21,6 +21,7 @@ import { iniciarCalendarios } from '@/services/calendarios';
 import { formatearHora } from '@/services/fechas';
 import { completarCoordenadasPendientes } from '@/services/lugares';
 import { iniciarCorreo } from '@/services/correo';
+import { iniciarEmpresa } from '@/services/empresa';
 import { iniciarPlanes } from '@/services/planes';
 import { iniciarTrafico } from '@/services/rutas/actualizar';
 // Registra la tarea de navegación con el móvil bloqueado (solo en la app propia).
@@ -80,6 +81,9 @@ export default function LayoutRaiz() {
   useEffect(() => iniciarCorreo(), []);
   // Otros calendarios (Google, iCloud...): lo nuevo de fuera, al abrir y al volver.
   useEffect(() => iniciarCalendarios(), []);
+  // Plan empresa (fase 15): con el plan puesto, lo de la empresa al abrir, al volver y al
+  // llegar un aviso. Sin el plan no hace nada.
+  useEffect(() => iniciarEmpresa(), []);
 
   useEffect(() => {
     if (listo) {
@@ -100,6 +104,13 @@ export default function LayoutRaiz() {
         router.push({ pathname: '/plan', params: { id: destino.id } });
       } else if (destino.pantalla === 'resumenes') {
         router.push('/resumenes');
+      } else if (destino.pantalla === 'empresa') {
+        // Aviso de la empresa: turnos, tareas, calendario o la gente.
+        if (destino.seccion === 'turnos') router.push('/empresa-turnos');
+        else if (destino.seccion === 'equipo') router.push('/empresa-equipo');
+        else if (destino.seccion === 'calendario' || destino.seccion === 'tareas') {
+          router.push({ pathname: '/empresa', params: { ver: destino.seccion } });
+        } else router.push('/empresa');
       } else if (destino.pantalla === 'mapa') {
         router.navigate({ pathname: '/mapa', params: { evento: destino.id, dia: destino.dia } });
       } else if (destino.pantalla === 'alarmas') {
@@ -152,6 +163,13 @@ export default function LayoutRaiz() {
           <Stack.Screen name="plan" />
           <Stack.Screen name="plan-nuevo" />
           <Stack.Screen name="resumenes" />
+          <Stack.Screen name="cambiar-plan" />
+          <Stack.Screen name="empresa-equipo" />
+          <Stack.Screen name="empresa-evento" />
+          <Stack.Screen name="empresa-turnos" />
+          <Stack.Screen name="empresa-turno" />
+          <Stack.Screen name="empresa-tarea" />
+          <Stack.Screen name="empresa-disponibilidad" />
         </Stack.Protected>
         <Stack.Protected guard={!bienvenidaCompletada}>
           <Stack.Screen name="bienvenida" options={{ gestureEnabled: false }} />
@@ -159,6 +177,9 @@ export default function LayoutRaiz() {
         {/* Página de votación de un plan (fase 8): la abren los invitados desde el enlace
             de WhatsApp, sin cuenta ni bienvenida. Fuera de las rutas protegidas. */}
         <Stack.Screen name="votar" />
+        {/* Plan empresa (fase 15): el enlace de invitación y la vuelta de Google o Microsoft
+            llegan aquí, también a alguien que aún no ha hecho la bienvenida. */}
+        <Stack.Screen name="empresa" />
       </Stack>
     </ThemeProvider>
   );

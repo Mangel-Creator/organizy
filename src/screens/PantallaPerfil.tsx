@@ -34,6 +34,7 @@ import { SeccionAvisos } from './perfil/SeccionAvisos';
 import { SeccionCalendarios } from './perfil/SeccionCalendarios';
 import { SeccionCopia } from './perfil/SeccionCopia';
 import { SeccionEpocas } from './perfil/SeccionEpocas';
+import { SeccionPlan } from './perfil/SeccionPlan';
 import { SeccionRecordatorios } from './perfil/SeccionRecordatorios';
 
 type EstadosPermisos = Record<Permiso, EstadoPermiso | undefined>;
@@ -150,6 +151,9 @@ export function PantallaPerfil() {
           <MensajeError texto={aviso} />
         )}
       </View>
+
+      {/* Plan personal o plan empresa (fase 15). Solo sale en Expo Go y en desarrollo. */}
+      <SeccionPlan />
 
       <Titulo nivel={2} style={estilos.seccion}>
         Cómo se ve

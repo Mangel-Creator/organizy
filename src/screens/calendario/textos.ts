@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import type { Opcion } from '@/components';
 import type { Evento, Repeticion, TipoEvento } from '@/data/eventos';
 import type { Energia } from '@/services/agenda';
+import { leerIdVirtual } from '@/services/empresa/calendario';
 import { PREFIJO_EPOCA } from '@/services/epoca';
 import type { ClaveDia } from '@/services/fechas';
 
@@ -52,6 +53,13 @@ export function abrirEvento(id: string) {
   // hacer) no son eventos guardados: se abre la sección de la época.
   if (id.startsWith(PREFIJO_EPOCA)) {
     router.push('/epoca');
+    return;
+  }
+  // Lo de la empresa (plan empresa) se abre en su ficha: no se edita desde el calendario.
+  const empresa = leerIdVirtual(id);
+  if (empresa) {
+    const ruta = { evento: '/empresa-evento', turno: '/empresa-turno', tarea: '/empresa-tarea' } as const;
+    router.push({ pathname: ruta[empresa.clase], params: { id: empresa.id } });
     return;
   }
   router.push({ pathname: '/evento', params: { id } });

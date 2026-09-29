@@ -106,6 +106,17 @@ const MIGRACIONES: Migracion[] = [
   async (bd) => {
     await bd.execAsync('ALTER TABLE hitos ADD COLUMN temas TEXT;');
   },
+  // 9. Fase 15 (Organizy grupal): copia de lo de la empresa para verlo sin conexión
+  //    (data/empresa/repositorio.ts). Una fila con todo como JSON; se borra al salir.
+  async (bd) => {
+    await bd.execAsync(`
+      CREATE TABLE empresa_copia (
+        clave TEXT PRIMARY KEY NOT NULL,
+        datos TEXT NOT NULL,
+        guardada TEXT NOT NULL
+      );
+    `);
+  },
 ];
 
 let bdPromesa: Promise<SQLite.SQLiteDatabase> | null = null;

@@ -18,7 +18,9 @@ import {
 import { useCorreos } from '@/data/correos';
 import { useDensidad } from '@/data/densidad';
 import { useEnergia } from '@/data/energia';
-import { marcarHecha, moverTareas, useEventos, type Evento } from '@/data/eventos';
+import { useAgenda } from '@/data/agenda';
+import { useEmpresa } from '@/data/empresa';
+import { moverTareas, type Evento } from '@/data/eventos';
 import { usePerfil, type MomentoDelDia, type Perfil } from '@/data/perfil';
 import {
   DATOS_CUADRANTE,
@@ -37,6 +39,9 @@ import {
   type Siguiente,
 } from '@/services/agenda';
 import { contarNuevos } from '@/services/correo/correos';
+import { marcarHechaDeAgenda } from '@/services/empresa';
+import { todoElDiaDeEmpresa } from '@/services/empresa/calendario';
+import { NOMBRE_CLASE } from '@/services/empresa/textos';
 import { imprescindiblesDelDia, textoQuedan, ventanaEpoca } from '@/services/epoca';
 import {
   claveDia,
@@ -48,7 +53,7 @@ import {
   saludoSegunHora,
   sumarDias,
 } from '@/services/fechas';
-import { colorBaldosa, colorTipo, colorTipoSobreTinta, colores, espacio, fuentes } from '@/theme';
+import { colorBaldosa, colorEvento, colorEventoSobreTinta, colores, espacio, fuentes } from '@/theme';
 
 import { CapturaRapida } from './captura/CapturaRapida';
 import { ConfirmacionMovidas } from './calendario/ConfirmacionMovidas';
@@ -101,6 +106,7 @@ const TITULO_VISTA: Record<Vista, string> = {
   tareas: 'Tareas',
   estudio: 'Estudio de hoy',
   dia: 'Todo el día',
+  empresa: 'Hoy en la empresa',
 };
 
 // Hoy (rediseño del 26/09/2026, "mucho más visual"): cabecera oscura con el saludo y
@@ -110,7 +116,9 @@ export function PantallaHoy() {
   const ahora = useAhora();
   const hoy = claveDia(ahora);
   const { perfil } = usePerfil();
-  const { cargado, eventos } = useEventos();
+  // La agenda: tus eventos y, con el plan empresa, tus turnos, sus eventos y tus tareas asignadas.
+  const { cargado, eventos } = useAgenda();
+  const empresa = useEmpresa();
   const correo = useCorreos();
   const [energia, setEnergia] = useEnergia(hoy);
   // Época dorada activa (fase 4b): cambia el horario del día y añade su plan.
@@ -192,7 +200,7 @@ export function PantallaHoy() {
 
   // --- Casillas del panel ---
   const normales = delDia.filter((e) => !e.foco);
-  const deTipo = (tipo: Evento['tipo']) => delDia.filter((e) => e.tipo === tipo && (tipo === 'yo' || !e.foco));
+  const deTipo = (tipo: Evento['tipo']) => delDia.filter((e) => e.tipo === tipo && !e.empresa && (tipo === 'yo' || !e.foco));
   const nClientes = normales.filter((e) => e.tipo === 'cliente').length;
   const nAmigos = normales.filter((e) => e.tipo === 'amigos').length;
   const nYo = deTipo('yo').length;
@@ -200,6 +208,14 @@ export function PantallaHoy() {
   const bloquesHechos = bloquesDeHoy.filter((b) => b.estado === 'hecho').length;
 
   const correosNuevos = contarNuevos(correo.correos);
+
+  // Plan empresa (fase 15): lo de la empresa de hoy.
+  const datosEmpresa = empresa.modo && empresa.situacion.fase === 'dentro' ? empresa.situacion.datos : null;
+  const esperandoEmpresa = empresa.modo && empresa.situacion.fase !== 'dentro';
+  const deEmpresaHoy = delDia.filter((e) => e.empresa);
+  const todoElDiaEmpresa = datosEmpresa ? todoElDiaDeEmpresa(datosEmpresa, hoy) : [];
+  const tareasEmpresa = [...filasTareas, ...filasHechas].filter((f) => f.tarea.empresa);
+  const nEmpresa = deEmpresaHoy.length + todoElDiaEmpresa.length + tareasEmpresa.filter((f) => !f.tarea.hecha).length;
 
   const baldosas: DatosBaldosa[] = [
     {
@@ -257,6 +273,29 @@ export function PantallaHoy() {
       etiqueta: epoca ? `Época dorada · ${textoQuedan(epoca, hoy)}` : 'Época dorada',
       lectura: epoca ? `Época dorada, ${textoQuedan(epoca, hoy)}. Abrir` : 'Época dorada. Abrir',
     },
+    // Plan empresa (fase 15): solo con el plan puesto.
+    ...(datosEmpresa
+      ? [
+          {
+            clave: 'empresa' as const,
+            icono: 'business-outline' as const,
+            colores: colorBaldosa.empresa,
+            numero: String(nEmpresa),
+            etiqueta: `hoy en ${datosEmpresa.empresa.nombre}`,
+            lectura: `${nEmpresa} ${contar(nEmpresa, 'cosa', 'cosas')} de la empresa hoy. Ver la lista`,
+          },
+        ]
+      : esperandoEmpresa
+        ? [
+            {
+              clave: 'empresa' as const,
+              icono: 'business-outline' as const,
+              colores: colorBaldosa.empresa,
+              etiqueta: 'Plan empresa',
+              lectura: 'Plan empresa. Abrir',
+            },
+          ]
+        : []),
     // Resúmenes de correo (fase 11). Va la última y ocupa toda la fila.
     correo.conexion || correo.cuentas.length > 0
       ? {
@@ -283,6 +322,10 @@ export function PantallaHoy() {
     }
     if (clave === 'resumenes') {
       router.push('/resumenes');
+      return;
+    }
+    if (clave === 'empresa' && !datosEmpresa) {
+      router.push('/empresa');
       return;
     }
     setVista((actual) => (actual === clave ? null : clave));
@@ -359,6 +402,28 @@ export function PantallaHoy() {
                 {vista === 'amigos' ? listaEventos(soloEventos('amigos'), 'Hoy no hay planes con amigos.') : null}
                 {vista === 'yo' ? listaEventos(soloEventos('yo'), 'Hoy no tienes nada tuyo con hora.') : null}
 
+                {vista === 'empresa' && datosEmpresa ? (
+                  <>
+                    {todoElDiaEmpresa.map((e) => (
+                      <Texto key={e.id} fuerte>
+                        {NOMBRE_CLASE[e.clase]}: {e.titulo}
+                      </Texto>
+                    ))}
+                    {listaEventos(
+                      deEmpresaHoy.map((evento) => ({ inicio: intervaloDe(evento).inicio, evento, hueco: null })),
+                      'Hoy no tienes turno ni eventos de empresa.',
+                    )}
+                    {tareasEmpresa.length > 0 ? (
+                      <View style={separacion}>
+                        {tareasEmpresa.map((fila) => (
+                          <FilaTarea key={fila.tarea.id} {...fila} />
+                        ))}
+                      </View>
+                    ) : null}
+                    <Boton variante="secundario" titulo={`Abrir ${datosEmpresa.empresa.nombre}`} onPress={() => router.push('/empresa')} />
+                  </>
+                ) : null}
+
                 {vista === 'estudio' && epoca && plan ? (
                   <>
                     {selectorEnergia}
@@ -403,10 +468,11 @@ export function PantallaHoy() {
                               <Animated.View key="pasar-a-manana" layout={RECOLOCAR}>
                                 <Boton
                                   variante="secundario"
-                                  titulo={`Pasar el resto a mañana (${reparto.paraManana.length})`}
+                                  titulo={`Pasar el resto a mañana (${reparto.paraManana.filter((t) => !t.empresa).length})`}
                                   onPress={() =>
                                     moverTareas(
-                                      reparto.paraManana.map((t) => t.id),
+                                      // Las de la empresa tienen su fecha límite: no se mueven.
+                                      reparto.paraManana.filter((t) => !t.empresa).map((t) => t.id),
                                       sumarDias(hoy, 1),
                                     )
                                   }
@@ -461,7 +527,7 @@ function TarjetaSiguiente({ siguiente, hoy, perfil, ahora }: PropsSiguiente) {
   const lugar = resolverLugar(evento.lugar, perfil);
 
   return (
-    <View style={[estilos.siguiente, { borderLeftColor: colorTipoSobreTinta[evento.tipo] }]}>
+    <View style={[estilos.siguiente, { borderLeftColor: colorEventoSobreTinta(evento) }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${cuando}: ${evento.titulo}, ${rangoHoras(evento)}`}
@@ -491,13 +557,13 @@ function FilaTarea({ tarea, detalle, apagada }: FilaTareaLista) {
     <View
       style={[
         estilos.tarea,
-        { borderLeftColor: apagada ? colores.cargaNormal : colorTipo[tarea.tipo] },
+        { borderLeftColor: apagada ? colores.cargaNormal : colorEvento(tarea) },
         { minHeight: medidas.altoFila, paddingVertical: Math.max(medidas.rellenoFila - 4, 0) },
         apagada && estilos.apagada,
       ]}>
       <Casilla
         marcada={tarea.hecha}
-        alCambiar={(hecha) => marcarHecha(tarea.id, hecha)}
+        alCambiar={(hecha) => marcarHechaDeAgenda(tarea.id, hecha)}
         etiqueta={`Marcar como hecha: ${tarea.titulo}`}
       />
       <Pressable
@@ -514,6 +580,7 @@ function FilaTarea({ tarea, detalle, apagada }: FilaTareaLista) {
           {tarea.titulo}
         </Texto>
         <Texto pequeno secundario>
+          {tarea.empresa ? 'Empresa · ' : ''}
           {detalle}
           {tarea.cuadrante && !apagada ? (
             <Texto pequeno style={tarea.cuadrante === 'hazlo' ? estilos.hazlo : undefined}>

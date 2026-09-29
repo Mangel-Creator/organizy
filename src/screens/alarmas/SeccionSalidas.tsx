@@ -2,14 +2,14 @@ import { StyleSheet, View } from 'react-native';
 
 import { Texto, Titulo } from '@/components';
 import { alternarAlarmaSalida, useAlarmas } from '@/data/alarmas';
-import { useEventos } from '@/data/eventos';
+import { useAgenda } from '@/data/agenda';
 import { usePerfil } from '@/data/perfil';
 import { useSalidas } from '@/data/salidas';
 import { citasParaAlarma } from '@/services/alarmas';
 import { formatearDiaCorto, formatearHora } from '@/services/fechas';
 import { claveCita } from '@/services/rutas/citas';
 import { modoDeViaje } from '@/services/rutas/tipos';
-import { colores, colorTipo, espacio } from '@/theme';
+import { colorEvento, colores, espacio } from '@/theme';
 
 import { useAhora } from '../calendario/useAhora';
 import { InterruptorPequeno } from './FilaAlarma';
@@ -19,7 +19,7 @@ import { InterruptorPequeno } from './FilaAlarma';
 // se mueve sola si cambia el evento o el tráfico. Filas planas con la barra del tipo.
 export function SeccionSalidas() {
   const ahora = useAhora();
-  const { eventos } = useEventos();
+  const { eventos } = useAgenda();
   const { perfil } = usePerfil();
   const salidas = useSalidas();
   const { ajustes } = useAlarmas();
@@ -49,7 +49,7 @@ export function SeccionSalidas() {
               return (
                 <View
                   key={cita.clave}
-                  style={[estilos.fila, { borderLeftColor: colorTipo[cita.evento.tipo] }]}>
+                  style={[estilos.fila, { borderLeftColor: colorEvento(cita.evento) }]}>
                   <View style={estilos.textos}>
                     <Texto fuerte numberOfLines={1}>
                       {cita.evento.titulo}

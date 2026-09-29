@@ -5,6 +5,8 @@ import { leerAdelantos, leerAlarmas, suscribirseAdelantos, suscribirseAlarmas } 
 import { leerAjustesAvisos, suscribirseAjustesAvisos } from '@/data/avisos';
 import { leerCorreos, suscribirseCorreos } from '@/data/correos';
 import { leerEpocas, suscribirseEpocas } from '@/data/epocas';
+import { leerAgenda } from '@/data/agenda';
+import { suscribirseEmpresa } from '@/data/empresa';
 import { leerEventos, moverTareas, suscribirseEventos } from '@/data/eventos';
 import { cargarPerfil, suscribirsePerfil } from '@/data/perfil';
 import { leerPlanes, suscribirsePlanes } from '@/data/planes';
@@ -46,7 +48,7 @@ export { contarAvisosProgramados, enviarAvisoDePrueba } from './programar';
 export async function probarAvisoDeHoy(tipo: 'resumen-manana' | 'cierre-dia' | 'salida'): Promise<void> {
   const { perfil } = await cargarPerfil();
   if (!perfil) return;
-  const [eventos, ajustes, salidas] = await Promise.all([leerEventos(), leerAjustesAvisos(), leerSalidas()]);
+  const [eventos, ajustes, salidas] = await Promise.all([leerAgenda({ tareas: false }), leerAjustesAvisos(), leerSalidas()]);
   const ctx = { ahora: new Date(), eventos, perfil, ajustes, salidas: Object.values(salidas) };
   await enviarAvisoDePrueba(avisoDeHoy(tipo, ctx));
 }
@@ -93,7 +95,8 @@ export function reprogramarAvisos(): Promise<void> {
     const hoy = claveDia(ahora);
     const [eventos, ajustes, { epocas, registro }, energia, salidas, alarmas, adelantos, nivel, planes, recordatorios, correo] =
       await Promise.all([
-        leerEventos(),
+        // Con el plan empresa, también sus turnos y eventos (sus tareas no: no se pasan a mañana).
+        leerAgenda({ tareas: false }),
         leerAjustesAvisos(),
         leerEpocas(),
         leerAjuste<Energia>(`energia:${hoy}`, 'normal'),
@@ -162,6 +165,7 @@ export function iniciarAvisos(): () => void {
     suscribirsePlanes(reprogramarEnUnMomento), // "Recordar a todos 3 h antes" (fase 8)
     suscribirseRecordatorios(reprogramarEnUnMomento), // recordatorios a clientes (fase 10)
     suscribirseCorreos(reprogramarEnUnMomento), // plazos que llegaron por correo (fase 11)
+    suscribirseEmpresa(reprogramarEnUnMomento), // turnos y eventos de empresa (fase 15)
   ];
   // Cada vez que se vuelve a abrir la app: así siempre hay avisos para los próximos días.
   const app = AppState.addEventListener('change', (estado) => {
@@ -180,6 +184,7 @@ export type DestinoApp =
   | { pantalla: 'mapa'; id: string; dia: string }
   | { pantalla: 'plan'; id: string } // un plan con votación (fase 8)
   | { pantalla: 'resumenes' } // resúmenes de correo (fase 11)
+  | { pantalla: 'empresa'; seccion?: string } // plan empresa (fase 15)
   | { pantalla: 'ninguna' }; // "Parar": no hace falta abrir nada
 
 // Hace lo que pide la respuesta y dice a qué pantalla ir.
