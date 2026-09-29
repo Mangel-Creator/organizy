@@ -358,7 +358,7 @@ export function PantallaMapa() {
 
       <Texto pequeno secundario>
         Tráfico y rutas: TomTom. Radares fijos: DGT (datos abiertos; de momento sin País Vasco ni Cataluña).
-        Límites de velocidad: © colaboradores de OpenStreetMap.
+        Límites de velocidad: © colaboradores de OpenStreetMap, con licencia ODbL.
       </Texto>
     </Pantalla>
   );

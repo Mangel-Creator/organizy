@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { Pressable, Share, StyleSheet } from 'react-native';
+import { Share, StyleSheet } from 'react-native';
 
-import { Boton, CampoTexto, Plegable, SelectorVisual, Tarjeta, Texto, Titulo } from '@/components';
+import { Boton, BotonEntrarCon, CampoTexto, Plegable, SelectorVisual, Tarjeta, Texto, Titulo } from '@/components';
 import { usePerfil } from '@/data/perfil';
 import {
   cambiarDeCuenta,
@@ -19,7 +19,7 @@ import {
 } from '@/services/empresa';
 import { proveedoresActivos, type ProveedoresActivos } from '@/services/empresa/proveedores';
 import { TEXTO_INFORMATICO, textoFallo } from '@/services/empresa/textos';
-import { alturaTactil, colores, espacio, radio } from '@/theme';
+import { colores, espacio } from '@/theme';
 
 import { Mensaje } from './piezas';
 
@@ -98,20 +98,23 @@ export function Entrar({ invitado }: { invitado: boolean }) {
         </Tarjeta>
       ) : (
         <>
-          <BotonProveedor
-            icono="logo-google"
-            titulo="Entrar con Google"
+          <BotonEntrarCon
+            proveedor="google"
+            titulo="Continuar con Google"
             activo={proveedores?.google === true}
             cargando={ocupado === 'google'}
             onPress={() => entrar('google')}
           />
-          <BotonProveedor
-            icono="logo-microsoft"
-            titulo="Entrar con Microsoft"
+          {proveedores && !proveedores.google && !nadaActivo ? <AunNoActivado /> : null}
+          <BotonEntrarCon
+            proveedor="microsoft"
+            titulo="Iniciar sesión con Microsoft"
             activo={proveedores?.microsoft === true}
             cargando={ocupado === 'azure'}
             onPress={() => entrar('azure')}
           />
+          {proveedores && !proveedores.microsoft && !nadaActivo ? <AunNoActivado /> : null}
+          <Texto pequeno secundario>Vale tu cuenta profesional o educativa, o una personal.</Texto>
           {nadaActivo ? (
             <Texto pequeno secundario>
               Aún no está activado: falta que el dueño de Organizy registre la app en Google y Microsoft (lo explica su guía).
@@ -131,7 +134,7 @@ export function Entrar({ invitado }: { invitado: boolean }) {
           2. Él entra en Microsoft Entra y, en Aplicaciones empresariales {'>'} Organizy {'>'} Permisos, pulsa «Conceder
           consentimiento de administrador».
         </Texto>
-        <Texto>3. Vuelve a pulsar «Entrar con Microsoft».</Texto>
+        <Texto>3. Vuelve a pulsar «Iniciar sesión con Microsoft».</Texto>
         <Texto pequeno secundario>
           Organizy solo pide tu nombre y tu correo: no lee tu correo ni tus archivos.
         </Texto>
@@ -141,36 +144,11 @@ export function Entrar({ invitado }: { invitado: boolean }) {
   );
 }
 
-function BotonProveedor({
-  icono,
-  titulo,
-  activo,
-  cargando,
-  onPress,
-}: {
-  icono: 'logo-google' | 'logo-microsoft';
-  titulo: string;
-  activo: boolean;
-  cargando: boolean;
-  onPress: () => void;
-}) {
+function AunNoActivado() {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !activo }}
-      disabled={!activo || cargando}
-      onPress={onPress}
-      style={({ pressed }) => [estilos.proveedor, !activo && estilos.apagado, pressed && estilos.pulsado]}>
-      <Ionicons name={icono} size={22} color={colores.texto} />
-      <Texto fuerte style={!activo && estilos.textoApagado}>
-        {cargando ? 'Abriendo…' : titulo}
-      </Texto>
-      {!activo ? (
-        <Texto pequeno secundario>
-          · Aún no está activado
-        </Texto>
-      ) : null}
-    </Pressable>
+    <Texto pequeno secundario>
+      Aún no está activado.
+    </Texto>
   );
 }
 
@@ -269,18 +247,4 @@ const estilos = StyleSheet.create({
   flex: { flex: 1 },
   privacidad: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
   caja: { gap: espacio.s },
-  proveedor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espacio.s,
-    minHeight: alturaTactil + 4,
-    paddingHorizontal: espacio.m,
-    borderRadius: radio.normal,
-    borderWidth: 1,
-    borderColor: colores.bordeCampo,
-    backgroundColor: colores.tarjeta,
-  },
-  apagado: { backgroundColor: 'transparent', borderColor: colores.borde },
-  textoApagado: { color: colores.textoSecundario },
-  pulsado: { transform: [{ scale: 0.98 }] },
 });

@@ -65,6 +65,23 @@ export const coloresMapa = {
   bordeRadar: '#FFFFFF',
 } as const;
 
+// Botones para entrar con Google o Microsoft (BotonEntrarCon): los colores que exigen
+// sus normas de marca (tema claro) y los del logo de Microsoft. Otra excepción a "cada
+// color significa una sola cosa" (29/09/2026), solo en esos botones y en el logo de cada
+// cuenta vinculada: sin ellos, Google y Microsoft pueden rechazar la app en su revisión.
+export const coloresMarca = {
+  googleFondo: '#FFFFFF',
+  googleBorde: '#747775',
+  googleTexto: '#1F1F1F',
+  microsoftFondo: '#FFFFFF',
+  microsoftBorde: '#8C8C8C',
+  microsoftTexto: '#5E5E5E',
+  microsoftRojo: '#F25022',
+  microsoftVerde: '#7FBA00',
+  microsoftAzul: '#00A4EF',
+  microsoftAmarillo: '#FFB900',
+} as const;
+
 // Los mismos colores, más claros, para cuando van sobre la cabecera oscura
 // (los normales no se distinguen sobre tintaSuave).
 export const colorTipoSobreTinta = {

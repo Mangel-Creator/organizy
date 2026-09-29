@@ -1,6 +1,7 @@
 export { AvisoPantallaInicio } from './AvisoPantallaInicio';
 export { BarraProgreso } from './BarraProgreso';
 export { Boton } from './Boton';
+export { BotonEntrarCon, LogoMarca, type ProveedorMarca } from './BotonEntrarCon';
 export { BotonFlotante } from './BotonFlotante';
 export { BotonInicial } from './BotonInicial';
 export { CampoTexto } from './CampoTexto';

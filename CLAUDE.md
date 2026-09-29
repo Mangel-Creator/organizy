@@ -313,6 +313,27 @@ sesión que fuera**:
   usuario lo quitó el mismo día al saber que Organizy no puede reservar ni cancelar por él:
   Booksy solo deja reservar desde fuera a empresas socias, y un "robot" con su contraseña va
   contra sus normas. No lo vuelvas a proponer salvo que lo pida.
+- 29/09/2026 — **Revisión de plagio y propiedad intelectual** (lo pidió el usuario). Arreglado:
+  - **El código es del usuario, con todos los derechos reservados** (`LICENSE`; `package.json`
+    con `"license": "UNLICENSED"`). Antes llevaba por error la licencia MIT de la plantilla
+    de Expo, que dejaba copiar Organizy entera. El repositorio sigue público por GitHub
+    Pages. No vuelvas a poner una licencia libre sin que el usuario lo pida.
+  - **Botones oficiales para entrar con Google y Microsoft** (`BotonEntrarCon`, `LogoMarca`):
+    "Continuar con Google" (la "G" de colores sobre blanco y letra Google Sans) e "Iniciar
+    sesión con Microsoft" (su logo de cuatro cuadrados), como exigen sus normas de marca
+    para pasar su revisión. Nunca pongas sus logos en un solo color ni sobre otro fondo.
+    Sus colores (`coloresMarca`) son otra excepción a "cada color significa una sola cosa",
+    solo en esos botones y en el logo de cada cuenta vinculada. **No uses el logo de
+    Apple** en la app (Apple no deja: la fila de iCloud lleva una nube).
+  - **Los datos de radares tienen licencia ODbL** (llevan límites de OpenStreetMap):
+    `src/data/radares/LICENCIA.md`, campo `licencia` del JSON y "con licencia ODbL" en el
+    Mapa. Si el repositorio deja de ser público, hay que seguir ofreciendo ese archivo.
+  - **Pendiente del usuario, antes de subir a las tiendas**: **cambiar el nombre** (ya
+    existe "Organizy: AI Planner" en la App Store, de Organizy Ltd., y Apple no admite dos
+    apps con el mismo nombre; comprobar en TMview que el nuevo está libre) y **hacer un
+    icono propio** (el actual es la "A" de la plantilla de Expo, en `assets/images`,
+    `assets/expo.icon` y `public/icono-app.png`). El identificador
+    `com.mangelcreator.organizy` puede quedarse.
 
 ## Cómo prueba el usuario en el iPhone
 
@@ -507,6 +528,7 @@ no sea un evento de Clientes o de Amigos (ni botones, ni errores, ni mensajes de
 | Solo la Época dorada (franja, bloques de estudio, días con hito) | `dorado` | `#B7892B` (texto oscuro encima) |
 | Solo los botones de WhatsApp (excepción del 26/09) | `whatsapp` | `#25D366` (texto oscuro encima) |
 | Solo lo de la empresa (plan empresa, fase 15): turnos, eventos de empresa, tareas asignadas | `empresa` | `#44576B` (azul pizarra; casillas `colorBaldosa.empresa`) |
+| Solo los botones de entrar con Google o Microsoft y sus logos (excepción del 29/09) | `coloresMarca` | los de sus normas de marca |
 
 Para el color de un tipo de evento usa `colorTipo[evento.tipo]` (en `theme`).
 
@@ -599,6 +621,8 @@ botones se hunden un poco (`scale` 0.94-0.99). Nada de pulsos ni animaciones inf
 - `Plegable` — fila "Más ajustes" que se abre al tocarla; `resumen` enseña lo que ya
   está puesto y `abierto` la abre desde fuera (por ejemplo, si hay un error dentro).
 - `BotonFlotante` admite `icono="close"` para cuando lo que abre ya está abierto.
+- `BotonEntrarCon` — botón oficial para entrar con `proveedor="google"` o `"microsoft"`, como
+  piden sus normas de marca (no cambies su aspecto). `LogoMarca` enseña solo el logo.
 
 ## Idioma y formatos
 
@@ -1483,8 +1507,9 @@ borran solos a los 7 días.
     Resúmenes). `organizy:cuentasCorreo` (en `NO_VIAJAN`: la sesión es de cada dispositivo).
     Cada correo del servidor lleva `origen` y `cuenta`: "Abrir en Outlook" y, al quitar la
     cuenta, se van sus resúmenes (las tareas se quedan).
-  - **Pantalla**: sin nada vinculado, "Vincula tu correo" con filas Gmail, Outlook, "iCloud o
-    Mail del iPhone" y "Otro correo" (estas dos explican el reenvío), la frase de qué se
+  - **Pantalla**: sin nada vinculado, "Vincula tu correo" con los botones oficiales
+    "Continuar con Google" (Gmail) e "Iniciar sesión con Microsoft" (Outlook), las filas
+    "iCloud o Mail del iPhone" y "Otro correo" (estas dos explican el reenvío), la frase de qué se
     guarda y qué se envía a la IA, y plegado "Sin guardar nada en el servidor" (ayudante:
     QR o enlace). Con algo vinculado, "Tus cuentas" (revisado hace…, "Volver a entrar" en
     granate si caducó, "Quitar" con confirmación) y "Vincular otra cuenta" plegado.

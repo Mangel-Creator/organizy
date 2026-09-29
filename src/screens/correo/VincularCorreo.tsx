@@ -3,23 +3,27 @@ import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Boton, CampoTexto, Plegable, Texto } from '@/components';
+import { Boton, BotonEntrarCon, CampoTexto, Plegable, Texto } from '@/components';
 import type { ProveedorCorreo, ProveedoresCorreo } from '@/data/correos';
 import { conectarCorreo, vincularCuenta, type ResultadoVincular } from '@/services/correo';
 import { alturaTactil, colores, espacio, radio } from '@/theme';
 
-// "Vincular con…" (fase 11): una fila por cada correo. Gmail y Outlook solo piden
-// iniciar sesión; iCloud (y la app Mail del iPhone) no se puede vincular y se explica
-// cómo reenviarlo. Plegado, el ayudante de Gmail (sin guardar nada en el servidor), que
+// "Vincular con…" (fase 11). Gmail y Outlook solo piden iniciar sesión: van con los
+// botones oficiales de Google y Microsoft (BotonEntrarCon; sus normas de marca lo
+// exigen). iCloud (y la app Mail del iPhone) no se puede vincular y se explica cómo
+// reenviarlo; su fila no lleva el logo de Apple (Apple no deja usarlo en otras apps). Plegado, el ayudante de Gmail (sin guardar nada en el servidor), que
 // se vincula escaneando su QR o pegando su enlace.
 
 type NombreIcono = ComponentProps<typeof Ionicons>['name'];
-type Opcion = ProveedorCorreo | 'icloud' | 'otro';
+type Opcion = 'icloud' | 'otro';
+
+const BOTONES: { valor: ProveedorCorreo; titulo: string; ayuda: string }[] = [
+  { valor: 'gmail', titulo: 'Continuar con Google', ayuda: 'Para vincular tu Gmail.' },
+  { valor: 'outlook', titulo: 'Iniciar sesión con Microsoft', ayuda: 'Para vincular Outlook, Hotmail o Live.' },
+];
 
 const OPCIONES: { valor: Opcion; icono: NombreIcono; titulo: string; ayuda: string }[] = [
-  { valor: 'gmail', icono: 'logo-google', titulo: 'Vincular con Gmail', ayuda: 'Entras con tu cuenta de Google' },
-  { valor: 'outlook', icono: 'logo-microsoft', titulo: 'Vincular con Outlook', ayuda: 'Outlook, Hotmail o Live' },
-  { valor: 'icloud', icono: 'logo-apple', titulo: 'iCloud o Mail del iPhone', ayuda: 'Apple no deja vincularlo: te digo cómo' },
+  { valor: 'icloud', icono: 'cloud-outline', titulo: 'iCloud o Mail del iPhone', ayuda: 'Apple no deja vincularlo: te digo cómo' },
   { valor: 'otro', icono: 'mail-outline', titulo: 'Otro correo', ayuda: 'Trabajo, Yahoo…' },
 ];
 
@@ -58,11 +62,7 @@ export function VincularCorreo({ proveedores, alTerminar }: Props) {
   const [explicando, setExplicando] = useState<'icloud' | 'otro' | null>(null);
   const [ocupado, setOcupado] = useState<ProveedorCorreo | null>(null);
 
-  const pulsar = async (opcion: Opcion) => {
-    if (opcion === 'icloud' || opcion === 'otro') {
-      setExplicando((actual) => (actual === opcion ? null : opcion));
-      return;
-    }
+  const vincular = async (opcion: ProveedorCorreo) => {
     setOcupado(opcion);
     const r = await vincularCuenta(opcion).catch(() => ({ ok: false as const, motivo: 'error' as const }));
     setOcupado(null);
@@ -73,24 +73,39 @@ export function VincularCorreo({ proveedores, alTerminar }: Props) {
 
   return (
     <View style={estilos.contenedor}>
+      {BOTONES.map((b) => {
+        const desactivado = proveedores?.[b.valor] === false;
+        return (
+          <View key={b.valor} style={estilos.boton}>
+            <BotonEntrarCon
+              proveedor={b.valor === 'gmail' ? 'google' : 'microsoft'}
+              titulo={b.titulo}
+              activo={!desactivado && (ocupado === null || ocupado === b.valor)}
+              cargando={ocupado === b.valor}
+              onPress={() => vincular(b.valor)}
+            />
+            <Texto pequeno secundario>
+              {desactivado ? 'Aún no está activado.' : b.ayuda}
+            </Texto>
+          </View>
+        );
+      })}
       {OPCIONES.map((o) => {
-        const desactivado = (o.valor === 'gmail' || o.valor === 'outlook') && proveedores?.[o.valor] === false;
         return (
           <View key={o.valor}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`${o.titulo}. ${desactivado ? 'Aún no está activado.' : o.ayuda}`}
-              accessibilityState={{ busy: ocupado === o.valor, expanded: explicando === o.valor }}
-              disabled={ocupado !== null}
-              onPress={() => pulsar(o.valor)}
+              accessibilityLabel={`${o.titulo}. ${o.ayuda}`}
+              accessibilityState={{ expanded: explicando === o.valor }}
+              onPress={() => setExplicando((actual) => (actual === o.valor ? null : o.valor))}
               style={({ pressed }) => [estilos.fila, pressed && estilos.pulsado]}>
               <View style={estilos.icono}>
                 <Ionicons name={o.icono} size={22} color={colores.texto} />
               </View>
               <View style={estilos.textos}>
-                <Texto fuerte>{ocupado === o.valor ? 'Abriendo…' : o.titulo}</Texto>
+                <Texto fuerte>{o.titulo}</Texto>
                 <Texto pequeno secundario>
-                  {desactivado ? 'Aún no está activado' : o.ayuda}
+                  {o.ayuda}
                 </Texto>
               </View>
               <Ionicons
@@ -99,7 +114,7 @@ export function VincularCorreo({ proveedores, alTerminar }: Props) {
                 color={colores.textoSecundario}
               />
             </Pressable>
-            {explicando === o.valor && (o.valor === 'icloud' || o.valor === 'otro') ? (
+            {explicando === o.valor ? (
               <Texto pequeno secundario style={estilos.explicacion}>
                 {EXPLICACION[o.valor]}
               </Texto>
@@ -177,6 +192,7 @@ export function VincularAyudante({ alTerminar }: { alTerminar: (mensaje: { bien:
 
 const estilos = StyleSheet.create({
   contenedor: { gap: espacio.s },
+  boton: { gap: espacio.xs, marginBottom: espacio.xs },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',

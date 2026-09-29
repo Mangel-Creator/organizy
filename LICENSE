@@ -1,21 +1,51 @@
-The MIT License (MIT)
+Organizy
+Copyright (c) 2026 Mangel-Creator. Todos los derechos reservados.
+All rights reserved.
 
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+El código, el diseño, los textos, los iconos propios y el resto de contenidos de este
+repositorio son propiedad de su autor. Que el repositorio se pueda ver en GitHub NO da
+permiso para copiarlo, modificarlo, distribuirlo, publicarlo, venderlo ni usarlo en
+otros productos o servicios, salvo lo que permita la ley o lo que el autor autorice por
+escrito.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The source code, design, texts and other contents of this repository are the property
+of their author. Being able to view this repository on GitHub does NOT grant any right
+to copy, modify, distribute, publish, sell or use it in other products or services,
+except as permitted by law or with the author's written permission.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Las versiones publicadas antes del 29 de septiembre de 2026 llevaban por error la
+licencia MIT de la plantilla de Expo. Desde esa fecha se aplica esta licencia.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+-------------------------------------------------------------------------------
+Componentes de terceros (conservan su propia licencia)
+-------------------------------------------------------------------------------
+
+- Librerías de package.json: cada una con su licencia, en node_modules/<paquete>/.
+- Datos de radares (src/data/radares/radares-dgt.json): licencia ODbL 1.0. Ver
+  src/data/radares/LICENCIA.md.
+- Letras IBM Plex Sans, IBM Plex Mono y Google Sans: SIL Open Font License 1.1.
+- Logos de Google y Microsoft: marcas de sus dueños. Solo se usan en los botones
+  para iniciar sesión con ellos, como dicen sus normas de marca.
+- Partes de la plantilla inicial de Expo (create-expo-app), con esta licencia:
+
+  The MIT License (MIT)
+
+  Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.

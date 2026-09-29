@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
-import { Boton, Tarjeta, Texto, Titulo } from '@/components';
+import { Boton, LogoMarca, Tarjeta, Texto, Titulo } from '@/components';
 import type { ConexionCorreo, CuentaCorreo } from '@/data/correos';
 import { desconectarCorreo, NOMBRE_PROVEEDOR, quitarCuenta, vincularCuenta } from '@/services/correo';
 import { claveDia, formatearHora } from '@/services/fechas';
@@ -74,12 +74,9 @@ export function CuentasCorreo({ cuentas, conexion, actualizando, alTerminar }: P
         return (
           <View key={c.id} style={estilos.fila}>
             <View style={estilos.cabecera}>
-              <Ionicons
-                name={c.proveedor === 'gmail' ? 'logo-google' : 'logo-microsoft'}
-                size={20}
-                color={colores.texto}
-                accessibilityLabel={NOMBRE_PROVEEDOR[c.proveedor]}
-              />
+              <View accessible accessibilityLabel={NOMBRE_PROVEEDOR[c.proveedor]}>
+                <LogoMarca proveedor={c.proveedor === 'gmail' ? 'google' : 'microsoft'} tamano={20} />
+              </View>
               <View style={estilos.textos}>
                 <Texto fuerte numberOfLines={1}>
                   {c.email}

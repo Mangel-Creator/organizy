@@ -21,7 +21,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const URL_DGT = 'https://infocar.dgt.es/datex2/dgt/PredefinedLocationsPublication/radares/content.xml';
-const URL_OVERPASS = 'https://overpass-api.de/api/interpreter';
+const LICENCIA =
+  'Base de datos con licencia ODbL 1.0 (https://opendatacommons.org/licenses/odbl/1-0/). Radares: DGT (datos abiertos). Límites de velocidad: © colaboradores de OpenStreetMap. Ver src/data/radares/LICENCIA.md.';
+const URL_OVERPASS ='https://overpass-api.de/api/interpreter';
 const AGENTE = 'Organizy/1.0 (actualizar radares DGT; https://github.com/Mangel-Creator/organizy)';
 const DESTINO = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'radares', 'radares-dgt.json');
 
@@ -185,7 +187,9 @@ async function main() {
     fuente: 'DGT, Punto de Acceso Nacional de Tráfico y Movilidad (datos abiertos)',
     publicado: dgt.publicado,
     revisado: new Date().toISOString().slice(0, 10),
-    // Límites de velocidad: © colaboradores de OpenStreetMap (ODbL).
+    // Lleva límites de velocidad de OpenStreetMap: el archivo entero queda con su licencia
+    // (ODbL), como pide OpenStreetMap. Ver src/data/radares/LICENCIA.md.
+    licencia: LICENCIA,
     descartados: malos.map((r) => `${r.id} (${r.carretera}, ${r.provincia})`),
     radares: buenos,
   };
