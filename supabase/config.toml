@@ -449,3 +449,8 @@ verify_jwt = false
 # pg_cron (con su contraseña) y las peticiones de la app (comprueba la sesión anónima).
 [functions.correo-cuentas]
 verify_jwt = false
+
+# Cuánta IA te queda (límites de 5 horas y de la semana, como Claude). Solo lee; comprueba
+# la sesión anónima por dentro, como las demás.
+[functions.ia]
+verify_jwt = false

@@ -23,6 +23,7 @@ import { respuestaJson, respuestaPrevia } from '../_shared/cors.ts';
 import { cifrar, descifrar } from '../_shared/cifrado.ts';
 import { analizarConClaude, iaDisponible } from '../_shared/iaCorreo.ts';
 import { numeroDeEntorno, sumarUso } from '../_shared/limite.ts';
+import { permitirIA } from '../_shared/limiteIA.ts';
 import {
   conResultado,
   emailDeCuenta,
@@ -162,11 +163,12 @@ type Resumen = {
 
 async function analizar(cuenta: Cuenta, m: MensajeLeido): Promise<Resumen> {
   const base = { id: m.id, recibido: m.recibido.toISOString(), de: nombreRemitente(m.de), asunto: m.asunto.slice(0, 200), enlace: m.enlace };
-  if (iaDisponible) {
+  // Con la IA agotada (5 horas o semana) o sin clave, se usan las reglas.
+  if (iaDisponible && (await permitirIA(cuenta.usuario)).permitido) {
     const uso = await sumarUso(cuenta.usuario, 'correo', LIMITE_IA_USUARIO, LIMITE_IA_GLOBAL).catch(() => null);
     if (uso?.permitido) {
       const hoy = diaDe(m.recibido);
-      const a = await analizarConClaude({ asunto: base.asunto, de: base.de, cuerpo: limpiarCuerpo(m.cuerpo).slice(0, 4000), hoy });
+      const a = await analizarConClaude({ asunto: base.asunto, de: base.de, cuerpo: limpiarCuerpo(m.cuerpo).slice(0, 4000), hoy }, cuenta.usuario);
       if (a) {
         let fecha = typeof a.fechaLimite === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(a.fechaLimite) ? a.fechaLimite : null;
         if (fecha && (fecha < hoy || fecha > sumarDias(hoy, 366))) fecha = null;

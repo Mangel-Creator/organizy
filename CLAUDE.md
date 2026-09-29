@@ -267,6 +267,13 @@ sesión que fuera**:
   empresa se guarda en Supabase: será una **excepción más** a "datos solo en el
   dispositivo" (la apunta la sesión 15 con el detalle). Prompt en
   `C:\Users\usuario\OneDrive\PERSONAL\Organizy\Prompts\Organizy-15-organizy-grupal.md`.
+- 29/09/2026 — **Límites de IA como los de Claude** (ver "Límites de IA"): cada persona tiene
+  un límite cada 5 horas y otro por semana, que ve **en porcentaje** en Perfil > "Tu IA". Al
+  llegar, la app sigue sin IA hasta que se libere; **el correo también cuenta** y al agotarse
+  usa las reglas. **Comprar más IA ("Conseguir más IA") queda preparado pero apagado**: el
+  saldo extra ya existe en el servidor, pero cobrar necesita la cuenta de Apple o Stripe
+  (autónomo); el botón explica que aún no se puede. No lo actives sin que el usuario tenga
+  esas cuentas y lo pida.
 - 28/09/2026 — **Sin "Reservar servicios"** (peluquería, barbería... con Booksy). Se hizo y el
   usuario lo quitó el mismo día al saber que Organizy no puede reservar ni cancelar por él:
   Booksy solo deja reservar desde fuera a empresas socias, y un "robot" con su contraseña va
@@ -420,7 +427,9 @@ src/
                        clientes/ (recordatorios a clientes: teléfono, mensaje, estado;
                        con pruebas),
                        correo/ (resúmenes de correo: traerlos del servidor y del ayudante,
-                       vincular y quitar cuentas, plazos como tareas; con pruebas).
+                       vincular y quitar cuentas, plazos como tareas; con pruebas),
+                       ia/ (límites de IA de 5 horas y semana: porcentajes y mensajes;
+                       con pruebas).
 supabase/              Servidor propio: Edge Functions (Deno) y SQL. Ver "Servidor propio".
 gmail/                 Ayudante de Gmail (Google Apps Script): ayudante.js (lo de Google) y
                        organizy-correo.js, que se GENERA con `npm run ayudante-gmail` juntando
@@ -1516,6 +1525,43 @@ borran solos a los 7 días.
   naranja ni verde.
 - **Pendiente (idea)**: que la captura con IA proponga el cuadrante al apuntar y que los plazos
   del correo entren como "Hazlo ya"; cuando el usuario ponga la clave de Anthropic.
+
+## Límites de IA (29/09/2026)
+
+- Lo pidió el usuario: límites como los de Claude y poder pagar más si se agotan. Dos
+  límites por persona (usuario anónimo de Supabase), contados **en millonésimas de dólar**
+  según el modelo y los tokens de cada llamada (`costeLlamada`): una **ventana de 5 horas**
+  que empieza con el primer uso y se libera entera al acabar, y una **semana** igual (7 días
+  desde el primer uso). Por defecto 0,15 $ cada 5 h y 0,50 $ a la semana (el uso "alto" de la
+  hoja IA del Excel); secretos `IA_VENTANA_HORAS`, `IA_LIMITE_VENTANA` e `IA_LIMITE_SEMANA`.
+  Siguen además los máximos por día de cada función (`sumarUso`), que protegen el gasto total.
+- **Servidor**: `supabase/migrations/20260929000000_limites_ia.sql` (ya aplicada): tablas
+  `ia_consumo` (lo gastado; `pg_cron` borra lo de más de 8 días), `ia_cuentas` (inicio de la
+  ventana y de la semana y saldo `extra`) e `ia_recargas` (referencia de pago única, para no
+  sumar dos veces), y funciones SQL `ia_estado`, `ia_permitir`, `ia_apuntar` (lo que pasa de un
+  límite se descuenta del extra) e `ia_recargar`. En las funciones:
+  `_shared/limiteIA.ts` (`permitirIA` antes de llamar a Claude, `apuntarIA(usuario, funcion,
+  modelo, respuesta.usage)` justo después, también si la respuesta no vale). **Toda llamada
+  nueva a Claude tiene que pasar por las dos.** Sin permiso: 429 `{ error: 'limite-ia', motivo:
+  'ventana'|'semana', libre, horas }`. Función `ia` (acción `estado`, solo lee) para la app.
+- **Correo**: cuenta para el límite; sin permiso, `correo-cuentas` usa las reglas y la función
+  `correo` contesta 429 (el ayudante de Gmail usa sus reglas 30 min). Ojo: el ayudante de Gmail
+  tiene su propio usuario anónimo, así que su gasto no se suma al de la app.
+- **App**: `services/ia/` (`limites.ts` puro con pruebas: porcentajes, "Se libera a las 18:40",
+  mensajes; `consultarEstadoIA`, `limiteDelError`). La captura y la Época dorada, al recibir el
+  429, dicen "Has gastado la IA de estas 5 horas. Vuelve a tenerla a las 18:40." y dejan
+  rellenarlo a mano. Perfil > "Tu IA" (`screens/perfil/SeccionIA.tsx`): dos barras ("Estas 5
+  horas" y "Esta semana", granate desde el 80 %), cuándo se libera cada una, el saldo extra y
+  "Conseguir más IA" (hoy explica que aún no se puede comprar).
+- **Comprar más (pendiente, apagado)**: cuando haya cobro, el aviso del pago (RevenueCat para
+  Apple/Google o Stripe en la web) llamará a `ia_recargar(usuario, cantidad, origen,
+  referencia)` desde una función nueva, y el secreto `IA_COMPRA_ACTIVA=si` hará que `estado`
+  devuelva `compra: true` (la tarjeta de "Conseguir más IA" tendrá entonces los paquetes).
+  Propuesta de paquetes en el Word "RESUMEN IA" del usuario. Para regalar saldo a mano:
+  `select public.ia_recargar('<usuario>', 500000, 'regalo', '<referencia única>')`.
+- **Planes de pago** (pendiente): cada plan tendrá sus números; hoy son los mismos para todos.
+  Con usuarios anónimos, borrar los datos del navegador da un usuario nuevo con los límites a
+  cero: para límites por persona de verdad hará falta iniciar sesión (lo mismo que para cobrar).
 
 ## Hoja de ruta
 

@@ -12,6 +12,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@0.128.0';
 
 import { respuestaJson, respuestaPrevia } from '../_shared/cors.ts';
 import { numeroDeEntorno, sumarUso } from '../_shared/limite.ts';
+import { apuntarIA, cuerpoLimiteIA, permitirIA } from '../_shared/limiteIA.ts';
 import { usuarioDeLaPeticion } from '../_shared/usuario.ts';
 
 // Modelo pequeño y barato de Claude (Haiku 4.5): de sobra para entender una frase.
@@ -131,6 +132,10 @@ Deno.serve(async (req) => {
   const peticion = leerPeticion(await req.json().catch(() => null));
   if (!peticion) return respuestaJson(req, { error: 'peticion' }, 400);
 
+  // Límites de 5 horas y de la semana (como Claude): al llegar, la app lo explica.
+  const permiso = await permitirIA(usuario);
+  if (!permiso.permitido) return respuestaJson(req, cuerpoLimiteIA(permiso), 429);
+
   let usosHoy: number;
   try {
     const uso = await sumarUso(usuario, 'captura', LIMITE_POR_USUARIO, LIMITE_GLOBAL);
@@ -149,6 +154,7 @@ Deno.serve(async (req) => {
       messages: [{ role: 'user', content: mensajeUsuario(peticion) }],
       output_config: { format: { type: 'json_schema', schema: ESQUEMA } },
     });
+    await apuntarIA(usuario, 'captura', MODELO, respuesta.usage);
     if (respuesta.stop_reason !== 'end_turn') {
       console.error('Respuesta cortada:', respuesta.stop_reason);
       return respuestaJson(req, { error: 'ia' }, 502);
