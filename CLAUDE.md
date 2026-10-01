@@ -334,6 +334,13 @@ sesión que fuera**:
     icono propio** (el actual es la "A" de la plantilla de Expo, en `assets/images`,
     `assets/expo.icon` y `public/icono-app.png`). El identificador
     `com.mangelcreator.organizy` puede quedarse.
+- 01/10/2026 — **Proyecto nuevo: Raxu** (nombre de trabajo), en `C:\proyectos\raxu`. Tras
+  una sesión de estrategia (Organizy intenta servir a demasiados públicos), el usuario eligió
+  centrarse en **autónomos que van a casa de sus clientes**: agenda con tráfico, "llego tarde",
+  ruta del día, cobros y, más adelante, recepcionista con IA. Todo en `C:\proyectos\raxu\IDEA.md`
+  y su `CLAUDE.md`; mensajes de cada sesión en `OneDrive\PERSONAL\Raxu\Prompts`. Raxu lee
+  Organizy como referencia y copia lo que sirve, **sin modificarlo**. **Organizy sigue como
+  está**: no se poda, oculta ni borra nada de Organizy sin que el usuario lo diga.
 
 ## Cómo prueba el usuario en el iPhone
 
