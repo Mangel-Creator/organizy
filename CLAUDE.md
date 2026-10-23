@@ -341,6 +341,14 @@ sesión que fuera**:
   y su `CLAUDE.md`; mensajes de cada sesión en `OneDrive\PERSONAL\Raxu\Prompts`. Raxu lee
   Organizy como referencia y copia lo que sirve, **sin modificarlo**. **Organizy sigue como
   está**: no se poda, oculta ni borra nada de Organizy sin que el usuario lo diga.
+- 23/10/2026 (última palabra sobre para quién es) — **Organizy sigue, pero solo para uso
+  propio del usuario: olvidarse de venderla por ahora.** Nada de planes de pago, precios,
+  marketing ni competencia; las sesiones de negocio se han archivado. Los **límites de IA y el
+  saldo** se quedan (lo eligió él). **Se quitan de la app**: el **Plan empresa** (pestaña
+  Empresa, turnos, tareas, chat, avisos de superiores y "Cambiar de plan"; vuelve la pestaña
+  Planes con amigos a su hueco) y los **recordatorios a clientes por WhatsApp** (fase 10, con
+  la parte B de WhatsApp Business). Lo hace la sesión "Quitar Plan empresa y WhatsApp a
+  clientes"; hasta entonces, no amplíes esas dos partes.
 
 ## Cómo prueba el usuario en el iPhone
 
