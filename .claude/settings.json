@@ -2,5 +2,6 @@
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   },
-  "autoCompactEnabled": true
+  "autoCompactEnabled": true,
+  "autoCompactWindow": 400000
 }
